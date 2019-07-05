@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2019, AT&T Intellectual Property.
+# Copyright (c) 2017-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (C) 2012-2017, Brocade Communications Systems, Inc.
@@ -430,6 +430,56 @@ sub build_rule {
         push @rproc, "action-group($name)";
     }
 
+    my $prefix;
+    if ( $level =~ /^security firewall/ ) {
+        if ($config->exists("session application")) {
+            $prefix = "session application";
+        }
+    } elsif ($config->exists("application")) {
+        $prefix = "application";
+    }
+    if (defined $prefix) {
+        my @values;
+        my $value;
+        my $engine = "";
+        my $name = "";
+        my $type = "";
+        my @engines = $config->listNodes("$prefix engine");
+        if (@engines) {
+            $prefix .= " engine $engines[0]";
+            $engine = $engines[0];
+        } else {
+            $engine = "ndpi";
+        }
+
+        # new engine-based dpi cli defines names and types
+        # as single values
+        $value = $config->returnValue("$prefix name");
+        if ($value) {
+            # New CLI, use the value of name node
+            $name = $value;
+        } else {
+            # Old CLI, use the first name node
+            @values = $config->listNodes("$prefix name");
+            $name = $values[0]
+              if @values;
+        }
+
+        $value = $config->returnValue("$prefix type");
+        if ($value) {
+            # New CLI, use the value of type node
+            $type = $value;
+        } else {
+            # Old CLI, use the first type node
+            @values = $config->listNodes("$prefix type");
+            $type = $values[0]
+              if @values;
+        }
+
+        push @match, "dpi($engine,$name,$type)"
+          if $name or $type;
+    }
+
     # Path monitor
     #
     my $pathmon_monitor = ( $config->listNodes("path-monitor monitor") )[0];
@@ -543,8 +593,31 @@ sub build_app_rule {
     my ( $rule, $value, @values );
 
     $value = $config->returnValue("action");
-    $rule  = "action=$value ";
+    $rule = "action=$value ";
 
+    @values = $config->listNodes("engine");
+    if (@values) {
+        $rule .= "engine=$values[0] ";
+        $config = Vyatta::Config->new("${level} engine $values[0]");
+    } else {
+        $rule .= "engine=ndpi "; # Maintain backwards compatibility
+    }
+
+    # new engine-based dpi cli defines protos, names and types
+    # as single values
+    $value = $config->returnValue("protocol");
+    $rule .= "protocol=$value "
+      if $value;
+
+    $value = $config->returnValue("name");
+    $rule .= "name=$value "
+      if $value;
+
+    $value = $config->returnValue("type");
+    $rule .= "type=$value "
+      if $value;
+
+    # Old CLI, use the first node
     @values = $config->listNodes("protocol");
     $rule .= "protocol=$values[0] "
       if @values;
