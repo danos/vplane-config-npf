@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2017,2019, AT&T Intellectual Property.
+# Copyright (c) 2017,2019-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
@@ -113,23 +113,25 @@ sub get_dpi_sess_detail {
 
     my $app_name   = $dpi->{"app-name"};
     my $proto_name = $dpi->{"proto-name"};
+    my $engine     = $dpi->{"engine"};
+    my $detail     = "";
 
-    if ( defined($app_name) ) {
-        my $info = "app-name $app_name";
-        $info .= " (l5-proto $proto_name)"
-          if defined($proto_name) && $proto_name ne $app_name;
-        return $info;
-    } elsif ( defined($proto_name) ) {
-        return "l5-proto-name $proto_name";
-    } else {
-        return "";
-    }
+    $detail .= "engine $engine "
+      if defined($engine);
+
+    $detail .= "app-name $app_name "
+      if defined($app_name);
+
+    $detail .= "l5-proto-name $proto_name"
+      if defined($proto_name);
+
+    return $detail;
 }
 
 sub print_sess_feature_detail {
     my ( $id, $entry, $feature, $header_printed ) = @_;
 
-    return 0 if !defined ($feature->{dpi});
+    return 0 if !defined($feature->{dpi});
 
     my $fmt_str = "%-9s %-31s %-31s %-9s %-10s %-20s\n";
     if ( $$header_printed == 0 ) {
@@ -155,9 +157,18 @@ sub print_sess_feature_detail {
 
     my $intf = $feature->{interface} // "inactive";
 
-    my $feat = get_dpi_sess_detail( $feature->{dpi} );
+    my @engines = $feature->{dpi};
+    my @tmp     = $engines[0];
+    my $len     = @tmp;
+    foreach my $i ( 0 .. $len ) {
+        my $feat = get_dpi_sess_detail( $engines[0][$i] );
 
-    printf( $fmt_str, $id, $src, $dst, $proto, $intf, $feat );
+        if ( $i == 0 ) {
+            printf( $fmt_str, $id, $src, $dst, $proto, $intf, $feat );
+        } else {
+            printf( $fmt_str, "", "", "", "", "", $feat );
+        }
+    }
 
     return 1;
 }
@@ -168,13 +179,14 @@ sub print_sess_detail {
 
     my $features_count = $entry->{features_count};
 
-    return if !defined( $features_count);
+    return if !defined($features_count);
 
     # Only print the first DPI data found. (The rest are duplicates)
     my $rc;
-    for ( my $i = 0; $i < $features_count; $i++ ) {
-	    $rc = print_sess_feature_detail( $id, $entry, $entry->{features}->[$i], $header_printed);
-	    return if ( $rc )
+    for ( my $i = 0 ; $i < $features_count ; $i++ ) {
+        $rc = print_sess_feature_detail( $id, $entry, $entry->{features}->[$i],
+            $header_printed );
+        return if ($rc);
     }
 }
 
@@ -184,42 +196,52 @@ sub print_sess_feature_dpi {
     return
       if !defined $feature->{dpi};
 
-    my $di = $feature->{dpi};
+    my @engines = $feature->{dpi};
 
-    my $fmt_str = "%-9s %-15s %-15s %-10s %-6s %-9s %-10s %-9s %-10s %-20s\n";
+    my $fmt_str =
+      "%-9s %-9s %-15s %-15s %-10s %-6s %-9s %-10s %-9s %-10s %-20s\n";
     if ( $$header_printed == 0 ) {
         $$header_printed = 1;
         printf( $fmt_str,
-            "Conn ID",   "App-name", "L5-proto-name", "Offloaded",
-            "Error",     "Fwd-pkts", "Fwd-bytes",     "Bwd-pkts",
-            "Bwd-bytes", "Types" );
+            "Conn ID",   "Engine",    "App-name", "L5-proto-name",
+            "Offloaded", "Error",     "Fwd-pkts", "Fwd-bytes",
+            "Bwd-pkts",  "Bwd-bytes", "Type" );
         printf( $fmt_str,
-            "-------",   "--------", "-------------", "---------",
-            "-----",     "--------", "---------",     "--------",
-            "---------", "-----" );
+            "-------",   "------",    "--------", "-------------",
+            "---------", "-----",     "--------", "---------",
+            "--------",  "---------", "----" );
     }
 
-    my $app_name   = $di->{"app-name"}   // "";
-    my $proto_name = $di->{"proto-name"} // "";
+    my @tmp = $engines[0];
+    my $len = @tmp;
+    foreach my $i ( 0 .. $len ) {
+        my $di         = $engines[0][$i];
+        my $app_name   = $di->{"app-name"} // "";
+        my $proto_name = $di->{"proto-name"} // "";
+        my $type       = $di->{"type"} // "";
+        my $fw_bytes   = $di->{"forward-bytes"} // "";
+        my $bw_bytes   = $di->{"backward-bytes"} // "";
+        my $fw_pkts    = $di->{"forward-pkts"} // "";
+        my $bw_pkts    = $di->{"backward-pkts"} // "";
+        my $engine     = $di->{"engine"} // "";
 
-    my $offloaded = "false";
-    $offloaded = "true" if ( $di->{"offloaded"} );
+        my $offloaded = "false";
+        $offloaded = "true" if ( $di->{"offloaded"} );
 
-    my $error = "false";
-    $error = "true" if ( $di->{"error"} );
+        my $error = "false";
+        $error = "true" if ( $di->{"error"} );
 
-    my $types = "";
-    foreach my $type ( @{ $di->{types} } ) {
-        $types .= "$type ";
+        if ( $i == 0 ) {
+            printf( $fmt_str,
+                $id,        $engine,   $app_name, $proto_name,
+                $offloaded, $error,    $fw_pkts,  $fw_bytes,
+                $bw_pkts,   $bw_bytes, $type );
+        } else {
+            printf( $fmt_str,
+                "", $engine, $app_name, $proto_name, $offloaded,
+                $error, "", "", "", "", $type );
+        }
     }
-    chop $types;
-
-    printf( $fmt_str,
-        $id,                     $app_name,
-        $proto_name,             $offloaded,
-        $error,                  $di->{"forward-pkts"},
-        $di->{"forward-bytes"},  $di->{"backward-pkts"},
-        $di->{"backward-bytes"}, $types );
 }
 
 sub print_sess_dpi {
@@ -227,13 +249,14 @@ sub print_sess_dpi {
 
     my $features_count = $entry->{features_count};
 
-    return if !defined( $features_count);
+    return if !defined($features_count);
 
     # Only print the first DPI data found. (The rest are duplicates)
     my $rc;
-    for ( my $i = 0; $i < $features_count; $i++ ) {
-	    $rc = print_sess_feature_dpi( $id, $entry, $entry->{features}->[$i], $header_printed);
-	    return if ( $rc )
+    for ( my $i = 0 ; $i < $features_count ; $i++ ) {
+        $rc = print_sess_feature_dpi( $id, $entry, $entry->{features}->[$i],
+            $header_printed );
+        return if ($rc);
     }
 }
 

@@ -519,58 +519,16 @@ sub build_rule {
         my $user_app_name = $config->returnValue("then name") // "";
         my @user_app_types = $config->listNodes("then type");
         my $user_app_proto = $config->returnValue("then protocol") // "";
+        my $user_app_type;
 
-        my %qm_types = (
-                basic             => 0,
-                networking        => 1,
-                email             => 2,
-                webmail           => 3,
-                im_mc             => 4,
-                chat              => 5,
-                audio_chat        => 6,
-                video_chat        => 7,
-                file_transfer     => 8,
-                social_network    => 9,
-                voip              => 10,
-                web               => 11,
-                web_search        => 12,
-                web_ecom          => 13,
-                web_sites         => 14,
-                mobile            => 15,
-                p2p               => 16,
-                file_mngt         => 17,
-                db                => 18,
-                enterprise        => 19,
-                update            => 20,
-                gaming            => 21,
-                aaa               => 22,
-                remote_access     => 23,
-                mm_streaming      => 24,
-                vpn_tun           => 25,
-                cdn               => 26,
-                news_portal       => 27,
-                classified_ads    => 28,
-                advertising       => 29,
-                analytics         => 30,
-                adult_content     => 31,
-                anonymizer        => 32,
-                blog              => 33,
-                forum             => 34,
-                standardized      => 35,
-                scada             => 36,
-                iot               => 37,
-                cloud_services    => 38,
-        );
-
-        # Convert the list of application types in @user_app_types
-        # into a bitfield per %qm_types.
-        my $user_app_bitfield = 0;
-        for my $atype (@user_app_types) {
-            $user_app_bitfield |= (1 << $qm_types{$atype});
+        if (@user_app_types) {
+            $user_app_type = $user_app_types[0];
+        } else {
+            $user_app_type = "";
         }
 
         # Send the rproc: app(name, type_bitfield, protocol).
-        push @rproc, "app($user_app_name,$user_app_bitfield,$user_app_proto)";
+        push @rproc, "app($user_app_name,$user_app_type,$user_app_proto)";
     }
 
     $rule .= "match=" . join( ';', @match ) . " "
