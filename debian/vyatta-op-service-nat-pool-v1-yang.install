@@ -1,0 +1,3 @@
+usr/share/configd/yang/vyatta-op-service-nat-pool-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-nat-pool-op

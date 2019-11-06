@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+"""
+Run the specified vplsh command, translating the output via getInterfaceConfig
+to ensure it contains the correct interface types and keys.
+
+eg, this vplsh output:
+
+{
+    "dataplane": [{
+            "tagnode": "dp0bond1",
+            ...
+        },{
+            "tagnode": "br2",
+            ...
+        },{
+            "tagnode": "dp0vhost2",
+            ...
+        },{
+            "tagnode": "vfp1",
+            ...
+        },{
+            "tagnode": "vfp2",
+            ...
+        },{
+            "tagnode": "dp0bond2",
+            ...
+        },{
+            "tagnode": "br1",
+            ...
+        }
+    ]
+}
+
+will be converted to:
+
+{
+    "bonding": [
+        {
+            "tagnode": "dp0bond1",
+            ...
+        },
+        {
+            "tagnode": "dp0bond2",
+            ...
+        }
+    ],
+    "bridge": [
+        {
+            "tagnode": "br2",
+            ...
+        },
+        {
+            "tagnode": "br1",
+            ...
+        }
+    ],
+    "vhost": [
+        {
+            "name": "dp0vhost2",
+            ...
+        }
+    ],
+    "virtual-feature-point": [
+        {
+            "ifname": "vfp1",
+            ...
+        },
+        {
+            "ifname": "vfp2",
+            ...
+        }
+    ]
+}
+"""
+
+import vplaned
+import argparse
+import json
+from vyatta.interfaces.interfaces import getInterfaceConfig as gid
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--cmd", help="vplsh command to run")
+args = parser.parse_args()
+if (args.cmd is None):
+    exit()
+
+ifc = gid()
+if (ifc is None or not ifc):
+    exit()
+
+outdict = {}
+with vplaned.Controller() as controller:
+    for dp in controller.get_dataplanes():
+        with dp:
+            status = dp.json_command(args.cmd)
+            if (status and status['dataplane']):
+                for x in status['dataplane']:
+                    iftype = ifc[x['tagnode']].type
+                    ifkey = ifc[x['tagnode']].key
+                    x[ifkey] = x.pop('tagnode')
+                    outdict.setdefault(iftype, []).append(x)
+
+print(json.dumps(outdict))

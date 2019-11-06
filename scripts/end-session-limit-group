@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ ${COMMIT_ACTION} = 'DELETE' ] ;
+then
+    # detach from interface(s) before deleting group
+    npf-session-limit.pl --cmd="assign" --type="group" --name="$1"
+
+    vyatta-dp-npf.pl --variant=session-limiter --cmd="delete-group" --group="$1"
+    vyatta-dp-npf.pl --cmd=commit
+else
+    vyatta-dp-npf.pl --variant=session-limiter --cmd="update" --group="$1"
+    vyatta-dp-npf.pl --cmd=commit
+
+    # attach/detach to/from interface(s)
+    npf-session-limit.pl --cmd="assign" --type="group" --name="$1"
+fi

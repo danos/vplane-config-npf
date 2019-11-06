@@ -1,0 +1,267 @@
+module vyatta-op-service-nat-cgnat-v1 {
+    namespace "urn:vyatta.com:mgmt:vyatta-op-service-nat-cgnat:1";
+    prefix vyatta-op-service-nat-cgnat-v1;
+
+    import vyatta-opd-extensions-v1 {
+        prefix opd;
+    }
+    import vyatta-op-show-v1 {
+        prefix show;
+    }
+    import vyatta-op-clear-v1 {
+        prefix clear;
+    }
+    import ietf-inet-types {
+        prefix inet;
+    }
+    import vyatta-op-npf-types-v1 {
+        prefix op-npf-types;
+    }
+
+    organization "AT&T Inc.";
+    contact
+        "AT&T
+         Postal: 208 S. Akard Street
+                 Dallas, TX 25202
+         Web: www.att.com";
+
+    description
+        "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
+
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions
+        are met:
+
+        1. Redistributions of source code must retain the above copyright
+           notice, this list of conditions and the following disclaimer.
+        2. Redistributions in binary form must reproduce the above
+           copyright notice, this list of conditions and the following
+           disclaimer in the documentation and/or other materials provided
+           with the distribution.
+        3. Neither the name of the copyright holder nor the names of its
+           contributors may be used to endorse or promote products derived
+           from this software without specific prior written permission.
+
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+        'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+        LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+        FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+        COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+        INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+        POSSIBILITY OF SUCH DAMAGE.
+
+        SPDX-License-Identifier: BSD-3-Clause
+
+        YANG module for CGNAT operation mode commands";
+
+    revision 2019-07-19 {
+        description "Initial revision.";
+    }
+
+    typedef op-ipv4-addr-opt-mask {
+        type union {
+            type inet:ipv4-address-no-zone {
+                opd:pattern-help "<IPv4-address>";
+                opd:help "An IPv4 address";
+            }
+            type inet:ipv4-prefix {
+                opd:pattern-help "<IPv4-address>/<mask-len>";
+                opd:help "An IPv4 address with mask length";
+            }
+        }
+    }
+
+    grouping session-filter {
+        opd:option subscriber-address {
+            opd:help "Match subscriber IPv4 address with optional mask";
+            type op-ipv4-addr-opt-mask;
+        }
+
+        opd:option subscriber-port {
+            opd:help "Match subscriber port";
+            type inet:port-number {
+                opd:pattern-help "<port>";
+            }
+        }
+
+        opd:option public-address {
+            opd:help "Match public IPv4 address with optional mask";
+            type op-ipv4-addr-opt-mask;
+        }
+
+        opd:option public-port {
+            opd:help "Match public port";
+            type inet:port-number {
+                opd:pattern-help "<port>";
+            }
+        }
+
+        opd:option protocol {
+            opd:help "Match protocol";
+            type string;
+            opd:allowed "allowed-protocols";
+        }
+
+        opd:option interface {
+            opd:help "Match interface name";
+            opd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+            type op-npf-types:op-ifname;
+        }
+
+        opd:option session-id {
+            opd:help "Match session identifier";
+            type uint32 {
+                opd:pattern-help "<session-id>";
+            }
+        }
+
+        opd:option sub-session-id {
+            opd:help "Match sub-session identifier";
+            type uint32 {
+                range 1..max;
+                opd:pattern-help "<sub-session-id>";
+            }
+        }
+
+        opd:option pool {
+            opd:help "Match pool name";
+            type op-npf-types:op-group-name {
+                opd:pattern-help "<pool-name>";
+            }
+            opd:allowed "allowed-nodes service nat pool";
+        }
+    }
+
+    opd:augment /show:show {
+
+        opd:command cgnat {
+            opd:help "Show CGNAT information";
+
+            opd:command summary {
+                opd:help "Show summary of CGNAT information";
+                opd:on-enter "vyatta-dp-cgnat-op --show summary";
+            }
+
+            opd:command errors {
+                opd:help "Show CGNAT error statistics";
+                opd:on-enter "vyatta-dp-cgnat-op --show errors";
+            }
+
+            opd:command policy {
+                opd:help "Show CGNAT policy information";
+                opd:on-enter "vyatta-dp-cgnat-op --show policy";
+
+                opd:argument policyname {
+                    opd:help "Show CGNAT policy information for specified " +
+                             "policy";
+                    type op-npf-types:op-group-name {
+                       opd:pattern-help "<policy-name>";
+                    }
+                    opd:allowed "allowed-nodes service nat cgnat policy";
+                    opd:on-enter "vyatta-dp-cgnat-op --show policy " +
+                                 "--name ${@: -1}";
+                }
+            }
+
+            opd:command subscriber {
+                opd:help "Show CGNAT subscriber information";
+                opd:on-enter "vyatta-dp-cgnat-subs-op --show";
+
+                opd:argument subscriber-prefix {
+                    opd:help "Show CGNAT subscriber information for " +
+                             "matching subscribers";
+                    type op-ipv4-addr-opt-mask;
+                    opd:on-enter "vyatta-dp-cgnat-subs-op --show " +
+                                 "--subs-addr ${@: -1}";
+                }
+
+                opd:command detail {
+                    opd:help "Show detailed CGNAT subscriber information";
+                    opd:on-enter "vyatta-dp-cgnat-subs-op --show --detail";
+
+                    opd:argument subscriber-prefix {
+                        opd:help "Show detailed CGNAT subscriber info for " +
+                                 "matching subscribers";
+                        type op-ipv4-addr-opt-mask;
+                        opd:on-enter "vyatta-dp-cgnat-subs-op --show " +
+                                     "--detail --subs-addr ${@: -1}";
+                    }
+                }
+            }
+
+            opd:command public {
+                opd:help "Show CGNAT public address information";
+                opd:on-enter "vyatta-dp-cgnat-pub-op --show";
+
+                opd:argument subscriber-prefix {
+                    opd:help "Show CGNAT public address information for " +
+                             "matching public addresses";
+                    type op-ipv4-addr-opt-mask;
+                    opd:on-enter "vyatta-dp-cgnat-pub-op --show " +
+                                 "--pub-addr ${@: -1}";
+                }
+            }
+
+            opd:command session {
+                opd:help "Show CGNAT session information";
+                opd:repeatable true;
+                opd:inherit "session filters" {
+                    opd:on-enter "vyatta-dp-cgnat-sess-op-yang show ${@: 4}";
+                }
+                uses session-filter;
+
+                opd:command exclude-inner {
+                    opd:help "Exclude inner per-destination sessions.";
+                }
+                opd:command detail {
+                    opd:help "Show detailed session information.";
+                }
+                opd:option count {
+                    opd:help "The requested number of entries to return.";
+                    description "The requested number of entries to return. If " +
+                                "not provided then all entries will be returned. " +
+                                "Note that more entries than requested may be " +
+                                "returned due to providing all related " +
+                                "destination entries.";
+                    type uint64;
+                }
+                opd:command unordered {
+                    opd:help "Return sessions unordered.";
+                    description "By default, the show session command will fetch " +
+                             "and display the sessions for each subscriber in " +
+                             "order of subscriber address and subscriber port. " +
+                             "If there are a lot of subscribers then this can " +
+                             "take an excessive amount of time as the whole " +
+                             "is iterated over for each subscriber. " +
+                             " " +
+                             "The 'unordered' option may be used in this " +
+                             "situation.  It fetches and displays the session " +
+                             "table in batches of 1000 sessions at a time. " +
+                             "The start of the next batch resumes where the " +
+                             "previous batch ended meaning the session table " +
+                             "is only iterated over once.";
+                }
+            }
+        }
+    }
+
+    opd:augment /clear:clear {
+        opd:command cgnat {
+            opd:help "Clear CGNAT information";
+
+            opd:command session {
+                opd:help "Delete matching CGNAT sessions";
+                opd:repeatable true;
+                opd:inherit "session filters for clearing" {
+                    opd:on-enter "vyatta-dp-cgnat-sess-op-yang clear ${@: 4}";
+                }
+                uses session-filter;
+            }
+        }
+    }
+}

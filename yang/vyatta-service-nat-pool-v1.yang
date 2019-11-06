@@ -1,0 +1,373 @@
+module vyatta-service-nat-pool-v1 {
+    namespace "urn:vyatta.com:mgmt:vyatta-service-nat-pool:1";
+    prefix vyatta-service-nat-pool-v1;
+
+    import configd-v1 {
+        prefix configd;
+    }
+    import ietf-inet-types {
+        prefix inet;
+    }
+    import vyatta-fw-types-v1 {
+        prefix fw-types;
+    }
+    import vyatta-types-v1 {
+        prefix types;
+    }
+    import vyatta-resources-v1 {
+        prefix resources;
+    }
+    import vyatta-resources-group-v1 {
+        prefix res-group;
+    }
+    import vyatta-services-v1 {
+        prefix service;
+    }
+    import vyatta-service-nat-v1 {
+        prefix nat;
+    }
+
+    organization "AT&T Inc.";
+    contact
+        "AT&T
+         Postal: 208 S. Akard Street
+                 Dallas, TX 25202
+         Web: www.att.com";
+
+    description
+        "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
+
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions
+        are met:
+
+        1. Redistributions of source code must retain the above copyright
+           notice, this list of conditions and the following disclaimer.
+        2. Redistributions in binary form must reproduce the above
+           copyright notice, this list of conditions and the following
+           disclaimer in the documentation and/or other materials provided
+           with the distribution.
+        3. Neither the name of the copyright holder nor the names of its
+           contributors may be used to endorse or promote products derived
+           from this software without specific prior written permission.
+
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+        'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+        LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+        FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+        COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+        INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+        POSSIBILITY OF SUCH DAMAGE.
+
+        SPDX-License-Identifier: BSD-3-Clause
+
+        YANG module for NAT pool configuration";
+
+    revision 2019-06-20 {
+        description "Initial revision.";
+    }
+
+    augment /service:service/nat:nat {
+        configd:end "nat-pool-configuration";
+        configd:get-state "nat-pool-get-state";
+        list pool {
+            description "Name of NAT pool. The pool is used to allocate " +
+                        "addresses for packets to be translated to when " +
+                        "using NAT.";
+            configd:help "Name of NAT pool";
+            key "poolname";
+            leaf poolname {
+                description "Name of NAT pool";
+                configd:help "Name of NAT pool";
+                type fw-types:group-name {
+                    configd:help "Name of NAT pool";
+                }
+            }
+            leaf type {
+                mandatory true;
+                description "Type of NAT using the pool";
+                configd:help "Type of NAT using the pool";
+                type enumeration {
+                    enum "CGNAT" {
+                        description "Carrier-grade NAT";
+                        configd:help "Carrier-grade NAT";
+                    }
+                }
+            }
+            leaf address-pooling {
+                mandatory true;
+                description "The address pooling algorithm";
+                configd:help "The address pooling algorithm";
+                type enumeration {
+                    enum "paired" {
+                        description "Internal IP addresses are paired with " +
+                                    "external IP addresses";
+                        configd:help "Internal IP addresses are paired with " +
+                                     "external IP addresses";
+                    }
+                }
+            }
+            leaf address-allocation {
+                mandatory true;
+                description "The address allocation algorithm";
+                configd:help "The address allocation algorithm";
+                type enumeration {
+                    enum "round-robin" {
+                        description "Uses a different address when " +
+                                    "allocating a subscribers first port block";
+                        configd:help "Uses a different address when " +
+                                     "allocating a subscribers first port " +
+                                     "block";
+                    }
+                }
+            }
+            list entry {
+                min-elements 1;
+                max-elements 16;
+                configd:help "Name of the address entry";
+                description "Name of the address entry. Multiple entries can " +
+                            "be configured, using either addresses with " +
+                            "prefixes or ranges.";
+                key "entry-name";
+                leaf "entry-name" {
+                    description "Name of address entry";
+                    configd:help "Name of address entry";
+                    type fw-types:group-name {
+                        configd:help "Name of address mapping";
+                    }
+                }
+                container ip-address {
+                    description "Choose the IPv4 address prefix or range " +
+                                "for this pool entry";
+                    configd:help "IPv4 address settings";
+                    must "count(prefix|range) = 1" {
+                        error-message "One of 'prefix' or 'range' (not both) " +
+                                      "must be set";
+                    }
+                    leaf prefix {
+                        description "IPv4 address and mask";
+                        configd:help "IPv4 address and mask";
+                        type types:ipv4-prefix {
+                            configd:help "IPv4 address and mask";
+                            configd:normalize "normalize ipv4-prefix";
+                        }
+                    }
+                    container range {
+                        presence "IPv4 address range configured";
+                        description "IPv4 address range";
+                        configd:help "IPv4 address range";
+                        leaf start {
+                            mandatory true;
+                            description "Start address";
+                            configd:help "Start address";
+                            type types:ipv4-address;
+                        }
+                        leaf end {
+                            mandatory true;
+                            description "End address";
+                            configd:help "End address";
+                            type types:ipv4-address;
+                        }
+                    }
+                }
+            }
+            container port {
+                description "Choose the mapping algorithms and ports that " +
+                            "source or destination ports of packets can be " +
+                            "mapped to";
+                configd:help "NAT pool port configuration";
+                leaf allocation {
+                    mandatory true;
+                    description "The port allocation algorithm";
+                    configd:help "The port allocation algorithm";
+                    type enumeration {
+                        enum "sequential" {
+                            description "Allocate ports sequentially";
+                            configd:help "Allocate ports sequentially";
+                        }
+                        enum "random" {
+                            description "Allocate ports randomly";
+                            configd:help "Allocate ports randomly";
+                        }
+                    }
+                }
+                container range {
+                    description "Choose the range of " +
+                                "ports to select from";
+                    configd:help "Range of ports to allocate";
+                    must "start <= end" {
+                        error-message "port-range start must be lower than " +
+                                      "or equal to port-range end";
+                    }
+                    must "(end - start + 1) >= ../dynamic-block-allocation/block-size" {
+                        error-message "port-range must be greater than " +
+                            "or equal to block-size";
+                    }
+                    leaf start {
+                        mandatory true;
+                        description "Start of the port range";
+                        configd:help "Start of the port range";
+                        type inet:port-number {
+                            configd:help "Start of port range";
+                        }
+                    }
+                    leaf end {
+                        mandatory true;
+                        description "End of the port range";
+                        configd:help "End of the port range";
+                        type inet:port-number {
+                            configd:help "End of port range";
+                        }
+                    }
+                }
+                container dynamic-block-allocation {
+                    description "NAT pool dynamic block allocation " +
+                                "configuration";
+                    configd:help "NAT pool dynamic block allocation " +
+                                 "configuration";
+                    leaf block-size {
+                        mandatory true;
+                        description "Set the number of ports in a block (multiple of 64 only)";
+                        configd:help "Set the number of ports in a block (multiple of 64 only)";
+                        must "current() mod 64 = 0" {
+                            error-message "The block-size value must be a multiple of 64";
+                        }
+                        type uint16 {
+                            range "64..4096";
+                            configd:help "Number of ports in a block (multiple of 64 only)";
+                        }
+                    }
+                    leaf max-blocks-per-subscriber {
+                        mandatory true;
+                        description "Set the maximum number of blocks per " +
+                                    "subscriber";
+                        configd:help "Set the maximum number of blocks per " +
+                                     "subscriber";
+                        type uint16 {
+                            range "1..32";
+                            configd:help "Maximum number of blocks per " +
+                                         "subscriber";
+                        }
+                    }
+                }
+            }
+            container log {
+                description "Decide if a log message should be made when a " +
+                            "block is allocated to a subscriber or removed " +
+                            "from a subscriber";
+                configd:help "Pool logging configuration";
+                leaf block-allocation {
+                    type empty;
+                    description "Log when block is allocated to a subscriber " +
+                                "or freed";
+                    configd:help "Log when block is allocated to a " +
+                                 "subscriber or freed";
+                }
+            }
+            container blacklist {
+                description "Stop pool addresses from being used for " +
+                            "mappings and clear any existing mappings";
+                configd:help "Stop pool addresses from being used for " +
+                             "mappings and clear any existing mappings";
+                leaf address-group {
+                    description "The address-group identifying the pool " +
+                                "addresses being blacklisted";
+                    configd:help "The address-group identifying the pool " +
+                                 "addresses being blacklisted";
+                    type leafref {
+                        path "/resources:resources/res-group:group/" +
+                             "res-group:address-group/res-group:tagnode";
+                    }
+                }
+            }
+            container state {
+                config false;
+                description "NAT per-pool state and statistics";
+
+                leaf active-mappings {
+                    description "The number of active NAT translation " +
+                                "mappings using this pool.";
+                    type uint64;
+                }
+                leaf total-mapping-requests {
+                    description "Total number of NAT mapping requests made " +
+                                "using this pool (including unsuccessful " +
+                                "requests).";
+                    type uint64;
+                }
+                leaf total-mapping-failures {
+                    description "Total number of NAT mapping requested that " +
+                                "were failed using this pool.";
+                    type uint64;
+                }
+                leaf active-port-blocks {
+                    description "The number of actively used blocks of ports " +
+                                "that this pool is using.";
+                    type uint64;
+                }
+                leaf total-port-blocks {
+                    description "The total number of blocks of ports " +
+                                "allocated using this pool (including blocks " +
+                                "freed).";
+                    type uint64;
+                }
+                leaf total-port-block-failures {
+                    description "The total number of port block allocation " +
+                                "requests using this pool that were failed " +
+                                "(not including " +
+                                "'total-port-block-max-exceeded').";
+                    type uint64;
+                }
+                leaf total-port-block-max-exceeded {
+                    description "The total number of port block allocation " +
+                                "requests using this pool that were failed " +
+                                "due to the maximum number of blocks per " +
+                                "subscriber being exceeded.";
+                    type uint64;
+                }
+                leaf total-port-block-freed {
+                    description "The total number of blocks of ports freed " +
+                                "using this pool.";
+                    type uint64;
+                }
+                leaf last-addr-tcp {
+                    description "Pool address currently being used for TCP " +
+                                "mappings.";
+                    type types:ipv4-address;
+                }
+                leaf last-addr-udp {
+                    description "Pool address currently being used for UDP " +
+                                "mappings.";
+                    type types:ipv4-address;
+                }
+                leaf last-addr-other {
+                    description "Pool address currently being used for " +
+                                "mappings of protocols other than TCP and UDP.";
+                    type types:ipv4-address;
+                }
+                leaf active {
+                    description "Pool active state.";
+                    type boolean;
+                }
+                leaf pool-addr-count {
+                    description "The total number of addresses in the pool.";
+                    type uint64;
+                }
+                leaf attached-policy-count {
+                    description "The number of policies using the pool.";
+                    type uint64;
+                }
+                leaf attached-policy-addr-count {
+                    description "The total number of addresses in all the " +
+                                "policies attached to the pool.";
+                    type uint64;
+                }
+            }
+        }
+    }
+}

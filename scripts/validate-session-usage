@@ -1,0 +1,63 @@
+#! /usr/bin/perl
+#
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# This is called during Yang validation for portmonitor configuration
+#
+# It prevents any configuration under "session" (eg "session application")
+# since this indicates a stateful firewall.
+# NB this can't be checked in YANG because session/* doesn't exist
+# in non-DPI builds.
+#
+# It checks for stateful configs - 'state enable' and 'session'
+# and warns that these won't have the expected effect.
+#
+# These are only warnings, so it always exits with 0
+# to cause the Yang validation to succeed.
+
+use strict;
+use warnings;
+use lib '/opt/vyatta/share/perl5';
+use Vyatta::Config;
+use Getopt::Long;
+
+my $fw_name;
+my $variant;
+
+GetOptions( 'name=s' => \$fw_name, 'variant=s' => \$variant ) or die "Bad arguments";
+
+die "Bad arguments" if (!defined($fw_name) || !defined($variant));
+
+my $prefix = 'security firewall name';
+my $config = Vyatta::Config->new();
+my %msgs = (
+    "portmonitor"  => "as a portmonitor filter",
+);
+my $msg = "configured $msgs{$variant}";
+
+foreach my $rule ( $config->listNodes("$prefix $fw_name rule") ) {
+
+    $config->setLevel("$prefix $fw_name rule $rule");
+
+    if ($config->exists("session")) {
+
+        $config->setLevel("$prefix $fw_name rule $rule session");
+
+        if (scalar($config->listNodes()) > 0) {
+            print "Firewall '$fw_name' has session rules which can't be $msg\n";
+            exit 1; # failed
+        }
+
+        print "Warning: firewall '$fw_name' is sessionless when $msg\n";
+    }
+
+    if ($config->exists("state enable")) {
+        print "Warning: firewall '$fw_name' is not stateful when $msg\n";
+    }
+
+    $config->setLevel('');
+}
+
+exit 0; # success

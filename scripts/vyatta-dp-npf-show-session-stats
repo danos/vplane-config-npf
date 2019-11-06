@@ -1,0 +1,99 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+# All Rights Reserved.
+# Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Config::Tiny;
+use List::Util qw( max min );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::Aggregate;
+use Vyatta::SessionStats;
+
+sub aggregate_sess_stats_responses {
+    my ( $dp_arr, $dp_responses ) = @_;
+    return aggregate_npf_responses( $dp_arr, $dp_responses,
+        "Vyatta::SessionStats" );
+}
+
+sub format_session_statistics {
+    my $decoded = shift;
+    my $stats   = $decoded->{config}->{sessions}->{statistics};
+
+    my $max  = $stats->{max};
+    my $used = $stats->{used};
+
+    # Availability can't ever be less than zero, nor can the percentage
+    # available ever be less than zero either. The used percentage can,
+    # however, exceed the set allocation.
+    my $avail = max( 0, $max - $used );
+    my $used_per = 100.0 * ( $used / $max );
+    my $avail_per = max( 0.0, 100.0 - $used_per );
+
+    printf( "Available (percentage):\t%d\t(%.2f%%)\n", $avail, $avail_per );
+    printf( "Used (percentage):\t%d\t(%.2f%%)\n",      $used,  $used_per );
+    printf( "NATed:\t\t\t%d\n", $stats->{nat} );
+    printf( "NAT64:\t\t\t%d\n", $stats->{nat64} );
+    printf( "NAT46:\t\t\t%d\n", $stats->{nat46} );
+    print("\n");
+    print("Detailed (by state):\n\n");
+    print("\tTCP\n");
+    printf( "\t\tSYN SENT:\t%d\n",     $stats->{tcp}->{syn_sent} );
+    printf( "\t\tSYN RECEIVED:\t%d\n", $stats->{tcp}->{syn_received} );
+    printf( "\t\tESTABLISHED:\t%d\n",  $stats->{tcp}->{established} );
+    printf( "\t\tFIN WAIT:\t%d\n",     $stats->{tcp}->{fin_wait} );
+    printf( "\t\tCLOSE WAIT:\t%d\n",   $stats->{tcp}->{close_wait} );
+    printf( "\t\tLAST ACK:\t%d\n",     $stats->{tcp}->{last_ack} );
+    printf( "\t\tTIME WAIT:\t%d\n",    $stats->{tcp}->{time_wait} );
+    printf( "\t\tRST RECEIVED:\t%d\n", $stats->{tcp}->{rst_received} );
+    printf( "\t\tCLOSE:\t\t%d\n",      $stats->{tcp}->{closed} );
+    printf( "\t\tLISTEN:\t\t%d\n",     $stats->{tcp}->{closing} );
+    print("\n");
+    print("\tUDP\n");
+    printf( "\t\tNEW:\t\t%d\n",       $stats->{udp}->{new} );
+    printf( "\t\tESTABLISHED:\t%d\n", $stats->{udp}->{established} );
+    printf( "\t\tCLOSE:\t\t%d\n",     $stats->{udp}->{closed} );
+    print("\n");
+    print("\tICMP Echo\n");
+    printf( "\t\tNEW:\t\t%d\n",       $stats->{icmp}->{new} );
+    printf( "\t\tESTABLISHED:\t%d\n", $stats->{icmp}->{established} );
+    printf( "\t\tCLOSE:\t\t%d\n",     $stats->{icmp}->{closed} );
+    print("\n");
+    print("\tOther\n");
+    printf( "\t\tNEW:\t\t%d\n",       $stats->{other}->{new} );
+    printf( "\t\tESTABLISHED:\t%d\n", $stats->{other}->{established} );
+    printf( "\t\tCLOSE:\t\t%d\n",     $stats->{other}->{closed} );
+}
+
+if ( $#ARGV >= 0 ) {
+    print "Usage: $0\n";
+    exit 1;
+}
+
+my $fabric;
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+my $dp_rsp =
+  vplane_exec_cmd( "session-op show sessions summary", $dp_ids, $dp_conns, 1 );
+my $agg_rsp = aggregate_sess_stats_responses( $dp_ids, $dp_rsp );
+format_session_statistics($agg_rsp);
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

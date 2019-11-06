@@ -1,0 +1,144 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Config::Tiny;
+use JSON qw( decode_json );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::FWHelper qw(get_proto_name);
+
+sub print_nat {
+    my ( $entry, $nat_type, $nat ) = @_;
+
+    return if !defined ( $nat );
+
+    my $foo = "";
+
+    return if ( $nat_type =~ /source/ && $nat->{trans_type} != 2 );
+
+    return if ($nat_type =~ /destination/ && $nat->{trans_type} == 2 );
+
+    if ( $nat->{trans_type} == 2 ) {
+        $foo = "$entry->{src_addr}:$entry->{src_port}";
+    } else {
+        $foo = "$entry->{dst_addr}:$entry->{dst_port}";
+    }
+
+    print $foo;
+
+    my $ct = 4 - ( ( length($foo) + 1 ) / 8 );
+    for ( ; $ct >= 1 ; $ct-- ) {
+        print "\t";
+    }
+
+    my $trans_foo = "$nat->{trans_addr}:$nat->{trans_port}";
+
+    print $trans_foo;
+
+    $ct = 4 - ( ( length($trans_foo) + 1 ) / 8 );
+    for ( ; $ct >= 1 ; $ct-- ) {
+        print "\t";
+    }
+
+    my $proto = get_proto_name( $entry->{proto} );
+    $proto = $entry->{proto} if !defined($proto);
+    print $proto . "\t";
+
+    my $t = $entry->{time_to_expire};
+    if ( $t < 0 ) {
+        $t = 0;
+    }
+
+    print $t . "\n";
+}
+
+sub format_nat_trans {
+    my $decoded     = shift;
+    my $nat_type    = shift;
+    my $show_header = shift;
+
+    if ($show_header) {
+        print("Pre-NAT\t\t\tPost-NAT\t\tProt\tTimeout\n");
+        print("\n");
+    }
+
+    my $params;
+    my $entry_count = 0;
+    if ( defined $decoded && defined $decoded->{config}->{sessions} ) {
+        my %entries = %{ $decoded->{config}->{sessions} };
+
+        $entry_count = keys(%entries);
+
+        foreach my $entry ( sort { $a <=> $b } keys %entries ) {
+
+		my $features_count = $entries{$entry}->{features_count};
+
+		# Loop through all feature records 
+		for ( my $i = 0; $i < $features_count; $i++ ) {
+			my $feature = $entries{$entry}->{features}->[$i];
+
+			# is this NPF?
+			next if ( $feature->{type} != 3 );
+
+			print_nat($entries{$entry}, $nat_type, $feature->{nat})
+		}
+
+        }
+    }
+    return $entry_count;
+}
+
+sub usage {
+    print "Usage: $0 source|destination\n";
+    exit 1;
+}
+
+usage() if ( $#ARGV != 0 );
+usage() if ( ( $ARGV[0] ne "source" ) && ( $ARGV[0] ne "destination" ) );
+
+my $fabric;
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+my $show_header = 1;
+
+for my $dp_id ( sort @{$dp_ids} ) {
+    my $sock = ${$dp_conns}[$dp_id];
+
+    next unless $sock;
+
+    my $start     = 0;
+    my $req_count = 1000;
+    my $ret_count;
+    do {
+        my $t = $sock->execute(
+            "session-op show sessions full " . $start . " " . $req_count );
+        if ( defined($t) && $t !~ /^\s*$/ ) {
+            my $decoded = decode_json($t);
+            $ret_count = format_nat_trans( $decoded, $ARGV[0], $show_header );
+        } else {
+            $ret_count = 0;
+        }
+        $show_header = 0;
+        $start += $req_count;
+    } while ( $ret_count == $req_count );
+}
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

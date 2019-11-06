@@ -1,0 +1,4 @@
+#!/bin/bash
+declare -A cmdval=(["SET"]="update" ["DELETE"]="delete" ["ACTIVE"]="update")
+
+npf-session-limit.pl --cmd=${cmdval[$COMMIT_ACTION]} --type="param" --name="$1"

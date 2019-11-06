@@ -1,0 +1,206 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run after there has been a change under 'service nat'.
+It looks for changes in the nat pools and sends the changes to
+the dataplane."""
+
+
+import sys
+import getopt
+
+from collections import defaultdict
+from vyatta import configd
+from vyatta.npf.npf_debug import NpfDebug
+from vyatta.npf.npf_store import store_cfg
+
+FORCE = False
+
+CONFIG_CANDIDATE = configd.Client.CANDIDATE
+CONFIG_RUNNING = configd.Client.RUNNING
+
+BASE_ADDRESS_PATH = "service nat pool"
+
+# class used for printing debugs
+dbg = NpfDebug()
+
+
+# Used for easy assignment of nested dictionaries
+def nested_dict():
+    return defaultdict(nested_dict)
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def set_rules_in_nat_pool(key, cmd):
+    fcmd = "nat-cfg pool {} ".format(cmd)
+    store_cfg(key, fcmd, "SET", dbg)
+
+
+def delete_nat_pool(key, cmd):
+    fcmd = "nat-cfg pool {}".format(cmd)
+    store_cfg(key, fcmd, "DELETE", dbg)
+
+
+def process_options():
+    global FORCE
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "fd", ['force', 'debug'])
+
+    except getopt.GetoptError as r:
+        err(r)
+        err("usage: {} [-f|--force] [-d|--debug] ".format(sys.argv[0]))
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ('-f', '--force'):
+            FORCE = True
+        elif opt in ('-d', '--debug'):
+            dbg.enable()
+
+
+def send_nat_pool_config(commands):
+    dbg.pprint("send_nat_pool_config()")
+
+    for poolname in commands:
+
+        rc = commands[poolname].get('running')
+        cc = commands[poolname].get('cand')
+
+        if rc is None:
+            if cc is not None:
+                # this is new configuratiom
+                set_rules_in_nat_pool(cc[0], "add {} {}".format(poolname,
+                                                                cc[1]))
+        else:
+            if cc is None:
+                dbg.pprint("cc is None")
+                # configuration is being deleted
+                delete_nat_pool(rc[0], "delete {}".format(poolname))
+            else:
+                # configuration is being updated
+                set_rules_in_nat_pool(cc[0], "add {} {}".format(poolname,
+                                                                cc[1]))
+
+
+def build_nat_pool_config(commands, cfg, tree):
+    for poolname in cfg:
+        key = "{} pool {}".format(BASE_ADDRESS_PATH, poolname)
+        cmd = ""
+        dbg.pprint("poolname: {}".format(poolname))
+        p = cfg[poolname]
+
+        if 'type' in p:
+            cmd += "type={} ".format(p['type'].lower())
+
+        if 'address-pooling' in p:
+            cmd += "addr-pooling={} ".format(p['address-pooling'])
+
+        if 'address-allocation' in p:
+            cmd += "addr-alloc={} ".format(p['address-allocation'])
+
+        if 'entry' in p:
+            for entryname in p['entry']:
+                if 'ip-address' in p['entry'][entryname]:
+                    ipa = p['entry'][entryname]['ip-address']
+                    if 'prefix' in ipa:
+                        cmd += "prefix={}/{} ".format(entryname, ipa['prefix'])
+                    if 'range' in ipa:
+                        addr_range = ipa['range']
+                        if 'start' in addr_range and 'end' in addr_range:
+                            cmd += "address-range={}/{}-{} ".format(
+                                entryname, addr_range['start'],
+                                addr_range['end'])
+
+        if 'port' in p:
+            if 'allocation' in p['port']:
+                cmd += "port-alloc={} ".format(p['port']['allocation'])
+            if 'range' in p['port']:
+                port_range = p['port']['range']
+                if 'start' in port_range and 'end' in port_range:
+                    cmd += "port-range={}-{} ".format(port_range['start'],
+                                                      port_range['end'])
+            if 'dynamic-block-allocation' in p['port']:
+                dba = p['port']['dynamic-block-allocation']
+                if 'block-size' in dba:
+                    cmd += "block-size={} ".format(dba['block-size'])
+                if 'max-blocks-per-subscriber' in dba:
+                    cmd += "max-blocks={} ".format(
+                        dba['max-blocks-per-subscriber'])
+
+        log_pba = 'no'
+        if 'log' in p:
+            if 'block-allocation' in p['log']:
+                log_pba = 'yes'
+        cmd += "log-pba={} ".format(log_pba)
+
+        if 'blacklist' in p:
+            if 'address-group' in p['blacklist']:
+                cmd += "blacklist={} ".format(p['blacklist']['address-group'])
+
+        if poolname not in commands.keys():
+            commands[poolname] = {}
+        commands[poolname][tree] = (key, cmd)
+        dbg.pprint("POOL: {}; CMD: {}".format(poolname, cmd))
+
+
+def program_nat_pool_config():
+    global FORCE
+    dbg.pprint("program_nat_pool_config()")
+
+    commands = {}
+
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        err("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
+    try:
+        status = client.node_get_status(CONFIG_CANDIDATE, BASE_ADDRESS_PATH)
+
+        if status == client.UNCHANGED and not FORCE:
+            dbg.pprint("unchanged: {} so no work to do".
+                       format(BASE_ADDRESS_PATH))
+            return 0
+
+        try:
+            cand_cfg = (client.tree_get_dict(BASE_ADDRESS_PATH,
+                                             CONFIG_CANDIDATE, 'internal')
+                        ['pool'])
+            dbg.pprint("BUILD CANDIDATE")
+            build_nat_pool_config(commands, cand_cfg, 'cand')
+        except configd.Exception:
+            dbg.pprint("failed getting candidtate tree for {}".
+                       format(BASE_ADDRESS_PATH))
+
+    except configd.Exception:
+        dbg.pprint("there is no configuration under {}".format(
+                   BASE_ADDRESS_PATH))
+
+    try:
+        running_cfg = client.tree_get_dict(BASE_ADDRESS_PATH, CONFIG_RUNNING,
+                                           'internal')['pool']
+        dbg.pprint("BUILD RUNNING")
+        build_nat_pool_config(commands, running_cfg, 'running')
+    except configd.Exception:
+        dbg.pprint("failed getting running tree for {}".format(
+                   BASE_ADDRESS_PATH))
+
+    # send commands to the dataplane using cstore which will change
+    # the running configuration into the candidate configuration
+    send_nat_pool_config(commands)
+    return 0
+
+
+if __name__ == "__main__":
+    process_options()
+    ret = program_nat_pool_config()
+    exit(ret)

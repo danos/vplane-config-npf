@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Validate IP Packet Filter configuration.
+#
+
+from vyatta import configd
+
+
+BASE_ADDRESS_PATH = "security ip-packet-filter"
+
+STATUS_SUCCESS = 0
+STATUS_FAILED = 1
+
+
+def validate_ippf_interface_cfg(client):
+
+    try:
+        cfg = client.tree_get_dict(BASE_ADDRESS_PATH)
+    except configd.Exception:
+        # no ip-packet-filter configuration
+        return STATUS_SUCCESS
+
+    ifcfg = cfg["ip-packet-filter"].get("interface")
+    if not ifcfg:
+        # no ip-packet-filter interface configuration
+        return STATUS_SUCCESS
+
+    status = STATUS_SUCCESS
+
+    for interface in ifcfg:
+        ifname = interface["interface-name"]
+        for direction in ["in", "out"]:
+            if interface.get(direction):
+                # Less than two groups is fine.
+                # Yang prevents more than two groups.
+                # So we only need to compare the address families
+                # if there are exactly two groups.
+
+                if len(interface[direction]) == 2:
+
+                    # Get group names
+                    groupName1 = interface[direction][0]
+                    groupName2 = interface[direction][1]
+
+                    af1 = af2 = None
+
+                    # Walk group list to extract AFs
+                    for group in cfg["ip-packet-filter"]["group"]:
+                        if group["group-name"] == groupName1:
+                            af1 = group["ip-version"]
+
+                        elif group["group-name"] == groupName2:
+                            af2 = group["ip-version"]
+
+                    # Finally we can compare the AFs
+                    if af1 == af2:
+                        status = STATUS_FAILED
+                        print("\n[{} interface {} {}]\n\n"
+                              "Configure only one group per address-family"
+                              .format(BASE_ADDRESS_PATH, ifname, direction))
+
+    return status
+
+
+def validate_ippf_main():
+
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        print("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
+    return validate_ippf_interface_cfg(client)
+
+
+if __name__ == "__main__":
+    ret = validate_ippf_main()
+    exit(ret)

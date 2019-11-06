@@ -1,0 +1,154 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Config::Tiny;
+use JSON qw( decode_json );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::Aggregate;
+use Vyatta::NPTv6Stats;
+
+my ( $dp_ids, $dp_conns, $local_controller, $fabric );
+
+# get list of interfaces on the system via sysfs
+sub getInterfaces {
+    opendir( my $net_ifs, '/sys/class/net' )
+      or die "can't open /sys/class/net: $!\n";
+
+    # Exclude .spathintf and tunnel lower layers
+    my @interfaces =
+      grep { !/^(\..*|gretap0|gre0|tunl0|ip6tunl0|sit0)$/ } readdir $net_ifs;
+    closedir $net_ifs;
+
+    return @interfaces;
+}
+
+sub print_stats {
+    my ( $info, $show_params ) = @_;
+
+    # print Dumper $info;
+
+    my $ifname = @$show_params[0];
+    my $tname  = @$show_params[1];
+
+    my $fmt_str = "%-15s %-15s %4s %15s %15s\n";
+
+    printf( $fmt_str, "intf", "rule", "dirn", "dropped", "translated" );
+    printf( $fmt_str, "----", "----", "----", "-------", "----------" );
+
+    foreach my $intf ( sort keys %{$info} ) {
+        next if ( defined $ifname && $ifname ne $intf );
+        my $intf_info = $info->{$intf};
+        foreach my $rule ( sort keys %{$intf_info} ) {
+            next if ( defined $tname && $tname ne $rule );
+            my $rule_info = $intf_info->{$rule};
+            my $pkts_in   = $rule_info->{stats_in}->{packets};
+            my $drops_in  = $rule_info->{stats_in}->{drops};
+            my $trans_in  = $pkts_in - $drops_in;
+            my $pkts_out  = $rule_info->{stats_out}->{packets};
+            my $drops_out = $rule_info->{stats_out}->{drops};
+            my $trans_out = $pkts_out - $drops_out;
+            printf( $fmt_str, $intf, $rule, "in",  $drops_in,  $trans_in );
+            printf( $fmt_str, $intf, $rule, "out", $drops_out, $trans_out );
+        }
+    }
+}
+
+sub print_rules {
+    my ( $info, $show_params ) = @_;
+
+    # print Dumper $info;
+
+    my $ifname = @$show_params[0];
+    my $tname  = @$show_params[1];
+
+    my $fmt_str = "%-15s %-15s %4s %25s %25s\n";
+
+    printf( $fmt_str, "intf", "rule", "icmp", "inside", "outside" );
+    printf( $fmt_str, "----", "----", "----", "------", "-------" );
+
+    foreach my $intf ( sort keys %{$info} ) {
+        next if ( defined $ifname && $ifname ne $intf );
+        my $intf_info = $info->{$intf};
+        foreach my $rule ( sort keys %{$intf_info} ) {
+            next if ( defined $tname && $tname ne $rule );
+            my $rule_info = $intf_info->{$rule};
+            my $in        = $rule_info->{inside};
+            my $out       = $rule_info->{outside};
+            my $err       = $rule_info->{icmperr} ? "yes" : "no";
+            printf( $fmt_str, $intf, $rule, $err, $in, $out );
+        }
+    }
+}
+
+sub process_rulesets {
+    my ( $variant, $show_params ) = @_;
+
+    my $intf_sel="all:";
+    if ( $#$show_params >= 0 ) {
+	    $intf_sel="interface:".@$show_params[0];
+    }
+
+    my $dp_rsp = vplane_exec_cmd( "npf-op show $intf_sel nptv6-in nptv6-out", $dp_ids, $dp_conns, 1 );
+
+    my $agg_rsp =
+      aggregate_npf_responses( $dp_ids, $dp_rsp, "Vyatta::NPTv6Stats" );
+    return if ( !defined($agg_rsp) || !defined $agg_rsp->{rule_hash} );
+
+    # print Dumper $agg_rsp;
+
+    if ( defined($variant) && $variant eq 'stats' ) {
+        print_stats( $agg_rsp->{rule_hash}, $show_params);
+    }
+    else {
+        print_rules( $agg_rsp->{rule_hash}, $show_params);
+    }
+}
+
+sub usage {
+    print "Usage: $0 [--variant=stats] [interface [ruleset]]\n";
+    exit 1;
+}
+
+my $variant;
+
+GetOptions( 'variant=s' => \$variant )
+  or usage();
+
+usage()
+  if ( defined($variant)
+    && ( $variant ne "stats" ) );
+
+if ( $#ARGV >= 0 ) {
+    my $ifname = $ARGV[0];
+
+    my @valid_intfs = getInterfaces();
+
+    unless ( grep $_ eq $ifname, @valid_intfs ) {
+        warn "'$ifname' is not a valid interface\n";
+        exit 1;
+    }
+}
+
+( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+process_rulesets( $variant, \@ARGV );
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

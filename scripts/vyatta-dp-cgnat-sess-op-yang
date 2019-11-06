@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+"""This takes filter parameters passed in from op-mode commands, and
+   converts into command line options which are passed into
+   vyatta-dp-cgnat-sess-op. It handles op-mode commands:
+   'show cgnat session' and 'clear cgnat session'. """
+
+import os
+import sys
+import subprocess
+
+PROGNAME = os.path.basename(__file__)
+OP_CMD = '/opt/vyatta/sbin/vyatta-dp-cgnat-sess-op'
+
+actions = {
+    'show': '--show',
+    'clear': '--clear',
+}
+
+filters = {
+    'detail': '--detail',
+    'exclude-inner': '--exclude-inner',
+    'subscriber-address': '--subs-addr',
+    'subscriber-port': '--subs-port',
+    'interface': '--interface',
+    'public-address': '--pub-addr',
+    'public-port': '--pub-port',
+    'session-id': '--id1',
+    'sub-session-id': '--id2',
+    'pool': '--pool',
+    'count': '--count',
+    'protocol': '--proto',
+    'unordered': '--unordered',
+}
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def op_mode_to_command(argv):
+    params = [OP_CMD]
+
+    # remove the program name
+    argv.pop(0)
+
+    if not argv:
+        err("{}: missing action parameter".format(PROGNAME))
+        return
+
+    # Action commands are always first
+    action_params = actions.get(argv[0])
+    if action_params is None:
+        err("{}: unknown action: {}".format(PROGNAME, argv[0]))
+        return
+    params.append(action_params)
+    argv.pop(0)
+
+    while argv:
+        filter_param = filters.get(argv[0])
+        if filter_param is None:
+            err("{}: unknown filter: {}".format(PROGNAME, argv[0]))
+            return
+
+        params.append(filter_param)
+
+        if filter_param not in ('--detail', '--exclude-inner', '--unordered'):
+            if len(argv) < 2:
+                err("{}: missing parameter for: {}".format(PROGNAME, argv[0]))
+                return
+            params.append(argv[1])
+            argv.pop(0)
+        argv.pop(0)
+
+    return params
+
+
+if __name__ == "__main__":
+    cmd_params = op_mode_to_command(sys.argv)
+    if cmd_params:
+        cp = subprocess.run(cmd_params)
+        ret = cp.returncode
+    else:
+        ret = 2
+    exit(ret)

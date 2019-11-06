@@ -1,0 +1,8 @@
+#!/bin/bash
+INTF=$1
+
+if [ "$INTF" != "lo" ]
+then
+	>2& echo "Failed: Firewalls can only be assigned to 'lo'"
+	exit 1
+fi

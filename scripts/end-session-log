@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+"""Script to configure session logging in the dataplane"""
+
+from vyatta import configd
+from vplaned import Controller
+
+
+def session_store_cfg(path, creation_value, deletion_value, periodic_value,
+                      action):
+    with Controller() as ctrl:
+        config = "session-cfg logging creation={} deletion={} periodic={}".\
+            format(creation_value, deletion_value, periodic_value)
+        ctrl.store(path, config, action=action)
+
+
+def session_store_cfg_deletion(path):
+    session_store_cfg(path, "off", "off", "0", "DELETE")
+
+
+def main():
+
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        print("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
+    path = "system session log"
+
+    try:
+        cfg = client.tree_get_dict(path)['log']
+    except configd.Exception:
+        # no session logging configuration, so ensure it is disabled
+        session_store_cfg_deletion(path)
+        return 0
+
+    if 'creation' in cfg:
+        creation_value = "on"
+    else:
+        creation_value = "off"
+
+    if 'deletion' in cfg:
+        deletion_value = "on"
+    else:
+        deletion_value = "off"
+
+    if 'periodic' in cfg:
+        periodic_value = cfg['periodic']
+    else:
+        periodic_value = "0"
+
+    session_store_cfg(path, creation_value, deletion_value, periodic_value,
+                      "SET")
+
+    return 0
+
+
+if __name__ == '__main__':
+    main()

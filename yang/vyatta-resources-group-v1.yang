@@ -1,0 +1,339 @@
+module vyatta-resources-group-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-resources-group:1";
+	prefix vyatta-resources-group-v1;
+
+	import vyatta-types-v1 {
+		prefix types;
+	}
+
+	import vyatta-resources-v1 {
+		prefix resources;
+	}
+
+	import configd-v1 {
+		prefix configd;
+	}
+
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+
+	import vyatta-dscp-v1 {
+		prefix dscp;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		 All rights reserved.
+		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta resource groups";
+
+	revision 2019-06-26 {
+		description "Update resource group commit handling
+			     to improve performance even more.";
+	}
+	revision 2019-02-08 {
+		description "Update resource group validation and commit
+			     handling to improve performance.";
+	}
+	revision 2018-09-12 {
+		description "Updated description and copyright.";
+	}
+	revision 2017-09-07 {
+		description "Rename end-icmp-group to end-resource-group.
+			     Replace end-port-group by end-resource-group.
+			     Add support for DSCP and protocol resource
+			     groups. Add support for address group range.";
+	}
+	revision 2017-06-23 {
+		description "Let group addresses use mask 32 for IPv4 and
+			     mask 128 for IPv6";
+	}
+	revision 2016-10-25 {
+		description "Add warning validate script for address-groups named masquerade";
+	}
+	revision 2016-08-09 {
+		description "Add descriptions to many nodes.
+			     Move scripts from under tmplscripts.";
+	}
+	revision 2016-08-03 {
+		description "Increase address-group max-elements from 32 to 1024";
+	}
+	revision 2016-03-28 {
+		description "Remove use of bash in action scripts";
+	}
+	revision 2015-10-13 {
+		description "Initial revision.";
+	}
+
+	typedef group-address {
+		type union {
+			type types:ipv4-address {
+				configd:help "IP address to match";
+			}
+			type types:ipv4-prefix {
+				configd:help "IP subnet to match";
+				configd:normalize "normalize ipv4-prefix";
+			}
+			type types:ipv6-address {
+				configd:help "IPv6 address to match";
+			}
+			type types:ipv6-prefix {
+				configd:help "IPv6 subnet to match";
+				configd:normalize "normalize ipv6-prefix";
+			}
+		}
+	}
+
+	typedef group-port {
+		type union {
+			type fw-types:service-name;
+			type types:port;
+			type types:port-range;
+		}
+	}
+
+	grouping group-icmp-numeric {
+		list type {
+			description "Choose a type (and optional code) by number";
+			configd:help "Choose a type (and optional code) by number";
+			key type-number;
+			leaf type-number {
+				type fw-types:icmp-type-number;
+				description "ICMP type value";
+				configd:help "ICMP type value";
+			}
+			list code {
+				key code-number;
+				leaf code-number {
+					type fw-types:icmp-code-number;
+				}
+				description "ICMP code value";
+				configd:help "ICMP code value";
+			}
+		}
+	}
+
+	augment /resources:resources {
+		container group {
+			configd:priority "300";
+			description "Group of resources";
+			configd:help "Group of resources";
+			configd:validate "validate-resource-groups";
+			configd:end "end-resource-groups";
+			list icmp-group {
+				description "Group of IPv4 ICMP";
+				configd:help "Group of IPv4 ICMP";
+				key "group-name";
+				leaf group-name {
+					type fw-types:group-name;
+					description "Group of IPv4 ICMP";
+					configd:help "Group of IPv4 ICMP";
+				}
+				leaf description {
+					type string;
+					description "IPv4 ICMP-group description";
+					configd:help "IPv4 ICMP-group description";
+				}
+				leaf-list name {
+					type fw-types:icmpv4-symbolic;
+					description "Choose a type (and optional code) by name";
+					configd:help "Choose a type (and optional code) by name";
+				}
+				uses group-icmp-numeric;
+				must "count(name) + count(type/type-number) >= 1" {
+					error-message "An 'icmp-group' must have at least one member";
+				}
+			}
+			list icmpv6-group {
+				description "Group of IPv6 ICMP";
+				configd:help "Group of IPv6 ICMP";
+				key "group-name";
+				leaf group-name {
+					type fw-types:group-name;
+					description "Group of IPv6 ICMP";
+					configd:help "Group of IPv6 ICMP";
+				}
+				leaf description {
+					type string;
+					description "IPv6 ICMP-group description";
+					configd:help "IPv6 ICMP-group description";
+				}
+				leaf-list name {
+					type fw-types:icmpv6-symbolic;
+					description "Choose a type (and optional code) by name";
+					configd:help "Choose a type (and optional code) by name";
+				}
+				uses group-icmp-numeric;
+				must "count(name) + count(type/type-number) >= 1" {
+					error-message "An 'icmpv6-group' must have at least one member";
+				}
+			}
+			list port-group {
+				description "Group of ports";
+				configd:help "Group of ports";
+				key "tagnode";
+				leaf tagnode {
+					description "Port-group name";
+					type fw-types:group-name {
+						configd:help "Port-group name";
+						configd:syntax "syntax-check-port-group-name";
+					}
+					configd:help "Group of ports";
+				}
+				leaf description {
+					type string;
+					description "Port-group description";
+					configd:help "Port-group description";
+				}
+				leaf-list port {
+					type group-port;
+					ordered-by "user";
+					description "Port-group member";
+					configd:help "Port-group member";
+					max-elements 500;
+				}
+			}
+			list address-group {
+				description "Group of addresses and networks";
+				configd:help "Group of addresses and networks";
+				max-elements 1024;
+				key "tagnode";
+				leaf tagnode {
+					description "Address-group name";
+					type fw-types:group-name {
+						configd:help "Address-group name";
+					}
+					configd:help "Group of addresses and networks";
+				}
+				leaf description {
+					type string;
+					description "Address-group description";
+					configd:help "Address-group description";
+				}
+				leaf-list address {
+					type group-address;
+					ordered-by "user";
+					description "Address-group member";
+					configd:help "Address-group member";
+				}
+				list address-range {
+					description "Address range";
+					configd:help "Address range";
+					key "start";
+					leaf start {
+						description "Start address";
+						configd:help "Start address";
+						type union {
+							type types:ipv4-address {
+								configd:help "IPv4 address";
+							}
+							type types:ipv6-address {
+								configd:help "IPv6 address";
+							}
+						}
+					}
+					leaf to {
+						description "End address";
+						configd:help "End address";
+						mandatory "true";
+						must "(contains(current(), '.') and contains((../start), '.')) or (contains(current(), ':') and contains((../start), ':'))" {
+							error-message "Cannot apply IPv4 and IPv6 addresses to a single range.  Use single address family per range";
+						}
+						type union {
+							type types:ipv4-address {
+								configd:help "IPv4 address";
+							}
+							type types:ipv6-address {
+								configd:help "IPv6 address";
+							}
+						}
+					}
+				}
+			}
+			list dscp-group {
+				description "Group of DSCP values";
+				configd:help "Group of DSCP values";
+				key "group-name";
+				leaf group-name {
+					type fw-types:group-name;
+					description "Group name for DSCP values";
+					configd:help "Group name for DSCP values";
+				}
+				leaf description {
+					type string;
+					description "DSCP group description";
+					configd:help "DSCP group description";
+				}
+				leaf-list dscp {
+					type dscp:dscp-name-or-value;
+					description "DSCP value to match in an incoming IP header";
+					configd:help "DSCP value to match in an incoming IP header";
+					min-elements 1;
+				}
+			}
+			list protocol-group {
+				description "Group of IP L4 protocols";
+				configd:help "Group of IP L4 protocols";
+				key "group-name";
+				leaf group-name {
+					type fw-types:group-name;
+					description "Group name for IP L4 protocols";
+					configd:help "Group name for IP L4 protocols";
+				}
+				leaf description {
+					type string;
+					description "Protocol group description";
+					configd:help "Protocol group description";
+				}
+				leaf-list protocol {
+					type string {
+						configd:syntax "syntax-check-protocols";
+					}
+					description "IP L4 protocol to match";
+					configd:help "IP L4 protocol to match";
+					configd:allowed "allowed-protocols";
+					min-elements 1;
+				}
+			}
+		}
+	}
+}

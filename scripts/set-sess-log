@@ -1,0 +1,6 @@
+#!/bin/bash
+
+declare -A cmdval=(["SET"]="enable" ["DELETE"]="disable" ["ACTIVE"]="enable")
+
+vyatta-dp-npf-session-log.pl --cmd=${cmdval[$COMMIT_ACTION]} \
+	--proto="$1" --state="$2"

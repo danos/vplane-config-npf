@@ -1,0 +1,3 @@
+usr/share/configd/yang/vyatta-service-nat-nptv6-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-npf-nat-nptv6.pl

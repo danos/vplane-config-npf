@@ -1,0 +1,232 @@
+module vyatta-op-resources-group-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-op-resources-group:1";
+	prefix vyatta-op-resources-group-v1;
+
+	import vyatta-opd-extensions-v1 {
+		prefix opd;
+	}
+	import vyatta-op-show-v1 {
+		prefix show;
+	}
+	
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for resources-group-related operation mode commands.";
+
+	revision 2018-06-25 {
+		description "For pattern-help use opd instead of configd.";
+	}
+
+	revision 2017-09-11 {
+		description "Initial file.";
+	}
+
+	opd:augment /show:show {
+
+		opd:command address-group {
+			opd:help "Show address-group information";
+			opd:on-enter 'npf-address-group-show.pl --name=all';
+
+			opd:command detail {
+				opd:help "Show address-group detailed information";
+				opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="all"';
+			}
+
+			opd:command ipv4 {
+				opd:help "Show address-group information for IPv4";
+				opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="all"';
+
+				opd:command detail {
+					opd:help "Show address-group detailed information";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="all"';
+				}
+
+				opd:command tree {
+					opd:help "Show address-group Patricia tree";
+					opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="all"';
+				}
+			}
+
+			opd:command ipv6 {
+				opd:help "Show address-group information for IPv6";
+				opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="all"';
+
+				opd:command detail {
+					opd:help "Show address-group detailed information";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="all"';
+				}
+
+				opd:command tree {
+					opd:help "Show address-group Patricia tree";
+					opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="all"';
+				}
+			}
+
+			opd:command list {
+				opd:help "Show list of address-groups";
+				opd:on-enter 'npf-address-group-show.pl --name=all --action="show-summary"';
+			}
+
+			opd:option name {
+				opd:help "Show address-group information for a named address-group";
+				type string {
+					opd:pattern-help "<group-name>";
+				}
+				opd:allowed 'allowed-nodes resources group address-group; echo -n " all"';
+				opd:on-enter 'npf-address-group-show.pl --name="$4"';
+
+				opd:command detail {
+					opd:help "Show address-group detailed information";
+					opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="$4"';
+				}
+
+				opd:command ipv4 {
+					opd:help "Show address-group information for IPv4";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$4"';
+
+					opd:command detail {
+						opd:help "Show address-group detailed information";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="$4"';
+					}
+
+					opd:command optimal {
+						opd:help "Show address-group IPv4 optimal prefix list";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$4" --action="show-optimal"';
+					}
+
+					opd:command tree {
+						opd:help "Show address-group Patricia tree";
+						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="$4"';
+					}
+				}
+
+				opd:command ipv6 {
+					opd:help "Show address-group information for IPv6";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$4"';
+
+					opd:command detail {
+						opd:help "Show address-group detailed information";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="$4"';
+					}
+
+					opd:command optimal {
+						opd:help "Show address-group IPv4 optimal prefix list";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$4" --action="show-optimal"';
+					}
+
+					opd:command tree {
+						opd:help "Show address-group Patricia tree";
+						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="$4"';
+					}
+				}
+
+				opd:command tree {
+					opd:help "Show address-group Patricia tree";
+					opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="$4"';
+				}
+			}
+
+			opd:command tree {
+				opd:help "Show address-group Patricia tree for all address-groups";
+				opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="all"';
+			}
+
+			opd:argument group-name {
+				opd:help "Show address-group information for one or all groups";
+				type string {
+					opd:pattern-help "<group-name>";
+				}
+				opd:allowed 'allowed-nodes resources group address-group; echo -n " all"';
+				opd:on-enter 'npf-address-group-show.pl --name="$3"';
+
+				opd:command detail {
+					opd:help "Show address-group detailed information";
+					opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="$3"';
+				}
+
+				opd:command ipv4 {
+					opd:help "Show address-group information for IPv4";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$3"';
+
+					opd:command detail {
+						opd:help "Show address-group detailed information";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="$3"';
+					}
+
+					opd:command optimal {
+						opd:help "Show address-group IPv4 optimal prefix list";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$3" --action="show-optimal"';
+					}
+
+					opd:command tree {
+						opd:help "Show address-group Patricia tree";
+						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="$3"';
+					}
+				}
+
+				opd:command ipv6 {
+					opd:help "Show address-group information for IPv6";
+					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$3"';
+
+					opd:command detail {
+						opd:help "Show address-group detailed information";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="$3"';
+					}
+
+					opd:command optimal {
+						opd:help "Show address-group IPv4 optimal prefix list";
+						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$3" --action="show-optimal"';
+					}
+
+					opd:command tree {
+						opd:help "Show address-group Patricia tree";
+						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="$3"';
+					}
+				}
+
+				opd:command tree {
+					opd:help "Show address-group Patricia tree";
+					opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="$3"';
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,157 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2018-2019, AT&T Intellectual Property.  All rights reserved.
+# Copyright (c) 2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+use strict;
+use warnings;
+
+use lib "/opt/vyatta/share/perl5";
+use Vyatta::Dataplane;
+use Vyatta::Config;
+use Sys::Syslog qw(:standard :macros);
+
+if ( $#ARGV < 0 ) {
+    print "Usage: $0 <base-type> [[<selector-name> <selector-value>]... ]\n";
+    exit 1;
+}
+
+my %base_type_supports = (
+    'fw'     => [ 'interface', 'dir', 'name', 'rule' ],
+    'bridge' => [],
+    'zone'   => [ 'from',      'to',  'name', 'rule' ],
+    'nat'    => [],
+    'dnat44' => [ 'interface', 'rule' ],
+    'snat44' => [ 'interface', 'rule' ],
+    'pbr'    => [ 'interface', 'name', 'rule' ],
+);
+
+my %base_type_to_rs = (
+    'fw'     => [ 'fw-in', 'fw-out', 'bridge', 'local' ],
+    'bridge' => ['bridge'],
+    'zone'   => ['zone'],
+    'nat'    => [ 'snat', 'dnat', 'nat64' ],
+    'dnat44' => ['dnat'],
+    'snat44' => ['snat'],
+    'pbr'    => ['pbr'],
+);
+
+my %base_type_to_cli_prefix = (
+    'fw'     => 'firewall',
+    'bridge' => 'firewall bridge',
+    'zone'   => 'zone-policy',
+    'nat'    => 'nat',
+    'dnat44' => 'nat destination',
+    'snat44' => 'nat source',
+    'pbr'    => 'policy',
+);
+
+my %dir_to_rs = (
+    'in'    => 'fw-in',
+    'out'   => 'fw-out',
+    'l2'    => 'bridge',
+    'local' => 'local',
+);
+
+my %base_type_to_group_class = (
+    'fw'     => 'fw',
+    'zone'   => 'fw',
+    'dnat44' => 'dnat',
+    'snat44' => 'snat',
+    'pbr'    => 'pbr',
+);
+
+sub validate_selector {
+    my ( $base_type, $selector ) = @_;
+
+    die "selector $selector is not valid for base type $base_type\n"
+      unless grep ( /^$selector$/, @{ $base_type_supports{$base_type} } );
+}
+
+my $base_type = shift @ARGV;
+
+die "invalid base type $base_type\n"
+  unless ( exists $base_type_supports{$base_type} );
+
+my %selector;
+my @attach_points;
+my @rule_sets;
+
+my $cli =
+  sprintf( "clear %s %s\n", $base_type_to_cli_prefix{$base_type}, "@ARGV" );
+
+while ( my $arg = shift @ARGV ) {
+    validate_selector( $base_type, $arg );
+    $selector{$arg} = shift @ARGV;
+}
+
+my $interface = $selector{interface};
+if ( defined($interface) ) {
+    if ( $interface eq "lo" ) {
+
+        # loopback interfaces represent the global attach point.
+        push @attach_points, "global:";
+    } else {
+        push @attach_points, "interface:$interface";
+    }
+} else {
+    my $from = $selector{from};
+    if ( defined($from) ) {
+        my $to = $selector{to};
+        if ( defined($to) ) {
+            push @attach_points, "zone:$from>$to";
+        } else {
+
+            # Need to work out the possible "to" zones from the config as
+            # these are different attach points and need a clear command
+            # for each.
+            my $config = new Vyatta::Config;
+            my @to_zones =
+              $config->listOrigNodes("security zone-policy zone $from to");
+            for my $to_zone (@to_zones) {
+                push @attach_points, "zone:$from>$to_zone";
+            }
+        }
+    } else {
+        push @attach_points, "all:";
+    }
+}
+
+my $dir = $selector{dir};
+if ( defined($dir) ) {
+    my $rs = $dir_to_rs{$dir};
+    die "unknown direction $dir\n"
+      unless $rs;
+    push @rule_sets, $rs;
+} else {
+    @rule_sets = @{ $base_type_to_rs{$base_type} };
+}
+
+my $name = "";
+$name = "-n $base_type_to_group_class{$base_type}:$selector{name} "
+  if defined( $selector{name} );
+
+my $rule = "";
+$rule = "-r $selector{rule} "
+  if defined( $selector{rule} );
+
+my $fabric;
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+foreach my $attach_point (@attach_points) {
+    my $cmd = "npf-op clear $name$rule$attach_point @rule_sets";
+
+    Vyatta::Dataplane::vplane_exec_cmd( "$cmd", $dp_ids, $dp_conns, 0 );
+}
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233.
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+openlog( "clear", "", LOG_USER );
+syslog( LOG_WARNING, "User %s: command: %s", $ENV{LOGNAME}, $cli );
+
+exit 0;

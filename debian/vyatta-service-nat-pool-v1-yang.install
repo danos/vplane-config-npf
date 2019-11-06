@@ -1,0 +1,4 @@
+usr/share/configd/yang/vyatta-service-nat-pool-v1.yang
+
+opt/vyatta/sbin/nat-pool-configuration
+opt/vyatta/sbin/nat-pool-get-state

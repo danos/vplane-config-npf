@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ ${COMMIT_ACTION} = 'DELETE' ] ;
+then
+    # detach from global attach point before delete
+    npf-session-limit.pl --cmd="assign" --type="global"
+
+    npf-session-limit.pl --cmd="delete" --type="global"
+else
+    npf-session-limit.pl --cmd="update" --type="global"
+
+    # attach/detach to/from global attach point
+    npf-session-limit.pl --cmd="assign" --type="global"
+fi

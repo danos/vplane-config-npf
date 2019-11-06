@@ -1,0 +1,496 @@
+module vyatta-system-session-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-system-session:1";
+	prefix vyatta-system-session-v1;
+
+	import vyatta-system-v1 {
+		prefix system;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-npf-v1 {
+		prefix npf;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2018-2019, AT&T Intellectual Property.
+		 All rights reserved.
+		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta firewall session configuration";
+
+	revision 2019-02-05 {
+		description "Added support for session logging on creation,
+			     deletion, and periodically.";
+	}
+	revision 2018-11-06 {
+		description "Added rst-received state to TCP timeout options.";
+	}
+	revision 2018-10-09 {
+		description "Block session limit on HW interfaces and move validation to top level.";
+	}
+	revision 2018-09-12 {
+		description "Updated description and copyright.";
+	}
+	revision 2017-05-09 {
+		description "Add session limiter.
+			     Fix issue deleting session table-size config.
+			     Deprecate TCP close timeout and give note
+			     if used.";
+	}
+	revision 2016-08-09 {
+		description "Add descriptions to many nodes.
+			     Update custom handling to use common types.
+			     Move scripts from under tmplscripts.";
+	}
+	revision 2016-04-15 {
+		description "Add VRF support.";
+	}
+	revision 2015-08-06 {
+		description "Initial revision.";
+	}
+
+	typedef timeout {
+		type uint32 {
+			range 1..21474836;
+		}
+	}
+
+	typedef session-number {
+		type uint32 {
+			range 1..100000000;
+		}
+	}
+
+	grouping timeout-group {
+		container timeout {
+			presence "timeout configuration";
+			description "Connection timeout options";
+			configd:help "Connection timeout options";
+			container tcp {
+				presence "timeout configuration";
+				description "TCP connection timeout options";
+				configd:help "TCP connection timeout options";
+				leaf close-wait {
+					type timeout;
+					description "TCP CLOSE-WAIT timeout in seconds";
+					configd:help "TCP CLOSE-WAIT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=close-wait --timeout=21600 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=close-wait --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf established {
+					type timeout;
+					description "TCP ESTABLISHED timeout in seconds";
+					configd:help "TCP ESTABLISHED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=established --timeout=86400 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=established --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf syn-sent {
+					type timeout;
+					description "TCP SYN-SENT timeout in seconds";
+					configd:help "TCP SYN-SENT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=syn-sent --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=syn-sent --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf fin-received {
+					type timeout;
+					description "TCP FIN-RECEIVED timeout in seconds";
+					configd:help "TCP FIN-RECEIVED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=fin-received --timeout=240 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=fin-received --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf fin-sent {
+					type timeout;
+					description "TCP FIN-SENT timeout in seconds";
+					configd:help "TCP FIN-SENT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=fin-sent --timeout=240 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=fin-sent --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf closing {
+					type timeout;
+					description "TCP CLOSING timeout in seconds";
+					configd:help "TCP CLOSING timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=closing --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=closing --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf simsyn-sent {
+					type timeout;
+					description "TCP SIMSYN-SENT timeout in seconds";
+					configd:help "TCP SIMSYN-SENT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=simsyn-sent --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=simsyn-sent --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf time-wait {
+					type timeout;
+					description "TCP TIME-WAIT timeout in seconds";
+					configd:help "TCP TIME-WAIT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=time-wait --timeout=240 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=time-wait --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf last-ack {
+					type timeout;
+					description "TCP LAST-ACK timeout in seconds";
+					configd:help "TCP LAST-ACK timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=last-ack --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=last-ack --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf syn-received {
+					type timeout;
+					description "TCP SYN-RECEIVED timeout in seconds";
+					configd:help "TCP SYN-RECEIVED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=syn-received --timeout=60 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=syn-received --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf rst-received {
+					type timeout;
+					description "TCP RST-RECEIVED timeout in seconds";
+					configd:help "TCP RST-RECEIVED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=rst-received --timeout=10 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=rst-received --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf closed {
+					type timeout;
+					status deprecated;
+					description "TCP CLOSED timeout in seconds";
+					configd:help "TCP CLOSED timeout in seconds";
+					configd:validate "echo '\nNote: changing TCP closed timeout no longer has any effect.'";
+				}
+				leaf fin-wait {
+					type timeout;
+					description "TCP FIN-WAIT timeout in seconds";
+					configd:help "TCP FIN-WAIT timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=tcp --state=fin-wait --timeout=21600 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=tcp --state=fin-wait --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+			}
+			container icmp {
+				presence "timeout configuration";
+				description "ICMP timeout";
+				configd:help "ICMP timeout";
+				leaf established {
+					type timeout;
+					description "ICMP ESTABLISHED timeout in seconds";
+					configd:help "ICMP ESTABLISHED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=icmp --state=established --timeout=60 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=icmp --state=established --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf new {
+					type timeout;
+					description "ICMP NEW timeout in seconds";
+					configd:help "ICMP NEW timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=icmp --state=new --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=icmp --state=new --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+			}
+			container other {
+				presence "timeout configuration";
+				description "Generic connection timeout";
+				configd:help "Generic connection timeout";
+				leaf established {
+					type timeout;
+					description "Generic ESTABLISHED timeout in seconds";
+					configd:help "Generic ESTABLISHED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=other --state=established --timeout=60 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=other --state=established --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf new {
+					type timeout;
+					description "Generic NEW timeout in seconds";
+					configd:help "Generic NEW timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=other --state=new --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=other --state=new --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+			}
+			container custom {
+				presence "timeout configuration";
+				description "Custom connection timeout options";
+				configd:help "Custom connection timeout options";
+				configd:validate "validate-fw-groups --variant=custom-timeout --vrf=$VAR(../../../../../routing-instance/@)";
+				list rule {
+					description "Rule number";
+					configd:help "Rule number";
+					configd:end "end-custom-timeout";
+					key "tagnode";
+					leaf tagnode {
+						type fw-types:rule-number;
+					}
+					leaf expire {
+						type timeout;
+						mandatory "true";
+						description "Expire time out value for this rule";
+						configd:help "Expire time out value for this rule";
+					}
+					container source {
+						presence "timeout configuration";
+						description "Source parameters";
+						configd:help "Source parameters";
+						uses npf:rule-ip-address-custom;
+						uses npf:rule-port;
+					}
+					container destination {
+						presence "timeout configuration";
+						description "Destination parameters";
+						configd:help "Destination parameters";
+						uses npf:rule-ip-address-custom;
+						uses npf:rule-port;
+					}
+					uses npf:rule-protocol;
+				}
+			}
+			container udp {
+				presence "timeout configuration";
+				description "UDP timeout";
+				configd:help "UDP timeout";
+				leaf established {
+					type timeout;
+					description "UDP ESTABLISHED timeout in seconds";
+					configd:help "UDP ESTABLISHED timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=udp --state=established --timeout=60 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=udp --state=established --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+				leaf new {
+					type timeout;
+					description "UDP NEW timeout in seconds";
+					configd:help "UDP NEW timeout in seconds";
+					configd:delete "vyatta-dp-npf-timeouts.pl --cmd=delete --proto=udp --state=new --timeout=30 --vrf=$VAR(../../../../../../routing-instance/@)";
+					configd:update "vyatta-dp-npf-timeouts.pl --cmd=update --proto=udp --state=new --timeout=$VAR(@) --vrf=$VAR(../../../../../../routing-instance/@)";
+				}
+			}
+		}
+	}
+
+	grouping limit-param-group {
+		leaf max-halfopen {
+			type session-number;
+			description "Maximum number of halfopen sessions";
+			configd:help "Maximum number of halfopen sessions";
+		}
+		container rate-limit {
+			presence "configure session rate limiting";
+			description "Limit maximum number of sessions per second";
+			configd:help "Limit maximum number of sessions per second";
+			leaf rate {
+				type uint32 {
+					range 1..max;
+				}
+				mandatory true;
+				description "Session rate limit in sessions/second";
+				configd:help "Session rate limit in sessions/second";
+			}
+			leaf burst {
+				type uint32 {
+					range 0..100000000;
+				}
+				default 0;
+				description "Burst size in number of sessions (0 to derive burst value from rate)";
+				configd:help "Burst size in number of sessions (0 to derive burst value from rate)";
+			}
+		}
+	}
+
+	grouping limit-rule {
+		uses npf:rule-icmpv4;
+		uses npf:rule-icmpv6;
+		leaf description {
+			type string;
+			description "Rule description";
+			configd:help "Rule description";
+		}
+		leaf disable {
+			type empty;
+			description "Disable rule";
+			configd:help "Disable rule";
+		}
+		uses npf:rule-protocol;
+		container source {
+			description "Source parameters";
+			configd:help "Source parameters";
+			uses npf:rule-ip-address;
+			uses npf:rule-port;
+		}
+		container destination {
+			description "Destination parameters";
+			configd:help "Destination parameters";
+			uses npf:rule-ip-address;
+			uses npf:rule-port;
+		}
+		uses npf:rule-tcp;
+	}
+
+	grouping limit-group {
+		container limit {
+			description "Session limiter.  Rate-limit sessions or set a maximum number
+of half-open sessions.";
+			configd:help "Session limiter";
+			container global {
+				description "Global session limit parameters";
+				configd:help "Global session limit parameters";
+				configd:end "end-session-limit-global";
+				uses limit-param-group;
+			}
+			container parameter {
+				description "Session limit parameters";
+				configd:priority "316";
+				configd:help "Session limit parameters";
+				list name {
+					configd:help "Limit parameter";
+					configd:end "end-session-limit-param $VAR(@)";
+					key "param-name";
+					leaf param-name {
+						type fw-types:group-name {
+							configd:help "Limit parameter name";
+						}
+						must "(not(current() = 'global'))" {
+							error-message "global is a reserved parameter name";
+						}
+						must "(not(current() = 'all'))" {
+							error-message "all is a reserved keyword";
+						}
+						must "(not(current() = 'brief'))" {
+							error-message "brief is a reserved keyword";
+						}
+					}
+					uses limit-param-group;
+				}
+			}
+			container group {
+				description "Session limit groups";
+				configd:help "Session limit groups";
+				configd:priority "317";
+				configd:validate "validate-session-limit.pl";
+				list name {
+					description "Limit group";
+					configd:help "Limit group";
+					configd:end "end-session-limit-group $VAR(@)";
+					key "group-name";
+					leaf group-name {
+						type fw-types:group-name {
+							configd:help "Limit group name";
+						}
+						must "(not(current() = 'global'))" {
+							error-message "global is a reserved parameter name";
+						}
+						must "(not(current() = 'all'))" {
+							error-message "all is a reserved keyword";
+						}
+						must "(not(current() = 'brief'))" {
+							error-message "brief is a reserved keyword";
+						}
+					}
+					list interface {
+						description "Apply to sessions created inbound and/or outbound on interface";
+						configd:help "Apply to sessions created inbound and/or outbound on interface";
+						configd:allowed "vyatta-interfaces.pl --show all_but_hw --skip=lo";
+						key "tagnode";
+						leaf tagnode {
+							type string;
+						}
+					}
+					list rule {
+						description "Rule number";
+						configd:help "Rule number";
+						key "tagnode";
+						leaf tagnode {
+							type fw-types:rule-number;
+						}
+						uses limit-rule;
+						leaf parameter {
+							description "Session limit parameter";
+							configd:help "Session limit parameter";
+							mandatory true;
+							type leafref {
+								path "../../../../parameter/name/param-name";
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	grouping log-group {
+		container log {
+			description "Session logging";
+			configd:help "Session logging";
+			configd:end "end-session-log";
+			leaf creation {
+				type empty;
+				description "Log on session creation";
+				configd:help "Log on session creation";
+			}
+			leaf deletion {
+				type empty;
+				description "Log on session deletion";
+				configd:help "Log on session deletion";
+			}
+			leaf periodic {
+				description "Log at periodic intervals";
+				configd:help "Log at periodic intervals";
+				units "seconds";
+				type uint32 {
+					range 5..86400;
+					configd:help "How often to log (in seconds)";
+				}
+			}
+		}
+	}
+
+	augment /system:system {
+		container session {
+			presence "Configure session parameters";
+			description "Session parameters";
+			configd:help "Session parameters";
+			configd:delete "vyatta-dp-npf.pl --variant=firewall --cmd=update-global-table-size";
+			leaf table-size {
+				type session-number;
+				description "Size of connection tracking table";
+				configd:help "Size of connection tracking table";
+				default "1048576";
+				configd:update "vyatta-dp-npf.pl --variant=firewall --cmd=update-global-table-size";
+			}
+			uses timeout-group;
+			uses limit-group;
+			uses log-group;
+		}
+	}
+}

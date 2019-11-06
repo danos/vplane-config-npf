@@ -1,0 +1,6 @@
+usr/share/configd/yang/vyatta-npf-v1.yang
+
+opt/vyatta/sbin/vyatta-ethertype
+opt/vyatta/sbin/rate-check.pl
+opt/vyatta/sbin/syntax-check-protocols
+opt/vyatta/sbin/allowed-protocols

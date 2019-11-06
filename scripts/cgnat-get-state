@@ -1,0 +1,202 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run to get the CGNAT state information from the dataplane
+and provide it in YANG format to provide the 'state' node under
+the CGNAT configuration."""
+
+
+import sys
+import getopt
+import vplaned
+import json
+from collections import OrderedDict
+from vyatta.npf.npf_debug import NpfDebug
+
+
+DATAPLANE_POLICY_CMD = 'cgn-op show policy'
+DATAPLANE_SUMMARY_CMD = 'cgn-op show summary'
+DATAPLANE_ERRORS_CMD = 'cgn-op show errors'
+
+# class used for printing debugs
+dbg = NpfDebug()
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def process_options():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "d", ['debug'])
+
+    except getopt.GetoptError as r:
+        err(r)
+        err("usage: {} [-d|--debug] ".format(sys.argv[0]))
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ('-d', '--debug'):
+            dbg.enable()
+
+
+def policy_netconf(entry):
+    state_entry = {}
+    state_entry['sessions-created'] = entry['sess_created']
+    state_entry['sessions-destroyed'] = entry['sess_destroyed']
+    state_entry['packets-out'] = entry['out_pkts']
+    state_entry['packets-in'] = entry['in_pkts']
+    state_entry['bytes-out'] = entry['out_bytes']
+    state_entry['bytes-in'] = entry['in_bytes']
+    state_entry['active-subscribers'] = entry['source_count']
+
+    policy_entry = {}
+    policy_entry['policyname'] = entry['name']
+    policy_entry['state'] = state_entry
+
+    dbg.pprint("policy netconf entry: {}".format(policy_entry))
+    return policy_entry
+
+
+def get_cgnat_policy_state():
+    dbg.pprint("get_cgnat_policy_state()")
+
+    policy_state_list = []
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp_dict = dp.json_command(DATAPLANE_POLICY_CMD)
+                if dp_dict and dp_dict.get('policies'):
+                    dbg.pprint("dataplane dict: {}".format(
+                        dp_dict['policies']))
+                    for policy in dp_dict['policies']:
+                        policy_state_list.append(policy_netconf(policy))
+
+    return policy_state_list
+
+
+def summary_netconf(entry):
+    state_entry = {}
+    state_entry['public-address-mappings'] = entry['apm_table_used']
+    state_entry['active-subscribers'] = entry['subs_table_used']
+    state_entry['sessions-created'] = entry['sess_created']
+    state_entry['sessions-destroyed'] = entry['sess_destroyed']
+    state_entry['packets-out'] = entry['pkts_out']
+    state_entry['packets-in'] = entry['pkts_in']
+    state_entry['bytes-out'] = entry['bytes_out']
+    state_entry['bytes-in'] = entry['bytes_in']
+
+    dbg.pprint("summary netconf entry: {}".format(state_entry))
+    return state_entry
+
+
+def get_cgnat_summary_state():
+    dbg.pprint("get_cgnat_summary_state()")
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp_dict = dp.json_command(DATAPLANE_SUMMARY_CMD)
+                if dp_dict and dp_dict.get('summary'):
+                    dbg.pprint("dataplane dict: {}".format(
+                        dp_dict['summary']))
+                    return summary_netconf(dp_dict['summary'])
+                # NB: currently only handles one dataplane, so
+                # will need enhanced if needing to support VDR
+    return
+
+
+error_maps = OrderedDict([
+    ('PCY_ENOENT', 'untranslatable-subscriber'),
+    ('SESS_ENOENT', 'untranslatable-session'),
+    ('BUF_PROTO', 'untranslatable-IP'),
+    ('BUF_ICMP',  'untranslatable-ICMP'),
+    ('MBU_ENOSPC', 'subscriber-port-block-limit'),
+    ('BLK_ENOSPC', 'port-block-exhausted'),
+    ('POOL_ENOSPC', 'public-addresses-exhausted'),
+    ('SRC_ENOSPC', 'subscriber-table-full'),
+    ('APM_ENOSPC', 'mapping-table-full'),
+    ('S1_ENOSPC', 'session-table-full'),
+    ('S2_ENOSPC', 'dest-session-table-full'),
+    ('S1_ENOMEM', 'session-allocation'),
+    ('S2_ENOMEM', 'dest-session-allocation'),
+    ('PB_ENOMEM', 'port-block-allocation'),
+    ('APM_ENOMEM', 'public-address-allocation'),
+    ('SRC_ENOMEM', 'subscriber-allocation'),
+    ('S1_EEXIST', 'session-lost-race'),
+    ('S2_EEXIST', 'dest-session-lost-race'),
+    ('APM_ENOENT', 'public-address-locked-on-destroy'),
+    ('SRC_ENOENT', 'subscriber-address-locked-on-destroy'),
+    ('BUF_ENOL3', 'no-IP-header'),
+    ('BUF_ENOL4', 'no-L4-header'),
+    ('BUF_ENOMEM', 'header-allocation'),
+    ('BUF_ENOSPC', 'too-short-packet'),
+    ('ERR_UNKWN', 'unknown'),
+])
+
+
+def errors_netconf(entries):
+
+    errors_dict = {}
+    for dir in entries:
+        errors_dict[dir] = {}
+        for err in entries[dir]:
+            errors_dict[dir][err['name']] = err['count']
+
+    state_entries = []
+    for errno, cause in error_maps.items():
+        state_entry = {}
+        state_entry['cause'] = cause
+        state_entry['in-count'] = errors_dict['in'][errno]
+        state_entry['out-count'] = errors_dict['out'][errno]
+        state_entries.append(state_entry)
+
+    dbg.pprint("policy netconf entry: {}".format(state_entries))
+    return state_entries
+
+
+def get_cgnat_errors_state():
+    dbg.pprint("get_cgnat_errors_state()")
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp_dict = dp.json_command(DATAPLANE_ERRORS_CMD)
+                if dp_dict and dp_dict.get('errors'):
+                    dbg.pprint("dataplane dict: {}".format(
+                        dp_dict['errors']))
+                    return errors_netconf(dp_dict['errors'])
+                    # NB: currently only handles one dataplane, so
+                    # will need enhanced if needing to support VDR
+    return
+
+
+if __name__ == "__main__":
+    process_options()
+    state_info = {}
+
+    policy_state_info = get_cgnat_policy_state()
+    if policy_state_info:
+        state_info['policy'] = policy_state_info
+
+    summary_state_info = get_cgnat_summary_state()
+    if summary_state_info:
+        if 'state' not in state_info:
+                state_info['state'] = {}
+        state_info['state']['summary'] = summary_state_info
+
+    errors_state_info = get_cgnat_errors_state()
+    if errors_state_info:
+        if 'state' not in state_info:
+                state_info['state'] = {}
+        state_info['state']['errors'] = {}
+        state_info['state']['errors']['error-causes'] = errors_state_info
+
+    if state_info:
+        print(json.dumps(state_info))
+    exit(0)

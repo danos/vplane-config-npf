@@ -1,0 +1,3 @@
+#!/opt/vyatta/bin/cliexec
+vyatta-dp-npf.pl --cmd=commit
+vyatta-dp-npf-snmptrap.pl --level='security $VAR(@)'

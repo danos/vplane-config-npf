@@ -1,0 +1,123 @@
+module vyatta-service-application-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-service-application:1";
+	prefix vyatta-service-application-v1;
+
+	import vyatta-services-v1 {
+		prefix service;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-npf-v1 {
+		prefix npf;
+	}
+	import vyatta-dpi-application-names-v1 {
+		prefix app-names;
+	}
+	import vyatta-dpi-application-types-v1 {
+		prefix app-types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+			 Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019 AT&T Intellectual Property
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for user-defined applications";
+
+	revision 2018-01-15 {
+		description "Initial revision of version 1.";
+	}
+
+	typedef appname {
+		type union {
+			type app-names:application-names;
+			type string;
+		}
+	}
+
+	augment /service:service {
+		container application {
+			description "Configure applications.
+				     Each rule is of the form: if { conditions } then { actions }
+				     The conditions are as per other NPF clients (FW, PBR, QoS).
+				     The actions are effectively: 'then set name|type|protocol to ...'.";
+			configd:help "Configure applications";
+			configd:end "vyatta-dp-npf.pl --variant=app --cmd=update --group=application --commit";
+			configd:delete "vyatta-dp-npf.pl --variant=app --cmd=delete-group --group=$VAR(@)";
+			list rule {
+				description "Rule number";
+				configd:help "Rule number";
+				must "then" {
+					error-message "Specify at least one \"then\" action: name, type, protocol";
+				}
+				key "rule-number";
+				leaf rule-number {
+					type fw-types:rule-number;
+				}
+				uses npf:rule-common;
+				uses npf:ethertype;
+				container then {
+					description "Specify actions";
+					configd:help "Specify actions";
+					leaf name {
+						configd:help "Specify application name";
+						description "Specify application name";
+						type appname;
+					}
+					list type {
+						description "Specify application type";
+						configd:help "Specify application type";
+						key type-value;
+						leaf type-value {
+							type app-types:application-types;
+						}
+					}
+					leaf protocol {
+						configd:help "Specify application protocol";
+						description "Specify application protocol";
+						type appname;
+					}
+				}
+			}
+		}
+	}
+}

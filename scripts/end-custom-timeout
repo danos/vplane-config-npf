@@ -1,0 +1,9 @@
+#!/opt/vyatta/bin/cliexec
+if [ ${COMMIT_ACTION} = 'DELETE' ] ;
+then
+	vyatta-dp-npf-timeouts.pl --cmd=delete --rule="$VAR(@)" --vrf="$VAR(../../../../../../routing-instance/@)";
+else
+	vyatta-dp-npf-timeouts.pl --cmd=update --rule="$VAR(@)" --vrf="$VAR(../../../../../../routing-instance/@)";
+fi
+
+vyatta-dp-npf.pl --cmd=commit

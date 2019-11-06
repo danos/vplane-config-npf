@@ -1,0 +1,159 @@
+module vyatta-service-nat-nptv6-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-service-nat-nptv6:1";
+	prefix vyatta-service-nat-nptv6-v1;
+
+	import vyatta-services-v1 {
+		prefix service;
+	}
+	import vyatta-service-nat-v1 {
+		prefix nat;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+
+	import vyatta-types-v1 {
+		prefix vyatta-types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2018-2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for IPv6 Network Prefix Translation (NPTv6) configuration";
+
+	revision 2018-10-03 {
+		description "Remove interface validation script as this is now done at higher level.";
+	}
+
+	revision 2018-07-26 {
+		description "Initial revision.";
+	}
+
+	typedef ipv6-prefix-nptv6 {
+		type vyatta-types:ipv6-prefix {
+			configd:pattern-help "<x> must be 48 to 64";
+			pattern '.*/((4[8-9])|(5[0-9])|(6[0-4]))' {
+				error-message "<IPv6-address>/<x>, where <x> is 48 to 64";
+			}
+		}
+	}
+
+	augment /service:service/nat:nat {
+		container nptv6 {
+			description "NPTv6 settings";
+			configd:help "NPTv6 settings";
+			list name {
+				description "NPTv6 rule name";
+				configd:help "NPTv6 rule name";
+				configd:end "vyatta-dp-npf-nat-nptv6.pl --cmd=nptv6-xlt --name=$VAR(@)";
+				key "rulename";
+				leaf rulename {
+					type fw-types:rule-name;
+				}
+				leaf outside {
+					description "NPTv6 outside prefix";
+					configd:help "NPTv6 outside prefix";
+					mandatory true;
+					type ipv6-prefix-nptv6 {
+						configd:help "IPv6 outside prefix to match";
+					}
+				}
+				leaf inside {
+					description "NPTv6 inside prefix";
+					configd:help "NPTv6 inside prefix";
+					mandatory true;
+					type ipv6-prefix-nptv6 {
+						configd:help "IPv6 inside prefix to match";
+					}
+				}
+				leaf disable-translation-icmp-errors {
+					description "Disable translation icmp errors";
+					configd:help "Disable translation icmp errors";
+					type empty;
+				}
+			}
+			list interface {
+				description "NPTv6 interface";
+				configd:help "NPTv6 interface";
+				configd:end "vyatta-dp-npf-nat-nptv6.pl --cmd=nptv6-int --interface=$VAR(@)";
+				configd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+				key "name";
+				leaf name {
+					type string;
+				}
+				list translator {
+					description "NPTv6 translator";
+					configd:help "NPTv6 translator";
+					min-elements 1;
+					key "name";
+					leaf name {
+						type leafref {
+							path "/service:service/nat:nat/nptv6/name/rulename";
+						}
+					}
+					container state {
+						config false;
+						description "State of rulesets associated with interface";
+						configd:get-state "/opt/vyatta/sbin/npf-get-nptv6-state";
+						leaf drops-in {
+							description "Number of input packets dropped";
+							type uint64;
+						}
+						leaf trans-in {
+							description "Number of input packets translated";
+							type uint64;
+						}
+						leaf drops-out {
+							description "Number of output packets dropped";
+							type uint64;
+						}
+						leaf trans-out {
+							description "Number of output packets translated";
+							type uint64;
+						}
+					}
+				}
+			}
+		}
+	}
+}

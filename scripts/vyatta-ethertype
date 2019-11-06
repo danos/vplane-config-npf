@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+#
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2014-2016, Brocade Communications Systems, Inc.
+# All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+use strict;
+use warnings;
+use lib '/opt/vyatta/share/perl5';
+use Vyatta::FWHelper qw(get_ether_type print_ether_types);
+
+if ( @ARGV > 0 ) {
+    my $type = $ARGV[0];
+    unless ( get_ether_type($type) ) {
+        print "Invalid ethertype syntax: '$type'\n";
+        exit 1;
+    }
+} else {
+    print_ether_types();
+}

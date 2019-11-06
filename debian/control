@@ -1,0 +1,243 @@
+Source: vplane-config-npf
+Section: contrib/net
+Priority: extra
+Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
+Build-Depends: debhelper (>= 9), autotools-dev, autoconf, automake,
+ cpio, libfile-copy-recursive-perl, libset-scalar-perl, dh-yang,
+ dh-python, python3
+X-Python3-Version: >= 3.5
+Standards-Version: 3.9.6
+
+Package: vplane-config-npf
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}, libreadonly-perl, libsnmp-perl, python3:any,
+ vplane-config, libvyatta-file-perl, libvyatta-dscp-perl, libvyatta-rate-perl,
+ libvyatta-typechecker-perl, libvyatta-interface-perl, libvyatta-cfg1,
+ libmodule-load-conditional-perl,
+ vyatta-dataplane-cfg-npf-cfg-2, vyatta-dataplane-op-npf-op-0,
+ python3-vyatta-interfaces (>= 1.52),
+ python3, python3-vyatta-cfgclient, ${python3:Depends},
+Conflicts: vyatta-cfg-firewall, vyatta-op-firewall, vyatta-nat
+Description: vyatta common firewall scripts
+ Vyatta common scripts and libraries for firewall services
+
+Package: vyatta-fw-types-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}
+Description: vyatta firewall yang types
+ YANG modules for common types used by firewall-related Vyatta YANG files
+
+Package: vyatta-npf-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ vplane-config-npf (= ${binary:Version}), libvyatta-rate-perl, vyatta-util,
+ vyatta-cfg
+Description: vyatta firewall yang groups
+ YANG module and scripts for groups used by firewall-related Vyatta YANG files
+
+Package: vyatta-resources-group-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ vplane-config-npf (= ${binary:Version}),
+ python3-vplane-config-npf (= ${binary:Version}), vyatta-util,
+ libvyatta-file-perl, libvyatta-cfg1, vyatta-cfg, python3:any, python3-netaddr
+Description: vyatta resource groups yang and scripts
+ YANG module and scripts for Vyatta resource group configuration
+
+Package: vyatta-security-firewall-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ vplane-config-npf (= ${binary:Version}), vplane-config,
+ vyatta-cfg, libvyatta-cfg1, vyatta-system (>= 1.6.1),
+ vyatta-interfaces (>= 0.5),
+Breaks: vyatta-op (<< 1.0), vyatta-system-alg-v1-yang (<< 1.11.4)
+Replaces: vyatta-op (<< 1.0), vyatta-system-alg-v1-yang (<< 1.11.4)
+Description: vyatta firewall yang and scripts
+ YANG module and scripts for Vyatta firewall configuration
+
+Package: vyatta-system-session-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version}), libvyatta-cfg1, vyatta-cfg,
+ vyatta-util, vyatta-protocols, libmodule-load-conditional-perl,
+ libvyatta-interface-perl (>= 1.46)
+Description: vyatta session yang and scripts
+ YANG module and scripts for Vyatta firewall session configuration
+
+Package: vyatta-system-session-routing-instance-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version}), vyatta-system-session-v1-yang
+Description: vyatta session yang and scripts for routing instances
+ YANG module for Vyatta firewall session configuration and operation
+
+Package: vyatta-service-nat-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
+ vplane-config-npf (= ${binary:Version}), vplane-config,
+ vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
+ libvyatta-cfg1, vyatta-protocols, libvyatta-interface-perl (>= 1.46)
+Description: vyatta nat yang and scripts
+ YANG module and scripts for Vyatta NAT configuration
+
+Package: vyatta-service-nat-nptv6-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
+ vplane-config-npf (= ${binary:Version}), vplane-config,
+ vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
+ libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang
+Description: vyatta nat nptv6 yang and scripts
+ YANG module and scripts for Vyatta NAT NPTv6 configuration
+
+Package: vyatta-service-nat64-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
+ vplane-config-npf (= ${binary:Version}), vplane-config,
+ vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
+ libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang,
+ python3, ${python3:Depends}
+Description: vyatta nat64 yang and scripts
+ YANG module and scripts for Vyatta NAT64 configuration
+
+Package: vyatta-policy-pbr-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version}), vyatta-interfaces (>= 0.5),
+ vyatta-cfg
+Breaks: vyatta-policy-route-v1-yang (<< 1.8.6)
+Replaces: vyatta-policy-route-v1-yang (<< 1.8.6)
+Description: vyatta pbr yang and scripts
+ YANG module and scripts for Vyatta Policy-based Routing (PBR)
+
+Package: vyatta-policy-pbr-routing-instance-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, vyatta-policy-pbr-v1-yang,
+ libvyatta-vrfmanager-perl
+Conflicts: vyatta-policy-pbr-v1-yang (<< 1.2.5)
+Replaces: vyatta-policy-pbr-v1-yang (<< 1.2.5)
+Description: vyatta pbr yang for routing instances
+ The YANG module for PBR routing instance configuration
+
+Package: vyatta-policy-pbr-bridge-v1-yang
+Architecture: all
+Depends: ${yang:Depends},
+ vyatta-policy-pbr-v1-yang
+Description: vyatta-policy-pbr-bridge-v1 module
+ The YANG module for vyatta-policy-pbr-bridge-v1
+
+Package: vyatta-op-npf-types-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}
+Description: vyatta npf operational yang types
+ YANG modules for common types used by npf-related op-mode Vyatta YANG files
+
+Package: vyatta-op-policy-pbr-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-policy-pbr
+ The Vyatta operation YANG for PBR commands
+
+Package: vyatta-op-security-firewall-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-security-firewall
+ The Vyatta operation YANG for firewall commands
+
+Package: vyatta-op-system-session-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-system-session
+ The Vyatta operation YANG for session commands
+
+Package: vyatta-op-resources-group-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-resources-group
+ The Vyatta operation YANG for resources group commands
+
+Package: vyatta-op-service-nat-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-service-nat
+ The Vyatta operation YANG for NAT commands
+
+Package: vyatta-op-service-nat-nptv6-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: operational CLI yang for vyatta-service-nat-nptv6
+ The Vyatta operation YANG for NPTv6 commands
+
+Package: vyatta-op-service-nat64-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version}),
+ python3, ${python3:Depends}
+Description: operational CLI yang for vyatta-service-nat64
+ The Vyatta operation YANG for NAT64 and NAT46 commands
+
+Package: vyatta-interfaces-switch-vif-policy-pbr-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: vyatta pbr yang for switch vlan interfaces
+ YANG module for enabling PBR on switch VLAN interfaces
+
+Package: vyatta-interfaces-switch-vif-firewall-v1-yang
+Architecture: all
+Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Description: vyatta firewall yang for switch vlan interfaces
+ YANG module for enabling firewall on switch VLAN interfaces
+
+Package: vyatta-service-application-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}
+Description: vyatta application service yang
+ YANG module for Vyatta application service
+
+Package: python3-vplane-config-npf
+Architecture: all
+Depends: ${misc:Depends}, python3:any
+Description: Vyatta python3 libraries for vplane-config-npf
+ Library of python3 modules for vplane-config-npf
+
+Package: vyatta-service-nat-pool-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version})
+Description: vyatta NAT pool yang
+ YANG module for Vyatta NAT pool configuration
+
+Package: vyatta-op-service-nat-pool-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version})
+Description: vyatta operational NAT pool yang and scripts
+ Vyatta operation YANG module and scripts for Vyatta NAT pool
+
+Package: vyatta-service-nat-cgnat-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version})
+Description: vyatta CGNAT yang and scripts
+ YANG module and scripts for Vyatta CGNAT configuration
+
+Package: vyatta-op-service-nat-cgnat-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version})
+Description: vyatta operational CGNAT yang and scripts
+ Vyatta operation YANG module and scripts for Vyatta CGNAT
+
+Package: vyatta-ippf-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ vplane-config-npf (= ${binary:Version}), vplane-config,
+ vyatta-cfg, libvyatta-cfg1, vyatta-system (>= 1.6.1),
+ vyatta-interfaces (>= 0.5), python3:any,
+Description: vyatta IP Packet Filter yang and scripts
+ YANG module for Vyatta IP packet filter configuration
+
+Package: vyatta-op-ippf-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ python3:any, vyatta-ippf-v1-yang
+Description: vyatta IP Packet Filter op-mode yang and scripts
+ YANG module for Vyatta IP packet filter op-mode

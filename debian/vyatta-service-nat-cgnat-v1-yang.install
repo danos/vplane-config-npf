@@ -1,0 +1,8 @@
+usr/share/configd/yang/vyatta-service-nat-cgnat-v1.yang
+
+opt/vyatta/sbin/cgnat-configuration
+opt/vyatta/sbin/cgnat-get-state
+opt/vyatta/sbin/cgnat-get-subscriber-rpc
+opt/vyatta/sbin/cgnat-get-public-rpc
+opt/vyatta/sbin/cgnat-get-sessions-rpc
+opt/vyatta/sbin/cgnat-clear-sessions-rpc

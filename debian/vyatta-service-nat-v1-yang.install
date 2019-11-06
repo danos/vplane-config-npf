@@ -1,0 +1,5 @@
+usr/share/configd/yang/vyatta-service-nat-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-npf-nat-nat44.pl
+opt/vyatta/sbin/vyatta-dp-npf-nat-nat64.pl
+opt/vyatta/sbin/validate-nat-rules.pl

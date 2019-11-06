@@ -1,0 +1,73 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+use strict;
+use warnings;
+
+use JSON qw( decode_json encode_json );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::Aggregate;
+use Vyatta::NPTv6Stats;
+
+my $configd_path = $ENV{'CONFIGD_PATH'};
+
+if ( !defined($configd_path) ) {
+    print STDERR "$0: CONFIGD_PATH not in environment\n";
+    exit 1;
+}
+
+my ( $rule_if, $rule_name );
+
+if ( $configd_path =~
+    "/service/nat/nptv6/interface/([^/]+)/translator/([^/]+)/state" )
+{
+    $rule_if   = $1;
+    $rule_name = $2;
+}
+else {
+    print STDERR "$0: CONFIGD_PATH in wrong format\n";
+}
+
+# print "Match if $rule_if; Rule $rule_name\n";
+
+my $stats = {
+    'trans-in'  => 0,
+    'trans-out' => 0,
+    'drops-in'  => 0,
+    'drops-out' => 0,
+};
+
+my $fabric;
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+my $dp_rsp = vplane_exec_cmd( "npf-op show nptv6 $rule_if $rule_name",
+    $dp_ids, $dp_conns, 1 );
+my $agg_rsp = aggregate_npf_responses( $dp_ids, $dp_rsp, "Vyatta::NPTv6Stats" );
+
+if ( defined($agg_rsp) && defined $agg_rsp->{rule_hash} ) {
+    my $per_rule = $agg_rsp->{rule_hash}->{$rule_if}->{$rule_name};
+
+    # print Dumper $per_rule;
+    my $stats_in  = $per_rule->{stats_in};
+    my $stats_out = $per_rule->{stats_out};
+
+    $stats->{'trans-in'} = $stats_in->{packets} - $stats_in->{drops};
+    $stats->{'drops-in'} = $stats_in->{drops};
+
+    $stats->{'trans-out'} = $stats_out->{packets} - $stats_out->{drops};
+    $stats->{'drops-out'} = $stats_out->{drops};
+}
+
+# print Dumper $stats;
+
+print encode_json($stats);
+
+exit 0;

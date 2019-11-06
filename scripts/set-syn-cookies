@@ -1,0 +1,4 @@
+#!/bin/bash
+declare -A sysctlval=(["disable"]="0" ["enable"]="1")
+
+sysctl -wq net.ipv4.tcp_syncookies=${sysctlval[$1]}

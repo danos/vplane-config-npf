@@ -1,0 +1,10 @@
+usr/share/configd/yang/vyatta-security-firewall-v1.yang
+
+opt/vyatta/sbin/end-fw-groups
+opt/vyatta/sbin/end-fw-ruleset
+opt/vyatta/sbin/end-global-state-policy
+opt/vyatta/sbin/loopback-fw-validate
+opt/vyatta/sbin/set-sess-log
+opt/vyatta/sbin/set-syn-cookies
+opt/vyatta/sbin/set-ping
+opt/vyatta/sbin/vyatta-dp-npf-session-log.pl

@@ -1,0 +1,318 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2017,2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Config::Tiny;
+use JSON qw( decode_json );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::FWHelper qw(get_proto_name);
+
+my $ICMP_PROT_NUM   = 1;
+my $ICMPV6_PROT_NUM = 58;
+my $TCP_PROT        = 6;
+
+my %variant_info = (
+    "standard" => {
+        print_sess_fn => \&print_sess_standard,
+    },
+    "detail" => {
+        print_sess_fn => \&print_sess_detail,
+    },
+    "dpi" => {
+        print_sess_fn => \&print_sess_dpi,
+    },
+);
+
+sub print_with_tabs {
+    my ( $item, $count ) = @_;
+
+    print $item;
+    my $ct = $count - ( ( length($item) + 1 ) / 8 );
+    for ( ; $ct >= 1 ; $ct-- ) {
+        print "\t";
+    }
+}
+
+sub print_sess_standard {
+    my ( $id, $entry, $header_printed ) = @_;
+
+    if ( $$header_printed == 0 ) {
+        $$header_printed = 1;
+        print(  "TCP state codes: SS - SYN SENT, SR - SYN RECEIVED, "
+              . "ES - ESTABLISHED, FW - FIN WAIT,\n" );
+        print(  "\t\t CW - CLOSE WAIT, CG - CLOSING, LA - LAST ACK, "
+              . "TW - TIME WAIT, RR - RST RECEIVED, CL - CLOSED\n" );
+        print("\n");
+        print(  "CONN ID\t\tSource\t\t\t\tDestination\t\t\tProtocol\t"
+              . "TIMEOUT\tIntf\t\tParent\n" );
+    }
+
+    print_with_tabs( $id, 3 );
+
+    my $field = "$entry->{src_addr}:$entry->{src_port}";
+    print_with_tabs( $field, 5 );
+
+    $field = "$entry->{dst_addr}:$entry->{dst_port}";
+    print_with_tabs( $field, 5 );
+
+    # Use the shorter name ICMPv6 for nicer layout
+    if ( $entry->{proto} == $ICMPV6_PROT_NUM ) {
+        $field = "icmpv6";
+    } else {
+        $field = get_proto_name( $entry->{proto} ) // $entry->{proto};
+    }
+
+    $field .= " [" . $entry->{proto} . "]";
+
+    # Convert from a state number in the name of the state. Note
+    # that TCP has different states than other protocols.
+    if ( $entry->{proto} == $TCP_PROT ) {
+        my @states = (
+            "NO", "SS", "SS", "SR", "ES", "FW", "FW", "CW",
+            "FW", "CG", "LA", "TW", "RR", "CL"
+        );
+        $field .= " $states[$entry->{state}]";
+    } else {
+        my @states = ( "NO", "new", "ES", "TM", "CL" );
+        $field .= " $states[$entry->{state}]";
+    }
+
+    print_with_tabs( $field, 3 );
+
+    $field = $entry->{time_to_expire};
+    $field = 0 if $field < 0;
+    print_with_tabs( $field, 2 );
+
+    $field = $entry->{interface} // "inactive";
+    print_with_tabs( $field, 3 );
+
+    print("$entry->{parent}\n");
+}
+
+sub get_dpi_sess_detail {
+    my ($dpi) = @_;
+
+    my $app_name   = $dpi->{"app-name"};
+    my $proto_name = $dpi->{"proto-name"};
+
+    if ( defined($app_name) ) {
+        my $info = "app-name $app_name";
+        $info .= " (l5-proto $proto_name)"
+          if defined($proto_name) && $proto_name ne $app_name;
+        return $info;
+    } elsif ( defined($proto_name) ) {
+        return "l5-proto-name $proto_name";
+    } else {
+        return "";
+    }
+}
+
+sub print_sess_feature_detail {
+    my ( $id, $entry, $feature, $header_printed ) = @_;
+
+    return 0 if !defined ($feature->{dpi});
+
+    my $fmt_str = "%-9s %-31s %-31s %-9s %-10s %-20s\n";
+    if ( $$header_printed == 0 ) {
+        $$header_printed = 1;
+        printf( $fmt_str,
+            "Conn ID",  "Source", "Destination",
+            "Protocol", "Intf",   "Features" );
+        printf( $fmt_str,
+            "-------",  "------", "-----------",
+            "--------", "----",   "--------" );
+    }
+
+    my $src = "$entry->{src_addr}:$entry->{src_port}";
+    my $dst = "$entry->{dst_addr}:$entry->{dst_port}";
+
+    # Use the shorter name ICMPv6 for nicer layout
+    my $proto;
+    if ( $entry->{proto} == $ICMPV6_PROT_NUM ) {
+        $proto = "icmpv6";
+    } else {
+        $proto = get_proto_name( $entry->{proto} ) // $entry->{proto};
+    }
+
+    my $intf = $feature->{interface} // "inactive";
+
+    my $feat = get_dpi_sess_detail( $feature->{dpi} );
+
+    printf( $fmt_str, $id, $src, $dst, $proto, $intf, $feat );
+
+    return 1;
+}
+
+# Print a 'session' line for each feature DPI found
+sub print_sess_detail {
+    my ( $id, $entry, $header_printed ) = @_;
+
+    my $features_count = $entry->{features_count};
+
+    return if !defined( $features_count);
+
+    # Only print the first DPI data found. (The rest are duplicates)
+    my $rc;
+    for ( my $i = 0; $i < $features_count; $i++ ) {
+	    $rc = print_sess_feature_detail( $id, $entry, $entry->{features}->[$i], $header_printed);
+	    return if ( $rc )
+    }
+}
+
+sub print_sess_feature_dpi {
+    my ( $id, $entry, $feature, $header_printed ) = @_;
+
+    return
+      if !defined $feature->{dpi};
+
+    my $di = $feature->{dpi};
+
+    my $fmt_str = "%-9s %-15s %-15s %-10s %-6s %-9s %-10s %-9s %-10s %-20s\n";
+    if ( $$header_printed == 0 ) {
+        $$header_printed = 1;
+        printf( $fmt_str,
+            "Conn ID",   "App-name", "L5-proto-name", "Offloaded",
+            "Error",     "Fwd-pkts", "Fwd-bytes",     "Bwd-pkts",
+            "Bwd-bytes", "Types" );
+        printf( $fmt_str,
+            "-------",   "--------", "-------------", "---------",
+            "-----",     "--------", "---------",     "--------",
+            "---------", "-----" );
+    }
+
+    my $app_name   = $di->{"app-name"}   // "";
+    my $proto_name = $di->{"proto-name"} // "";
+
+    my $offloaded = "false";
+    $offloaded = "true" if ( $di->{"offloaded"} );
+
+    my $error = "false";
+    $error = "true" if ( $di->{"error"} );
+
+    my $types = "";
+    foreach my $type ( @{ $di->{types} } ) {
+        $types .= "$type ";
+    }
+    chop $types;
+
+    printf( $fmt_str,
+        $id,                     $app_name,
+        $proto_name,             $offloaded,
+        $error,                  $di->{"forward-pkts"},
+        $di->{"forward-bytes"},  $di->{"backward-pkts"},
+        $di->{"backward-bytes"}, $types );
+}
+
+sub print_sess_dpi {
+    my ( $id, $entry, $header_printed ) = @_;
+
+    my $features_count = $entry->{features_count};
+
+    return if !defined( $features_count);
+
+    # Only print the first DPI data found. (The rest are duplicates)
+    my $rc;
+    for ( my $i = 0; $i < $features_count; $i++ ) {
+	    $rc = print_sess_feature_dpi( $id, $entry, $entry->{features}->[$i], $header_printed);
+	    return if ( $rc )
+    }
+}
+
+sub format_sessions {
+    my ( $decoded, $variant, $filt, $header_printed ) = @_;
+
+    my $print_sess_fn = $variant_info{$variant}{'print_sess_fn'};
+
+    my $params;
+    my $entry_count = 0;
+    if ( defined $decoded && defined $decoded->{config}->{sessions} ) {
+        my %entries = %{ $decoded->{config}->{sessions} };
+
+        $entry_count = keys(%entries);
+
+        foreach my $id ( sort { $a <=> $b } keys %entries ) {
+
+            # filter format is src_addr[:port]
+            # it is difficult to tell if :port is present or not after v6 addr
+            # so match filter against either src_addr or src_addr:src_port.
+            my $match =
+            (    !defined($filt)
+              || $filt eq "$entries{$id}->{src_addr}:$entries{$id}->{src_port}"
+              || $filt eq "$entries{$id}->{src_addr}" );
+
+            $print_sess_fn->( $id, $entries{$id}, $header_printed )
+              if ($match);
+        }
+    }
+    return $entry_count;
+}
+
+sub usage {
+    print "Usage: $0 --variant=[standard|detail|dpi] --filt=[filter]\n";
+    exit 1;
+}
+
+my ( $filt, $fabric );
+
+my $variant = 'standard';
+
+GetOptions(
+    'filt=s'    => \$filt,
+    'variant=s' => \$variant,
+) or usage();
+
+usage()
+  if ( defined($variant)
+    && ( $variant ne 'standard' )
+    && ( $variant ne 'detail' )
+    && ( $variant ne 'dpi' ) );
+
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+my $header_printed = 0;
+
+for my $dp_id ( sort @{$dp_ids} ) {
+    my $sock = ${$dp_conns}[$dp_id];
+
+    next unless $sock;
+
+    my $start     = 0;
+    my $req_count = 1000;
+    my $ret_count;
+
+    # Optimize for the standard case - no feature json
+    my $full = "full ";
+    $full = '' if ( $variant eq 'standard');
+
+    do {
+        my $t =
+          $sock->execute( "session-op show sessions " . $full . $start . " " . $req_count );
+        if ( defined($t) && $t !~ /^\s*$/ ) {
+            my $decoded = decode_json($t);
+            $ret_count =
+              format_sessions( $decoded, $variant, $filt, \$header_printed );
+        } else {
+            $ret_count = 0;
+        }
+        $start += $req_count;
+    } while ( $ret_count == $req_count );
+}
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

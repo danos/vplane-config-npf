@@ -1,0 +1,4 @@
+#!/bin/bash
+declare -A sysctlval=(["enable"]="0" ["disable"]="1")
+
+sysctl -wq "net.ipv4.icmp_echo_ignore_$1=${sysctlval[$2]}"

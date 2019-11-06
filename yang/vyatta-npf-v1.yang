@@ -1,0 +1,631 @@
+module vyatta-npf-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-npf:1";
+	prefix vyatta-npf-v1;
+
+	import configd-v1 {
+		prefix configd;
+	}
+
+	import vyatta-types-v1 {
+		prefix types;
+	}
+
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+
+	import vyatta-dscp-v1 {
+		prefix dscp;
+	}
+
+	import vyatta-resources-v1 {
+		prefix resources;
+	}
+
+	import vyatta-resources-group-v1 {
+		prefix res-group;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		 All rights reserved.
+		 Copyright (c) 2015-2017 by Brocade Communications Systems, Inc.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for groups used by firewall-related Vyatta
+		 YANG files";
+
+	revision 2018-11-27 {
+		description "Clarify help text.";
+	}
+	revision 2018-09-12 {
+		description "Updated description.";
+	}
+	revision 2018-02-09 {
+		description "Add a configurable policer period for token
+			     bucket calculations.";
+	}
+	revision 2017-12-12 {
+		description "Allow the same PCP marking of the inner VLAN
+			     header for QinQ packets.
+			     Add dscp-group and protocol-group leaves to
+			     common npf rules.
+			     Added police frame-overhead for qos policies.
+			     Use presence containers instead of not(*) in
+			     must statements.
+			     Allow negative frame-overhead values.";
+	}
+	revision 2017-04-07 {
+		description "Add operational state data definitions.
+			     Container tcp moved into grouping rule-tcp.";
+	}
+	revision 2016-11-18 {
+		description "Allow ports for UDP-Lite/DCCP/SCTP.
+			     Allow MAC addresses to be used in the
+			     same rule as ports and IP addresses";
+	}
+	revision 2016-08-24 {
+		description "Update Yang validation for icmp/icmpv6.
+			     Use grouping for source and destination
+			     address rules.
+			     Update yang validation for addresses.
+			     Update ethertype allowed/syntax scripts.
+			     Split up address rules so can be used
+			     when validating custom timeouts.
+			     Move scripts from under tmplscripts.";
+	}
+	revision 2016-03-28 {
+		description "Remove use of bash in action scripts";
+	}
+	revision 2015-10-15 {
+		description "Initial revision.";
+	}
+
+	typedef bandwidth-suffix {
+		type string {   /* Number followed by suffix */
+			pattern '((10|([0-9](\.([0-9]+))?))[gG][iI]?(bit|bps)?)|'
+				+ '([0-9]+(\.([0-9]+))?(([KMBkm][iI]?)?(bit|bps))?)';
+			configd:pattern-help "<<number><suffix>>
+   Suffixes are either 'bit' for bits-per-second or 'bps' for bytes-per-second.
+   These can be preceded by a decimal (K,M,G) or binary (Ki,Mi,Gi)
+   multiplier. No suffix implies Kbit (1000 bits per second).
+";
+		}
+	}
+
+	typedef burst-size {
+		type uint32 {
+			/* Arbitrary maximum: 312500000 is 100ms at 25 Mbits/sec */
+			range 1..312500000;
+		}
+		description "Burst size in bytes";
+		configd:help "Burst size in bytes";
+	}
+
+	grouping burst {
+		leaf burst {
+			type burst-size;
+			description "Burst size in bytes";
+			configd:help "Burst size in bytes";
+		}
+	}
+
+	typedef ratelimit-suffix {
+		type string {   /* Number followed by suffix */
+			pattern '[1-9][0-9]*(\.([0-9]+))?([KMkm]?pps)?';
+			configd:pattern-help "<number><suffix>
+   Suffixes can be one of pps, (K|k)pps or (M|m)pps for a multiplier.\n";
+			configd:help "Rate-limit in packets/second or period if tc set with no pps suffix";
+			configd:syntax "rate-check.pl $VAR(@)";
+		}
+	}
+
+	grouping marking-base {
+		leaf dscp {
+			type dscp:dscp-name-or-value;
+			description "DSCP value to be marked";
+			configd:help "DSCP value to be marked";
+		}
+		leaf pcp {
+			type uint8 {
+				range 0..7;
+			}
+			description "802.1 priority code point to apply";
+			configd:help "802.1 priority code point to apply";
+		}
+	}
+
+	grouping marking {
+		container mark {
+			description "Packet marking action";
+			configd:help "Packet marking action";
+			uses marking-base;
+		}
+	}
+
+	grouping marking-qos {
+		container mark {
+			description "Packet marking action";
+			configd:help "Packet marking action";
+			uses marking-base;
+			leaf pcp-inner {
+				type empty;
+				description "Mark inner VLAN header";
+				configd:help "Mark inner VLAN header";
+			}
+		}
+	}
+
+	grouping policing-base {
+		description "Packet rate limiting";
+		configd:help "Packet rate limiting";
+		leaf bandwidth {
+			type bandwidth-suffix;
+			description "Bandwidth limit in bytes/second";
+			configd:help "Bandwidth limit in bytes/second";
+		}
+		leaf ratelimit {
+			type ratelimit-suffix;
+			description "Ratelimit in packets/second or period";
+			configd:help "Ratelimit in packets/second or period";
+		}
+		leaf tc {
+			description "Policer token bucket period in milliseconds";
+			configd:help "Policer token bucket period in milliseconds";
+			type uint32 {
+				range 5..1000;
+			}
+		}
+		uses burst;
+	}
+
+	grouping mark-leaf {
+		leaf action {
+			description "Police action";
+			configd:help "Police action";
+			type enumeration {
+				enum "drop" {
+					description "Drop if overlimit";
+					configd:help "Drop if overlimit";
+				}
+			}
+		}
+	}
+
+	grouping policing {
+		container police {
+			presence "Policing rule configuration (non-QoS)";
+			must "count(bandwidth|ratelimit) = 1" {
+				error-message "One of 'bandwidth' or 'ratelimit' (not both) must be set";
+			}
+			uses policing-base;
+			container then {
+				description "Result for packets over police limit";
+				configd:help "Result for packets over police limit";
+				uses mark-leaf;
+				uses marking;
+			}
+		}
+	}
+
+	grouping policing-qos {
+		container police {
+			presence "Policing rule configuration (QoS)";
+			must "count(bandwidth|ratelimit) = 1" {
+				error-message "One of 'bandwidth' or 'ratelimit' (not both) must be set";
+			}
+			uses policing-base;
+			container then {
+				description "Result for packets over police limit";
+				configd:help "Result for packets over police limit";
+				uses mark-leaf;
+				uses marking-qos;
+			}
+			leaf frame-overhead {
+				type union {
+					type string {
+						pattern 'inherit';
+						configd:pattern-help "inherit";
+						configd:help "Inherit from qos policy";
+					}
+					type uint32 {
+						range 0..1000;
+						configd:help "Framing overhead in bytes";
+					}
+					type int32 {
+						range -63..-1;
+						configd:help "Framing overhead in bytes";
+					}
+				}
+			}
+		}
+	}
+
+	grouping ethertype {
+		leaf ethertype {
+			type string {
+				configd:syntax "vyatta-ethertype $VAR(@)";
+			}
+			description "Ethertype to match (name or hex or decimal)";
+			configd:help "Ethertype to match (name or hex or decimal)";
+			configd:allowed "vyatta-ethertype";
+		}
+	}
+
+	grouping rule-mac-address {
+		leaf mac-address {
+			type types:mac-address;
+			description "MAC address";
+			configd:help "MAC address";
+		}
+	}
+
+	grouping rule-ip-address-custom {
+		leaf address {
+			// Note that this check used for custom timeout
+			// does not check the number version of protocols
+			// 'icmp' and 'ipv6-icmp' (1 and 58) for backward
+			// compatability - in future should merge with
+			// rules-ip-address below and also check these.
+
+			// IPv6 addresses may also contain dots, so need to
+			// ensure the address has no colon to ensure it is IPv4
+			must "not((contains(current(), '.') and not(contains(current(), ':'))) and (../../protocol = 'ipv6-icmp' or ../../icmpv6))" {
+				error-message "Cannot mix IPv4 addresses with protocol 'ipv6-icmp'";
+			}
+			must "not((contains(current(), ':') and (../../protocol = 'icmp' or ../../icmp)))" {
+				error-message "Cannot mix IPv6 addresses with protocol 'icmp'";
+			}
+			// If not an IPv4 or IPv6 address, then check it is a valid address group
+			must "contains(current(), '.') or contains(current(), ':') or (current() = /resources:resources/res-group:group/res-group:address-group/res-group:tagnode)" {
+				error-message "Address group has not been configured";
+			}
+			must "count(../../*/address[contains(., '.') and not(contains(., ':'))]) = 0 or count(../../*/address[contains(., ':')]) = 0" {
+				error-message "Cannot mix IPv4 and IPv6 source/destination addresses";
+			}
+			type fw-types:fw-address;
+			description "IP address, subnet, or address-group";
+			configd:help "IP address, subnet, or address-group";
+			configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+		}
+	}
+
+	grouping rule-ip-address {
+		uses rule-ip-address-custom {
+			refine address {
+				// IPv6 addresses may also contain dots, so need to
+				// ensure the address has no colon to ensure it is IPv4
+				must "not((contains(current(), '.') and not(contains(current(), ':'))) and ../../protocol = 58)" {
+					error-message "Cannot mix IPv4 addresses with protocol 58 ('ipv6-icmp')";
+				}
+				must "not((contains(current(), ':') and ../../protocol = 1))" {
+					error-message "Cannot mix IPv6 addresses with protocol 1 ('icmp')";
+				}
+			}
+		}
+	}
+
+	grouping rule-port {
+		leaf port {
+			type fw-types:fw-port;
+			description "Port or port-group";
+			configd:help "Port or port-group";
+			configd:allowed "echo $VAR(/resources/group/port-group/@@)";
+			must "(../../protocol = 'tcp') or (../../protocol = 6) or ../../tcp or " +
+			     "(../../protocol = 'udp') or (../../protocol = 17) or " +
+			     "(../../protocol = 'dccp') or (../../protocol = 33) or " +
+			     "(../../protocol = 'sctp') or (../../protocol = 132) or " +
+			     "(../../protocol = 'udplite') or (../../protocol = 136) or " +
+			     "../../protocol-group" {
+				error-message "Only TCP/UDP/UDP-Lite/DCCP/SCTP allow a match port";
+			}
+			// Ensure that when a protocol group is referenced
+			// that it only contains protocols which we can
+			// match ports for.
+			must "not(../../protocol-group) or " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol) = " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol" +
+			     "[(. = 'tcp') or (. = '6') or " +
+			     "(. = 'udp') or (. = '17') or " +
+			     "(. = 'dccp') or (. = '33') or " +
+			     "(. = 'sctp') or (. = '132') or " +
+			     "(. = 'udplite') or (. = '136')])" {
+				error-message "When matching a port, the protocol group can contain only TCP, UDP, UDP-Lite, DCCP, or SCTP";
+			}
+		}
+	}
+
+	grouping rule-protocol {
+		leaf protocol {
+			type string {
+				configd:syntax "syntax-check-protocols";
+			}
+			description "IP L4 protocol to match (name, number or leave unconfigured for all)";
+			configd:help "IP L4 protocol to match (name, number or leave unconfigured for all)";
+			configd:allowed "allowed-protocols";
+		}
+	}
+
+	grouping fragment {
+		leaf fragment {
+			type empty;
+			description "Match on fragmented packets";
+			configd:help "Match on fragmented packets";
+		}
+	}
+
+	grouping rule-icmp-numeric {
+		list type {
+			description "Choose a type (and optional code) by number";
+			configd:help "Choose a type (and optional code) by number";
+			key type-number;
+			leaf type-number {
+				type fw-types:icmp-type-number;
+				description "ICMP type value";
+				configd:help "ICMP type value";
+			}
+			max-elements 1;
+			leaf code {
+				type fw-types:icmp-code-number;
+				description "ICMP code value";
+				configd:help "ICMP code value";
+			}
+		}
+	}
+
+	grouping rule-icmpv4 {
+		container icmp {
+			presence "ICMP rule configuration";
+			must "not(../protocol) or (../protocol = 'icmp') or (../protocol = 1)" {
+				error-message "'icmp' options can only be used if protocol is 'icmp' or not set";
+			}
+			must "not(../tcp) and not(../ipv6-route) and not(../icmpv6)" {
+				error-message "Options 'tcp', 'icmp', 'icmpv6' and 'ipv6-route' are mutually exclusive";
+			}
+			must "count(name|type|group) = 1" {
+				error-message "Can only specify one of 'name', 'type' or 'group'";
+			}
+			must "not(../protocol-group)" {
+				error-message "'icmp' options cannot be used with a protocol group";
+			}
+			description "ICMP for IPv4";
+			configd:help "ICMP for IPv4";
+			leaf name {
+				type fw-types:icmpv4-symbolic;
+				description "Choose a type (and optional code) by name";
+				configd:help "Choose a type (and optional code) by name";
+			}
+			uses rule-icmp-numeric;
+			leaf group {
+				type fw-types:group-name;
+				configd:pattern-help "<icmp-group name>";
+				configd:help "Defined IPv4 ICMP group";
+				configd:allowed "echo $VAR(/resources/group/icmp-group/@@)";
+			}
+		}
+	}
+
+	grouping rule-icmpv6 {
+		container icmpv6 {
+			presence "ICMPv6 rule configuration";
+			must "not(../protocol) or (../protocol = 'ipv6-icmp') or (../protocol = 58)" {
+				error-message "'icmpv6' options can only be used if protocol is 'ipv6-icmp' or not set";
+			}
+			must "not(../tcp) and not(../ipv6-route) and not(../icmp)" {
+				error-message "Options 'tcp', 'icmp', 'icmpv6' and 'ipv6-route' are mutually exclusive";
+			}
+			must "count(name|type|group) = 1" {
+				error-message "Can only specify one of 'name', 'type' or 'group'";
+			}
+			must "not(../protocol-group)" {
+				error-message "'icmpv6' options cannot be used with a protocol group";
+			}
+			description "ICMP for IPv6";
+			configd:help "ICMP for IPv6";
+			leaf name {
+				type fw-types:icmpv6-symbolic;
+				description "Choose a type (and optional code) by name";
+				configd:help "Choose a type (and optional code) by name";
+			}
+			uses rule-icmp-numeric;
+			leaf group {
+				type fw-types:group-name;
+				configd:pattern-help "<icmpv6-group name>";
+				configd:help "Defined IPv6 ICMP group";
+				configd:allowed "echo $VAR(/resources/group/icmpv6-group/@@)";
+			}
+		}
+	}
+
+	grouping action-fw-pbr {
+		leaf action {
+			type enumeration {
+				enum "accept" {
+					description "Accept packets matching this rule";
+					configd:help "Accept packets matching this rule";
+				}
+				enum "drop" {
+					description "Drop packets matching this rule";
+					configd:help "Drop packets matching this rule";
+				}
+			}
+			mandatory true;
+			description "Rule action";
+			configd:help "Rule action";
+		}
+	}
+
+	grouping rule-tcp {
+		container tcp {
+			presence "TCP rule configuration";
+			must "not(../protocol) or (../protocol = 'tcp') or (../protocol = 6)" {
+				error-message "'tcp' options can only be used if protocol is 'tcp' or not set";
+			}
+			must "not(../icmp) and not(../icmpv6) and not(../ipv6-route)" {
+				error-message "Options 'tcp', 'icmp', 'icmpv6' and 'ipv6-route' are mutually exclusive";
+			}
+			must "not(../protocol-group)" {
+				error-message "'tcp' options cannot be used with a protocol group";
+			}
+			description "TCP parameters";
+			configd:help "TCP parameters";
+			leaf flags {
+				type fw-types:tcp-flags;
+				configd:help "Match TCP flags";
+			}
+		}
+	}
+
+	grouping rule-common {
+		uses rule-icmpv4;
+		uses rule-icmpv6;
+		leaf description {
+			type string;
+			description "Rule description";
+			configd:help "Rule description";
+		}
+		leaf disable {
+			type empty;
+			description "Disable rule";
+			configd:help "Disable rule";
+		}
+		uses rule-protocol;
+		leaf protocol-group {
+			type leafref {
+				path "/resources:resources/res-group:group/res-group:protocol-group/res-group:group-name";
+			}
+			must "not(../protocol)" {
+				error-message "Cannot specify both 'protocol' and 'protocol-group'";
+			}
+			description "Group of IP L4 protocols to match";
+			configd:help "Group of IP L4 protocols to match";
+		}
+		container source {
+			description "Source parameters";
+			configd:help "Source parameters";
+			uses rule-mac-address;
+			uses rule-ip-address;
+			uses rule-port;
+		}
+		container destination {
+			description "Destination parameters";
+			configd:help "Destination parameters";
+			uses rule-mac-address;
+			uses rule-ip-address;
+			uses rule-port;
+		}
+		uses rule-tcp;
+		container ipv6-route {
+			presence "IPv6 route header option rule configuration";
+			must "not(../protocol) or (../protocol = 'ipv6-route') or (../protocol = 43)" {
+				error-message "'ipv6-route' options can only be used if protocol is 'ipv6-route' or not set";
+			}
+			must "not(../icmp) and not(../icmpv6) and not(../tcp)" {
+				error-message "Options 'tcp', 'icmp', 'icmpv6' and 'ipv6-route' are mutually exclusive";
+			}
+			description "IPv6 route";
+			configd:help "IPv6 route";
+			leaf type {
+				type uint8 {
+					range 0..255;
+				}
+				mandatory true;
+				description "IPv6 route type";
+				configd:help "IPv6 route type";
+			}
+		}
+		leaf dscp {
+			type dscp:dscp-name-or-value;
+			description "DSCP value to match in an incoming IP header";
+			configd:help "DSCP value to match in an incoming IP header";
+		}
+		leaf dscp-group {
+			type leafref {
+				path "/resources:resources/res-group:group/res-group:dscp-group/res-group:group-name";
+			}
+			must "not(../dscp)" {
+				error-message "Cannot specify both 'dscp' and 'dscp-group'";
+			}
+			description "Group of DSCP values to match in an incoming IP header";
+			configd:help "Group of DSCP values to match in an incoming IP header";
+		}
+		leaf pcp {
+			type uint8 {
+				range 0..7;
+			}
+			description "802.1 priority code point to match (0 to 7)";
+			configd:help "802.1 priority code point to match (0 to 7)";
+		}
+		leaf log {
+			type empty;
+			description "Enable logging for rule";
+			configd:help "Enable logging for rule";
+		}
+	}
+
+	grouping rule-state {
+		list rule {
+			description "State of rule number";
+			key "rule-number";
+			leaf rule-number {
+				type uint32;
+			}
+			leaf packets {
+				description "Number of packets matching the rule";
+				type uint64;
+			}
+			leaf bytes {
+				description "Number of bytes matching the rule";
+				type uint64;
+			}
+		}
+	}
+
+	grouping rule-group-state {
+		list name {
+			description "State of associated groups of rules";
+			key "group-name";
+			leaf group-name {
+				description "Name of group of rules";
+				type string;
+			}
+			uses rule-state;
+		}
+	}
+}

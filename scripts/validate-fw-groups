@@ -1,0 +1,89 @@
+#! /usr/bin/perl
+#
+# Copyright (c) 2018-2019, AT&T Intellectual Property.  All rights reserved
+# Copyright (c) 2015 Vyatta, Inc. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+# This is called during Yang validation under "security firewall name
+# or "policy route pbr" and for each group there it will run validation
+# on the rulesets and output errors it finds. If there is one or more
+# error, it will exit with 1 to cause the Yang validation to be failed.
+
+use strict;
+use warnings;
+use lib '/opt/vyatta/share/perl5';
+use Getopt::Long;
+use Vyatta::Config;
+use Vyatta::Config::Parse;
+use Vyatta::Npf::ValidateNpfRule qw(validate_npf_rule);
+
+my $rc             = 0;
+my $last_node_path = '';
+my $vrf            = '';
+
+my $variant = 'firewall';
+GetOptions( 'variant=s' => \$variant, "vrf:s" => \$vrf, );
+
+my $prefix;
+my $last_word;
+if ( $variant eq 'firewall' ) {
+    $last_word = 'name';
+    $prefix    = "security firewall $last_word";
+} elsif ( $variant eq 'route' ) {
+    $last_word = 'pbr';
+    $prefix    = "policy route $last_word";
+} elsif ( $variant eq 'custom-timeout' ) {
+    $last_word = 'timeout';
+    $prefix    = "system session $last_word";
+} elsif ( $variant eq 'ippf' ) {
+    $last_word = 'group';
+    $prefix = 'security ip-packet-filter $last_word';
+} else {
+    die "$0: Unknown variant option '$variant'\n";
+}
+
+$prefix = "routing routing-instance $vrf " . $prefix
+  if ($vrf);
+
+# Note this causes validation not to be done if the config for the rulesets
+# being looked at do not change, or the resource group config has not changed,
+# as only changes to these config trees can make an existing validate
+# configuration become invalid.
+my $conf = Vyatta::Config->new();
+exit $rc
+  if ( !$conf->isChanged($prefix) && !$conf->isChanged('resources group') );
+
+my $npf_config = Vyatta::Config::Parse->new($prefix);
+exit $rc if !$npf_config->{"$last_word"};    # no npf config
+
+my $npf_group_config = Vyatta::Config::Parse->new('resources group');
+
+# Parameter 1: node path where the error occurred
+# Parameter 2: the error message to display
+sub give_err {
+    my ( $node_path, $err_msg ) = @_;
+
+    print "\n";
+    if ( $node_path ne $last_node_path ) {
+        print "[$node_path]\n";
+        $last_node_path = $node_path;
+    }
+    print "$err_msg\n";
+    $rc = 1;
+    return;
+}
+
+foreach my $ruleset ( $npf_config->{"$last_word"} ) {
+    foreach my $rulename ( keys %$ruleset ) {
+        my $rules = $ruleset->{$rulename}->{'rule'};
+        foreach my $ruleno ( keys %$rules ) {
+            my $node_path = "$prefix $rulename rule $ruleno";
+            validate_npf_rule( $rules->{$ruleno}, $npf_group_config,
+                $node_path, \&give_err );
+        }
+    }
+}
+
+exit $rc;

@@ -1,0 +1,59 @@
+#! /usr/bin/perl
+#
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# The purpose of this script is to block tables from being deleted
+# when they are still in use by PBR. An exit code of zero indicates
+# the table may be deleted and non-zero indicates it should be
+# retained.
+#
+
+use lib "/opt/vyatta/share/perl5";
+use warnings;
+use strict;
+use Vyatta::Config;
+
+my $vrf_to_be_deleted = $ARGV[0];
+my $table_to_be_deleted = $ARGV[1];
+
+if ( !defined($vrf_to_be_deleted) || !defined($table_to_be_deleted) ) {
+    print "Usage: pbr-groups <vrf> <tableid>";
+    exit 2;
+}
+
+my $config = new Vyatta::Config;
+my $config_prefix = "policy route pbr";
+
+foreach my $g ( $config->listEffectiveNodes("$config_prefix") ) {
+    foreach my $r ( $config->listEffectiveNodes("$config_prefix $g rule") ) {
+        my $action =
+            $config->returnEffectiveValue("$config_prefix $g rule $r action");
+        continue 
+            if !defined($action) || $action ne "accept";
+
+        my $pbr_table = $config->returnEffectiveValue(
+            "$config_prefix $g rule $r table");
+
+        #  This script won't get called for main tables (i.e. table
+        #  number 254) since the YANG model has (or should have)
+        #  sufficient constraints to ensure that a VRF is not deleted
+        #  whilst there is configuration referencing it, so no need to
+        #  cope with the table attribute not existing, or table being
+        #  "main"
+        continue
+            if !defined($pbr_table);
+
+        my $vrf = $config->returnEffectiveValue(
+            "$config_prefix $g rule $r routing-instance");
+        $vrf = "default"
+            if !defined($vrf);
+
+        exit 1
+            if $vrf eq $vrf_to_be_deleted &&
+            $pbr_table eq $table_to_be_deleted;
+    }
+}
+
+exit 0;

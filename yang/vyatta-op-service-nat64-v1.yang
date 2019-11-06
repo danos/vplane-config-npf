@@ -1,0 +1,150 @@
+module vyatta-op-service-nat64-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-op-service-nat64:1";
+	prefix vyatta-op-service-nat64-v1;
+
+	import vyatta-opd-extensions-v1 {
+		prefix opd;
+	}
+	import vyatta-op-show-v1 {
+		prefix show;
+	}
+	import vyatta-op-service-nat-v1 {
+		prefix nat;
+	}
+	import vyatta-op-show-log-v1 {
+		prefix show-log;
+	}
+	import vyatta-op-clear-v1 {
+		prefix clear;
+	}
+	import vyatta-op-npf-types-v1 {
+		prefix op-npf-types;
+	}
+	import vyatta-op-delete-v1 {
+		prefix delete;
+	}
+	import vyatta-op-system-session-v1 {
+		prefix op-system-session;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for NAT64 and NAT46 operation mode commands.";
+
+	revision 2019-03-01 {
+		description "Initial revision.";
+	}
+
+	opd:augment /show:show/nat:nat {
+
+		opd:command nat64 {
+			opd:help "Show NAT64 information";
+			opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat64";
+
+			opd:command rules {
+				opd:help "Show NAT64 rules";
+				opd:on-enter "vyatta-dp-npf-nat64-op -s rules -t nat64";
+
+				opd:command detail {
+					opd:help "Show NAT64 rule detail";
+					opd:on-enter "vyatta-dp-npf-nat64-op -s rules -t nat64 -d";
+				}
+			}
+
+			opd:command translations {
+				opd:help "Show NAT64 translations";
+				opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat64";
+
+				opd:command detail {
+					opd:help "Show NAT64 translation detail";
+					opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat64 -d";
+				}
+			}
+		}
+
+		opd:command nat46 {
+			opd:help "Show NAT46 information";
+			opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat46";
+
+			opd:command rules {
+				opd:help "Show NAT46 rules";
+				opd:on-enter "vyatta-dp-npf-nat64-op -s rules -t nat46";
+
+				opd:command detail {
+					opd:help "Show NAT64 rule detail";
+					opd:on-enter "vyatta-dp-npf-nat64-op -s rules -t nat46 -d";
+				}
+			}
+
+			opd:command translations {
+				opd:help "Show NAT46 translations";
+				opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat46";
+
+				opd:command detail {
+					opd:help "Show NAT46 translation detail";
+					opd:on-enter "vyatta-dp-npf-nat64-op -s translations -t nat46 -d";
+				}
+			}
+		}
+	}
+
+	opd:augment /show:show/show-log:log/nat:nat {
+		opd:command nat64 {
+			opd:help "Show log for NAT64";
+			opd:on-enter 'npf-show-logs "NAT64"';
+		}
+		opd:command nat46 {
+			opd:help "Show log for NAT46";
+			opd:on-enter 'npf-show-logs "NAT46"';
+		}
+	}
+
+	opd:augment /delete:delete/op-system-session:session/op-system-session:table {
+		opd:option nat64  {
+			opd:help "Delete all nat64 session entries";
+			opd:on-enter "vyatta-dp-npf-nat64-op -c translations -t nat64";
+		}
+		opd:option nat46  {
+			opd:help "Delete all nat46 session entries";
+			opd:on-enter "vyatta-dp-npf-nat64-op -c translations -t nat46";
+		}
+	}
+}

@@ -1,0 +1,714 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
+# All Rights Reserved.
+# Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Config::Tiny;
+use JSON qw( decode_json );
+use List::Util qw( max min );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::Dataplane qw(vplane_exec_cmd);
+use Vyatta::Aggregate;
+use Vyatta::NpfRuleset;
+use Vyatta::FWHelper qw(get_proto_name get_vrf_name_from_id is_vrf_available);
+
+my $main_table_id = 254;  # The main routing table. See /etc/iproute2/rt_tables.
+my $show_internal = 0;
+my $detail;
+
+# set up information for formatting rulesets
+my %ruleset_data = (
+    "fw-in" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Firewall",
+        group_line     => "Firewall \"%s\":\n",
+    },
+    "fw-out" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Firewall",
+        group_line     => "Firewall \"%s\":\n",
+    },
+    "bridge" => {
+        print_group_fn     => \&print_group_npf,
+        tag_fn             => \&raw_tag,
+        header             => "Rulesets Information: Firewall",
+        group_line         => "Firewall \"%s\":\n",
+        override_direction => "l2",
+    },
+    "local" => {
+        print_group_fn     => \&print_group_npf,
+        tag_fn             => \&raw_tag,
+        header             => "Rulesets Information: Firewall",
+        group_line         => "Firewall \"%s\":\n",
+        override_direction => "local",
+    },
+    "zone" => {
+        print_group_fn           => \&print_group_npf,
+        tag_fn                   => \&raw_tag,
+        header                   => "Rulesets Information: From zone ",
+        group_line               => "Firewall \"%s\":\n",
+        header_each_attach_point => 1,
+    },
+    "dnat" => {
+        print_group_fn => \&print_group_nat,
+        tag_fn         => \&raw_tag,
+        header         => "NAT Rulesets Information",
+
+        # no group_line, as do not need per-group info
+    },
+    "snat" => {
+        print_group_fn => \&print_group_nat,
+        tag_fn         => \&raw_tag,
+        header         => "NAT Rulesets Information",
+
+        # no group_line, as do not need per-group info
+    },
+    "nat64" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: NAT64",
+        group_line     => "Rules \"%s\":\n",
+    },
+    "nat46" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: NAT46",
+        group_line     => "Rules \"%s\":\n",
+    },
+    "pbr" => {
+        print_group_fn => \&print_group_pbr,
+        tag_fn         => \&pbr_tag,
+        header         => "Rulesets Information: PBR",
+        group_line     => "PBR policy \"%s\":\n",
+    },
+    "ipsec" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: IPsec",
+        group_line     => "IPsec Rules \"%s\":\n",
+    },
+    "custom-timeout" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&custom_timeout_tag,
+        header         => "Rulesets Information: Custom Timeout for Sessions",
+
+        # no group_line, as do not need per-group info
+    },
+    "qos" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: QoS",
+
+        # no group_line, as do not need per-group info
+    },
+    "session-rproc" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Session Rproc",
+    },
+    "portmonitor-in" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Portmonitor",
+        group_line     => "Portmonitor Inbound Filter Rules \"%s\":\n",
+    },
+    "portmonitor-out" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Portmonitor",
+        group_line     => "Portmonitor Outbound Filter Rules \"%s\":\n",
+    },
+    "app" => {
+        print_group_fn => \&print_group_npf,
+        tag_fn         => \&raw_tag,
+        header         => "Rulesets Information: Application",
+        group_line     => "Application Rules \"%s\":\n",
+    },
+);
+
+my $default_rule_number = 10000;
+
+my ( $dp_ids, $dp_conns, $local_controller, $fabric );
+
+# DSCP reverse lookup.
+my %dscp_name = (
+    0  => 'default',
+    8  => 'cs1',
+    16 => 'cs2',
+    24 => 'cs3',
+    32 => 'cs4',
+    40 => 'cs5',
+    48 => 'cs6',
+    56 => 'cs7',
+    10 => 'af11',
+    12 => 'af12',
+    14 => 'af13',
+    18 => 'af21',
+    20 => 'af22',
+    22 => 'af23',
+    26 => 'af31',
+    28 => 'af32',
+    30 => 'af33',
+    34 => 'af41',
+    36 => 'af42',
+    38 => 'af43',
+    46 => 'ef',
+    44 => 'va',
+);
+
+# Return the name from the table if possible, else return the given value.
+sub get_dscp_name {
+    my ($dscp_val) = @_;
+    return exists( $dscp_name{$dscp_val} ) ? $dscp_name{$dscp_val} : $dscp_val;
+}
+
+sub raw_tag {
+    my ($tag) = @_;
+
+    return "tag($tag)";
+}
+
+# Change 'tag' to 'table' for showing policies
+sub pbr_tag {
+    my ($tag) = @_;
+    my $pbr_table;
+
+    if ( is_vrf_available() ) {
+
+        # Will error in the non-VRF case since we wouldn't have added a mapping
+        my $cmd = "/opt/vyatta/sbin/getvrftable --kernel-table $tag";
+        $pbr_table = `$cmd 2>/dev/null | tail -1`;
+
+        # so fall back to tag in this case
+        $pbr_table = $tag
+          if $pbr_table eq "";
+    } else {
+
+        # If VRF isn't available then getvrftable isn't
+        # available, but we can rely on the identity mapping
+        # for the default VRF
+        $pbr_table = $tag;
+    }
+
+    # Shown 'main' rather than the main table ID.
+    $pbr_table = 'main' if ( $pbr_table == $main_table_id );
+
+    return "table($pbr_table)";
+}
+
+sub custom_timeout_tag {
+    my ($tag) = @_;
+
+    return "timeout($tag)";
+}
+
+sub print_header {
+    my ($header) = @_;
+
+    print "-" x length $header;
+    print "\n$header\n";
+    print "-" x length $header;
+    print "\n";
+    print "-" x 80;
+    print "\n";
+}
+
+# return "default" for the default rule number, else return just the
+# rule number
+sub rule_or_name {
+    my $rule = shift;
+    if ( $rule == $default_rule_number ) {
+        return "default";
+    } else {
+        return $rule;
+    }
+}
+
+# get list of interfaces on the system via sysfs
+sub getInterfaces {
+    opendir( my $net_ifs, '/sys/class/net' )
+      or die "can't open /sys/class/net: $!\n";
+
+    # Exclude .spathintf and tunnel lower layers
+    my @interfaces =
+      grep { !/^(\..*|gretap0|gre0|tunl0|ip6tunl0|sit0)$/ } readdir $net_ifs;
+    closedir $net_ifs;
+
+    return @interfaces;
+}
+
+sub format_npf_match {
+    my ($match) = @_;
+
+    my $proto = "any";
+
+    # Replace protocol number with a name.
+    if ( $match =~ /(^|.* )proto(-final)? ([\S]*)(.*)/ ) {
+        $proto = get_proto_name($3);
+        $proto = $3 if !defined($proto);
+        $match = "${1}proto $proto$4";
+    }
+
+    my $tname;
+    if ( $match =~ /(from) <([\S]+)>/ ) {
+        $tname = $2;
+    }
+
+    $match =~ s/from (<[\S]+>)/from $tname/g
+      if ( defined $tname );
+
+    $tname = undef;
+    if ( $match =~ /(to) <([\S]+)>/ ) {
+        $tname = $2;
+    }
+
+    $match =~ s/to (<[\S]+>)/to $tname/g
+      if ( defined $tname );
+
+    return ( $match, $proto );
+}
+
+sub format_npf_operation {
+    my ( $operation, $ruleset_type ) = @_;
+
+    # Call function to replace tag info with ruleset-type-specific info
+    if ( $operation =~ /(^|.* )tag\(([0-9]*)\)(.*)/ ) {
+        my $tag_fn   = $ruleset_data{$ruleset_type}{'tag_fn'};
+        my $tag_info = $tag_fn->($2);
+        $operation = "$1$tag_info$3";
+    }
+
+    # Replace dscp value with name.
+    if ( $operation =~ /(^|.* )markdscp\(([\S]*)\)(.*)/ ) {
+        $operation = "$1markdscp(" . get_dscp_name($2) . ")$3";
+    }
+
+    # Replace routing instance ID with routing instance name.
+    if ( $operation =~ /(^|.* )setvrf\(([0-9]*)\)(.*)/ ) {
+        $operation = "$1routing-instance(" . get_vrf_name_from_id($2) . ")$3";
+    }
+
+    # Tidy-up app-firewall() rproc for simple forms
+    # These forms are generated by function update_generated_app_fw_groups
+    # in vyatta-dp-npf.pl.
+    $operation = "$1name=$2$3"
+      if ( $operation =~ /(.* app-firewall\()_N[^\+]*\+(.*)(\).*)/ );
+    $operation = "$1protocol=$2$3"
+      if ( $operation =~ /(.* app-firewall\()_P[^\+]*\+(.*)(\).*)/ );
+    $operation = "$1type=$2$3"
+      if ( $operation =~ /(.* app-firewall\()_T[^\+]*\+(.*)(\).*)/ );
+
+    # Tidy app rproc output.
+    if ( $operation =~ /(.*) app\((.*),(.*),(.*)\)(.*)/ ) {
+        my $name  = ( $2 eq '' ) ? "'none'" : $2;
+        my $proto = ( $4 eq '' ) ? "'none'" : $4;
+        my $hex = sprintf( "0x%X", $3 );
+        $operation = "$1 app=($name,$hex,$proto)$5";
+    }
+
+    return $operation;
+}
+
+sub print_npf_rule {
+    my ( $rule_num, $rule, $ruleset_type, $rule_header_printed ) = @_;
+    my $action = "drop";
+
+    my $fmt_str = "%-7s %-7s %-15s %-15s %-15s\n";
+
+    if ( $$rule_header_printed == 0 ) {
+        $$rule_header_printed = 1;
+        printf( $fmt_str, "rule", "action", "proto", "packets", "bytes" );
+        printf( $fmt_str, "----", "------", "-----", "-------", "-----" );
+    }
+
+    my ( $match, $proto ) = format_npf_match( $rule->{match} );
+
+    $action = "allow"
+      if ( $rule->{action} =~ /^pass/ );
+
+    printf( $fmt_str,
+        rule_or_name($rule_num), $action, $proto, $rule->{packets},
+        $rule->{bytes} );
+
+    if ( $detail && index( $match, "policer" ) != -1 ) {
+        my $policer_stats = $rule->{'policer-stats'};
+        my @police_stats = split( / /, $policer_stats );
+        printf( "%15s exceeded        %-15s %-15s\n",
+            ' ', $police_stats[2], $police_stats[4] );
+    }
+    print "  condition - $match\n";
+    if ( defined $rule->{operation} ) {
+        my $operation =
+          format_npf_operation( $rule->{operation}, $ruleset_type );
+        print "  operation - $operation\n"
+          if ( $operation ne "" );
+    }
+    print "\n";
+}
+
+sub print_nat_stats_rule {
+    my ( $attach_point, $rule_num, $rule, $ruleset_type, $rule_header_printed )
+      = @_;
+
+    my $fmt_str = "%-7s %-15s %-24s %-15s %-15s\n";
+
+    if ( $$rule_header_printed == 0 ) {
+        $$rule_header_printed = 1;
+        printf( $fmt_str, "rule", "pkts", "bytes", "interface", "used/total" );
+        printf( $fmt_str, "----", "----", "-----", "---------", "----------" );
+    }
+
+    my $used_total = "n/a";
+    $used_total = "$rule->{used_ts}/$rule->{total_ts}"
+      if defined( $rule->{used_ts} ) && defined( $rule->{used_ts} );
+
+    printf( $fmt_str,
+        $rule_num,     $rule->{packets}, $rule->{bytes},
+        $attach_point, $used_total );
+}
+
+sub print_group_nat_stats {
+    my ( $attach_type, $attach_point, $new_attach_point, $ruleset_type, $group,
+        $variant, $header_printed, $rule_header_printed )
+      = @_;
+
+    foreach my $rule_num ( sort { $a <=> $b } keys %{ $group->{rules} } ) {
+        print_nat_stats_rule( $attach_point, $rule_num,
+            $group->{rules}{$rule_num},
+            $ruleset_type, $rule_header_printed );
+    }
+}
+
+sub format_nat {
+    my $type;
+    if ( $type eq "snat" ) {
+        print("SOURCE\n");
+    } else {
+        print("DESTINATION\n");
+    }
+}
+
+sub print_nat_rule {
+    my ( $attach_point, $rule_num, $rule, $ruleset_type, $rule_header_printed )
+      = @_;
+
+    my $fmt_str = "%-7s %-15s %-39s %-15s\n";
+
+    if ( $$rule_header_printed == 0 ) {
+        $$rule_header_printed = 1;
+        if ( $ruleset_type eq "snat" ) {
+            print("SOURCE\n");
+        } else {
+            print("DESTINATION\n");
+        }
+        printf( $fmt_str, "rule", "intf", "match", "translation" );
+        printf( $fmt_str, "----", "----", "-----", "-----------" );
+    }
+
+    my ( $match, $proto ) = format_npf_match( $rule->{match}, $ruleset_type );
+
+    printf( $fmt_str, $rule_num, $attach_point, $match, $rule->{map} );
+}
+
+sub print_group_nat_rules {
+    my ( $attach_type, $attach_point, $new_attach_point, $ruleset_type, $group,
+        $variant, $header_printed, $rule_header_printed )
+      = @_;
+
+    my $header = $ruleset_data{$ruleset_type}{'header'};
+
+    if ( !$$header_printed and defined $header ) {
+        print_header($header);
+        $$header_printed = 1;
+    }
+
+    foreach my $rule_num ( sort { $a <=> $b } keys %{ $group->{rules} } ) {
+        print_nat_rule( $attach_point, $rule_num, $group->{rules}{$rule_num},
+            $ruleset_type, $rule_header_printed );
+    }
+}
+
+sub print_group_nat {
+    my ( $attach_type, $attach_point, $new_attach_point, $ruleset_type, $group,
+        $variant, $header_printed, $rule_header_printed )
+      = @_;
+
+    if ( defined($variant) && $variant eq 'stats' ) {
+        print_group_nat_stats( $attach_type, $attach_point, $new_attach_point,
+            $ruleset_type, $group, $variant, $header_printed,
+            $rule_header_printed );
+    } else {
+        print_group_nat_rules( $attach_type, $attach_point, $new_attach_point,
+            $ruleset_type, $group, $variant, $header_printed,
+            $rule_header_printed );
+    }
+}
+
+sub print_group_pbr_table {
+    my ( $group, $header_printed ) = @_;
+
+    my $fmt_str = "%-28s  %-4s  %-5s  %s\n";
+
+    if ( !$$header_printed ) {
+        printf $fmt_str, "PBR GROUP", "Rule", "Table", "Routing Instance";
+        printf $fmt_str, "----------------------------", "----", "-----", "----------------";
+        $$header_printed = 1;
+    }
+
+    foreach my $rule_num ( sort { $a <=> $b } keys %{ $group->{rules} } ) {
+        my $tag = "-";
+        my $vrf = "-";
+
+        if ( $group->{rules}{$rule_num}->{action} =~ /pass/ ) {
+            my $operation = $group->{rules}{$rule_num}->{operation};
+            $tag =
+              $operation =~ /tag\(([\w]*)\)/ ? $1 : "";
+
+            # Shown 'main' rather than the main table ID.
+            $tag = 'main' if ( $tag == $main_table_id );
+
+            if ( $operation =~ /setvrf\(([0-9]*)\)/ ) {
+                $vrf = get_vrf_name_from_id($1);
+            }
+        }
+
+        my $group_name = $group->{name};
+        if ( $group_name =~ /^([^:]*):(\S*)/ ) {
+            $group_name = $2;
+        }
+        printf $fmt_str, $group_name, $rule_num, $tag, $vrf;
+    }
+}
+
+sub print_group_pbr {
+    my ( $attach_type, $attach_point, $new_attach_point, $ruleset_type, $group,
+        $variant, $header_printed, $rule_header_printed )
+      = @_;
+
+    if ( defined($variant) && $variant eq 'pbr-table' ) {
+        print_group_pbr_table( $group, $header_printed );
+    } else {
+        print_group_npf( $attach_type, $attach_point, $new_attach_point,
+            $ruleset_type, $group, $variant, $header_printed,
+            $rule_header_printed );
+    }
+}
+
+sub print_group_npf {
+    my ( $attach_type, $attach_point, $new_attach_point, $ruleset_type, $group,
+        $variant, $header_printed, $rule_header_printed )
+      = @_;
+
+    my $header     = $ruleset_data{$ruleset_type}{'header'};
+    my $group_line = $ruleset_data{$ruleset_type}{'group_line'};
+    my $header_each_attach_point =
+      $ruleset_data{$ruleset_type}{'header_each_attach_point'};
+    my $override_direction = $ruleset_data{$ruleset_type}{'override_direction'};
+
+    if ( defined $header_each_attach_point && $new_attach_point ) {
+
+        # header printed again with attach_point when it changes
+        $$header_printed = 0;
+
+        if ( $attach_type eq 'interface' ) {
+            $header .= $attach_point;
+        } elsif ( $attach_type eq 'zone' ) {
+            my ( $fm_zone, $to_zone ) = split( />/, $attach_point, 2 );
+            $header .= "\"$fm_zone\" to zone \"$to_zone\"";
+        } else {
+            $attach_point = get_vrf_name_from_id($attach_point)
+              if ( $attach_type eq 'vrf' );
+            $header .= "$attach_type:$attach_point";
+        }
+    }
+
+    if ( !$$header_printed and defined $header ) {
+        print_header($header);
+        $$header_printed = 1;
+    }
+
+    my $group_name  = $group->{name};
+    my $group_class = $group->{class};
+
+    if ( $group_class eq "fw-internal" ) {
+        if ($show_internal) {
+            printf( $group_line, "$group_class:$group_name" )
+              if defined $group_line;
+        } else {
+            return;
+        }
+    } else {
+        printf( $group_line, $group_name )
+          if defined $group_line;
+    }
+
+    my ( $active_attach_point, $direction );
+
+    if ( $attach_type eq 'global' ) {
+        $active_attach_point = "ALL";
+    } elsif ( $attach_type eq 'interface' ) {
+        $active_attach_point = $attach_point;
+    } elsif ( $attach_type eq 'zone' ) {
+        undef $active_attach_point;
+    } else {
+        $active_attach_point = "$attach_type:$attach_point";
+    }
+
+    if ( defined $override_direction ) {
+        $direction = $override_direction;
+    } else {
+        $direction = $group->{direction};
+    }
+
+    if ( defined($active_attach_point) ) {
+        print("Active on ($active_attach_point, $direction)\n");
+    }
+
+    # want the rule header reprinted after each group
+    $$rule_header_printed = 0;
+    foreach my $rule_num ( sort { $a <=> $b } keys %{ $group->{rules} } ) {
+        print_npf_rule(
+            $rule_num,     $group->{rules}{$rule_num},
+            $ruleset_type, $rule_header_printed
+        );
+    }
+}
+
+sub print_ruleset {
+    my ( $ruleset_type, $config, $variant, $header_printed ) = @_;
+    my $new_attach_point;
+    my $rule_header_printed = 0;
+
+    foreach my $attach_point ( @{$config} ) {
+        $new_attach_point = 1;
+        foreach my $ruleset ( @{ $attach_point->{rulesets} } ) {
+            next if $ruleset->{ruleset_type} ne $ruleset_type;
+
+            foreach my $group ( @{ $ruleset->{groups} } ) {
+                my $print_group_fn =
+                  $ruleset_data{$ruleset_type}{'print_group_fn'};
+                $print_group_fn->(
+                    $attach_point->{attach_type},
+                    $attach_point->{attach_point},
+                    $new_attach_point,
+                    $ruleset_type,
+                    $group,
+                    $variant,
+                    $header_printed,
+                    \$rule_header_printed,
+                );
+                $new_attach_point = 0;
+            }
+        }
+    }
+
+    print "\n" if $rule_header_printed;
+}
+
+sub print_rules {
+    my ( $config, $variant ) = @_;
+
+    my $fw_header_printed = 0;
+    foreach my $ruleset_type ( 'fw-in', 'fw-out', 'bridge', 'local', 'zone' ) {
+        print_ruleset( $ruleset_type, $config, $variant, \$fw_header_printed );
+    }
+
+    my $nat_header_printed = 0;
+    foreach my $ruleset_type ( 'snat', 'dnat' ) {
+        print_ruleset( $ruleset_type, $config, $variant, \$nat_header_printed );
+    }
+
+    my $ipsec_header_printed = 0;
+    foreach my $ruleset_type ( 'controller', 'ipsec' ) {
+        print_ruleset( $ruleset_type, $config, $variant,
+            \$ipsec_header_printed );
+    }
+
+    # rest have header printed for each ruleset
+    foreach my $ruleset_type (
+        'nat64', 'nat46',   'pbr',
+        'custom-timeout',   'qos',
+        'session-rproc-in', 'app',
+        'portmonitor-in',   'portmonitor-out'
+      )
+    {
+        my $npf_header_printed = 0;
+        print_ruleset( $ruleset_type, $config, $variant, \$npf_header_printed );
+    }
+}
+
+sub process_rulesets {
+    my ( $variant, $show_params ) = @_;
+
+    my $dp_rsp =
+      vplane_exec_cmd( "npf-op show @$show_params", $dp_ids, $dp_conns, 1 );
+    my $agg_rsp =
+      aggregate_npf_responses( $dp_ids, $dp_rsp, "Vyatta::NpfRuleset" );
+    return if ( !defined($agg_rsp) || !defined $agg_rsp->{config} );
+
+    # print Dumper $agg_rsp;
+
+    print_rules( $agg_rsp->{config}, $variant );
+}
+
+sub usage {
+    print
+"Usage: $0 --variant=[pbr-table|stats] [--internal] [--detail] [attach-point [ruleset-type ... ]]\n";
+    exit 1;
+}
+
+my $variant;
+
+# Rule groups created internally (currently for zones) are not displayed
+# Options --internal will cause them to be shown.
+
+GetOptions(
+    'variant=s' => \$variant,
+    'internal'  => \$show_internal,
+    'detail'    => \$detail
+) or usage();
+
+usage()
+  if ( defined($variant)
+    && ( $variant ne "pbr-table" )
+    && ( $variant ne "stats" ) );
+
+if ( $#ARGV >= 0 && $ARGV[0] =~ /^interface:(\S*)/ ) {
+    my $ifname = $1;
+
+    my @valid_intfs = getInterfaces();
+
+    unless ( grep $_ eq $ifname, @valid_intfs ) {
+        warn "'$ifname' is not a valid interface\n";
+        exit 1;
+    }
+
+    # The loopback interface represents the global attach point
+    $ARGV[0] =~ s/interface:lo/global:/;
+}
+
+( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+process_rulesets( $variant, \@ARGV );
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

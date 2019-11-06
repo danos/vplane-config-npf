@@ -1,0 +1,720 @@
+module vyatta-service-nat64-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-service-nat64:1";
+	prefix vyatta-service-nat64-v1;
+
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-resources-v1 {
+		prefix resources;
+	}
+	import vyatta-resources-group-v1 {
+		prefix res-group;
+	}
+	import vyatta-services-v1 {
+		prefix service;
+	}
+	import vyatta-service-nat-v1 {
+		prefix nat;
+	}
+	import vyatta-types-v1 {
+		prefix types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta NAT64 and NAT46 configuration";
+
+	revision 2019-03-01 {
+		description "Initial revision.";
+	}
+
+	typedef nat64-rfc6052-prefix-length {
+		type uint8 {
+			range "32|40|48|56|64|96";
+			configd:help "IPv6 prefix length";
+		}
+		description
+			"RFC 6052 details the algorithmic translation of an IPv6 address
+			 to a corresponding IPv4 address, and vice versa.  The prefix length
+			 value determines how an IPv4 address is embedded in an IPv6 address.";
+		reference
+			"RFC 6052: IPv6 Addressing of IPv4/IPv6 Translators";
+	}
+
+	grouping nat64-match-port {
+		leaf port {
+			type union {
+				type types:port;
+				type fw-types:service-name;
+			}
+			description "Port to match";
+			configd:help "Port to match";
+			must "not(../port-range) and not(../port-group)" {
+				error-message "Only one of port, port-range or port-group may be specified";
+			}
+			must "(../../protocol = 'tcp') or (../../protocol = 6) or " +
+			     "(../../protocol = 'udp') or (../../protocol = 17) or " +
+			     "(../../protocol = 'dccp') or (../../protocol = 33) or " +
+			     "(../../protocol = 'sctp') or (../../protocol = 132) or " +
+			     "(../../protocol = 'udplite') or (../../protocol = 136) or " +
+			     "../../protocol-group" {
+				error-message "Only TCP/UDP/UDP-Lite/DCCP/SCTP allow a match port";
+			}
+			// Ensure that when a protocol group is referenced
+			// that it only contains protocols which we can
+			// match ports for.
+			must "not(../../protocol-group) or " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol) = " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol" +
+			     "[(. = 'tcp') or (. = '6') or " +
+			     "(. = 'udp') or (. = '17') or " +
+			     "(. = 'dccp') or (. = '33') or " +
+			     "(. = 'sctp') or (. = '132') or " +
+			     "(. = 'udplite') or (. = '136')])" {
+				error-message "When matching a port, the protocol group can contain only TCP, UDP, UDP-Lite, DCCP, or SCTP";
+			}
+		}
+		leaf port-range {
+			type types:port-range;
+			description "Port range to match";
+			configd:help "Port range to match";
+			must "not(../port) and not(../port-group)" {
+				error-message "Only one of port, port-range or port-group may be specified";
+			}
+			must "(../../protocol = 'tcp') or (../../protocol = 6) or " +
+			     "(../../protocol = 'udp') or (../../protocol = 17) or " +
+			     "(../../protocol = 'dccp') or (../../protocol = 33) or " +
+			     "(../../protocol = 'sctp') or (../../protocol = 132) or " +
+			     "(../../protocol = 'udplite') or (../../protocol = 136) or " +
+			     "../../protocol-group" {
+				error-message "Only TCP/UDP/UDP-Lite/DCCP/SCTP allow a match port";
+			}
+			// Ensure that when a protocol group is referenced
+			// that it only contains protocols which we can
+			// match ports for.
+			must "not(../../protocol-group) or " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol) = " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol" +
+			     "[(. = 'tcp') or (. = '6') or " +
+			     "(. = 'udp') or (. = '17') or " +
+			     "(. = 'dccp') or (. = '33') or " +
+			     "(. = 'sctp') or (. = '132') or " +
+			     "(. = 'udplite') or (. = '136')])" {
+				error-message "When matching a port, the protocol group can contain only TCP, UDP, UDP-Lite, DCCP, or SCTP";
+			}
+		}
+		leaf port-group {
+			description "Port group to match";
+			configd:help "Port group to match";
+			configd:allowed "echo $VAR(/resources/group/port-group/@@)";
+			must "not(../port) and not(../port-range)" {
+				error-message "Only one of port, port-range or port-group may be specified";
+			}
+			type fw-types:group-name {
+				configd:pattern-help "<port-group name>";
+				configd:help "Defined port group";
+			}
+			must "(../../protocol = 'tcp') or (../../protocol = 6) or " +
+			     "(../../protocol = 'udp') or (../../protocol = 17) or " +
+			     "(../../protocol = 'dccp') or (../../protocol = 33) or " +
+			     "(../../protocol = 'sctp') or (../../protocol = 132) or " +
+			     "(../../protocol = 'udplite') or (../../protocol = 136) or " +
+			     "../../protocol-group" {
+				error-message "Only TCP/UDP/UDP-Lite/DCCP/SCTP allow a match port";
+			}
+			// Ensure that when a protocol group is referenced
+			// that it only contains protocols which we can
+			// match ports for.
+			must "not(../../protocol-group) or " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol) = " +
+			     "count(/resources:resources/res-group:group/res-group:protocol-group[res-group:group-name = current()/../../protocol-group]/res-group:protocol" +
+			     "[(. = 'tcp') or (. = '6') or " +
+			     "(. = 'udp') or (. = '17') or " +
+			     "(. = 'dccp') or (. = '33') or " +
+			     "(. = 'sctp') or (. = '132') or " +
+			     "(. = 'udplite') or (. = '136')])" {
+				error-message "When matching a port, the protocol group can contain only TCP, UDP, UDP-Lite, DCCP, or SCTP";
+			}
+		}
+	}
+
+	augment /service:service/nat:nat {
+		container nat64 {
+			description "Contains the match and mapping parameters for IPv6 to IPv4 translation";
+			configd:help "IPv6 to IPv4 translation parameters";
+			configd:end "vyatta-dp-npf-nat64 -t nat64";
+			list group {
+				description "NAT64 ruleset";
+				configd:help "NAT64 ruleset";
+				key "ruleset-name";
+				leaf ruleset-name {
+					description "Ruleset name";
+					configd:help "Ruleset name";
+					must "not(../../../nat46/group/ruleset-name = current())" {
+						error-message "Ruleset name must not match a nat46 group";
+					}
+					type fw-types:rule-name;
+				}
+				leaf description {
+					description "Ruleset description";
+					configd:help "Ruleset description";
+					type string;
+				}
+				list rule {
+					description "Rule number";
+					configd:help "Rule number";
+					key "rule-number";
+					leaf rule-number {
+						type fw-types:rule-number;
+					}
+					must "match/destination/ip6-address" {
+						error-message "Must specify destination match parameters";
+					}
+					must "translation/source/mapping" {
+						error-message "Must specify source translation parameters";
+					}
+					must "translation/destination/mapping" {
+						error-message "Must specify destination translation parameters";
+					}
+					container match {
+						description "Match parameters determine which IPv6 packets are translated";
+						configd:help "IPv6 match parameters";
+						leaf protocol {
+							type string {
+								configd:syntax "syntax-check-protocols";
+							}
+							description "L4 protocol to match (name or number)";
+							configd:help "L4 protocol to match (name or number)";
+							configd:allowed "allowed-protocols";
+							must "not(current() = 'icmp') and not(current() = 1)" {
+								error-message "Cannot use 'icmp' with IPv6";
+							}
+							must "not(current() = 'ip') and not(current() = 'ipv6')" {
+								error-message "'ip' and 'ipv6' are not valid L4 protocols";
+							}
+						}
+						leaf protocol-group {
+							type leafref {
+								path "/resources:resources/res-group:group/res-group:protocol-group/res-group:group-name";
+							}
+							must "not(../protocol)" {
+								error-message "Cannot specify both 'protocol' and 'protocol-group'";
+							}
+							description "Group of L4 protocols to match";
+							configd:help "Group of L4 protocols to match";
+						}
+						container source {
+							description "IPv6 source match parameters";
+							configd:help "IPv6 source match parameters";
+							uses nat64-match-port;
+							container ip6-address {
+								description "IPv6 source to match";
+								configd:help "IPv6 source to match";
+								must "not(current()) or count(*) = 1" {
+									error-message "Only one of address-group, host or prefix may be set";
+								}
+								leaf address-group {
+									description "Address group";
+									configd:help "Address group";
+									configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+									type fw-types:group-name;
+								}
+								leaf host {
+									description "IPv6 address";
+									configd:help "IPv6 address";
+									type types:ipv6-address;
+								}
+								leaf prefix {
+									description "IPv6 prefix";
+									configd:help "IPv6 prefix";
+									type types:ipv6-prefix;
+								}
+							}
+						}
+						container destination {
+							description "IPv6 destination match parameters";
+							configd:help "IPv6 destination match parameters";
+							uses nat64-match-port;
+							container ip6-address {
+								description "IPv6 destination to match";
+								configd:help "IPv6 destination to match";
+								must "not(current()) or count(*) = 1" {
+									error-message "Only one of address-group, host or prefix may be set";
+								}
+								leaf address-group {
+									description "Address group";
+									configd:help "Address group";
+									configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+									type fw-types:group-name;
+								}
+								leaf host {
+									description "IPv6 address";
+									configd:help "IPv6 address";
+									type types:ipv6-address;
+								}
+								leaf prefix {
+									description "IPv6 prefix";
+									configd:help "IPv6 prefix";
+									type types:ipv6-prefix;
+								}
+							}
+						}
+					}
+					container translation {
+						description "Specifies how IPv6 packets matching the match criteria are translated";
+						configd:help "IPv6 to IPv4 translation parameters";
+						container source {
+							description "Specify how IPv6 source addresses are translated";
+							configd:help "IPv6 source address translation parameters";
+
+							container mapping {
+								description "Parameters to map an IPv6 source address to an IPv4 address";
+								configd:help "Parameters to map an IPv6 source address to an IPv4 address";
+								must "not(current()) or count(*) = 1" {
+									error-message "Specify either 'rfc6052' or 'overload', not both";
+								}
+
+								container rfc6052 {
+									description "IPv4 address is extracted from IPv6 address according to rfc6052 rules";
+									configd:help "IPv4 address is extracted from IPv6 address according to rfc6052 rules";
+									leaf prefix-length {
+										type nat64-rfc6052-prefix-length;
+										configd:help "Prefix length determines how IPv4 address is extracted from IPv6 address";
+										description "Prefix length determines how IPv4 address is extracted from IPv6 address";
+									}
+								}
+
+								container overload {
+									description "IPv4 address is allocated from an address and port pool";
+									configd:help "IPv4 address is allocated from an address and port pool";
+									must "not(current()) or not(../../../../match/protocol) or " +
+										"(not(../../../../match/protocol = 'ipv6-icmp') and " +
+										"not(../../../../match/protocol = 58))" {
+										error-message "'overload' may not be specified if matching protocol ipv6-icmp";
+									}
+									container ip-address-pool {
+										description "IPv4 address pool parameters";
+										configd:help "IPv4 address pool parameters";
+										must "not(current()) or count(*) = 1" {
+											error-message "Only one of address-group, address-range or prefix may be set";
+										}
+										leaf prefix {
+											description "IPv4 subnet to allocate addresses from";
+											configd:help "IPv4 subnet to allocate addresses from";
+											type types:ipv4-prefix;
+										}
+										leaf address-group {
+											description "Named address group to allocate addresses from";
+											configd:help "Named address group to allocate addresses from";
+											configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+											type fw-types:group-name;
+										}
+										list address-range {
+											description "IPv4 address range to allocate addresses from";
+											configd:help "Address range to allocate addresses from";
+											key "start";
+											leaf start {
+												description "Start address";
+												configd:help "Start address";
+												type types:ipv4-address {
+													configd:help "IPv4 address";
+												}
+											}
+											leaf to {
+												description "End address";
+												configd:help "End address";
+												mandatory "true";
+												type types:ipv4-address {
+													configd:help "IPv4 address";
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						container destination {
+							description "Specify how IPv6 destination addresses are translated";
+							configd:help "IPv6 destination address translation parameters";
+							container mapping {
+								description "Parameters to map an IPv6 destination address to an IPv4 address";
+								configd:help "Parameters to map an IPv6 destination address to an IPv4 address";
+								must "not(current()) or count(*) = 1" {
+									error-message "Specify either 'rfc6052' or 'host-to-host', not both";
+								}
+								container rfc6052 {
+									configd:help "IPv4 address is extracted from IPv6 address according to rfc6052 rules";
+									description "IPv4 address is extracted from IPv6 address according to rfc6052 rules";
+									leaf prefix-length {
+										type nat64-rfc6052-prefix-length;
+										configd:help "Prefix length determines how IPv4 address is extracted from IPv6 address";
+										description "Prefix length determines how IPv4 address is extracted from IPv6 address";
+									}
+								}
+								container host-to-host {
+									configd:help "A single IPv6 address is mapped to a single IPv4 address";
+									container ip-address {
+										description "IPv4 destination address";
+										configd:help "IPv4 destination address";
+										must "not(current()) or ../../../../../match/destination/ip6-address/host" {
+											error-message "Destination host-to-host mapping is only valid when matching a destination host address";
+										}
+										leaf host {
+											description "IPv4 address";
+											configd:help "IPv4 address";
+											type types:ipv4-address;
+										}
+									}
+									leaf port {
+										type union {
+											type types:port;
+											type fw-types:service-name;
+										}
+										configd:help "A single IPv6 address and port are mapped to a single IPv4 address and port";
+										description "A single IPv6 address and port are mapped to a single IPv4 address and port";
+										must "../../../../../match/destination/port" {
+											error-message "Destination host-to-host port mapping is only valid when matching a single destination port";
+										}
+										must "not(../../../../../match/protocol = 'sctp') and not(../../../../../match/protocol = 132)" {
+											error-message "Destination host-to-host port mapping is not valid for SCTP";
+										}
+										must "../ip-address/host" {
+											error-message "A destination port cannot be specified unless an address is also specified";
+										}
+									}
+								}
+							}
+						}
+					}
+					container log {
+						presence "logging configuration";
+						description "Enable logging for NAT64 rule";
+						configd:help "Enable logging for NAT64 rule";
+						leaf sessions {
+							type empty;
+							description "Enable logging for NAT64 session creation and closure";
+							configd:help "Enable logging for NAT64 session creation and closure";
+						}
+					}
+				}
+			}
+			list interface {
+				description "Interface to initiate an IPv6 to IPv4 session";
+				configd:help "Interface to initiate an IPv6 to IPv4 session";
+				configd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+				key "name";
+				leaf name {
+					description "Interface name";
+					configd:help "Interface name";
+					must "not(../../../nat46/interface/name = current())" {
+						error-message "An interface cannot have both a nat46 and a NAT64 rule";
+					}
+					type string;
+				}
+				list in {
+					description "Ruleset for IPv6-to-IPv4 packets on inbound interface";
+					configd:help "Ruleset for IPv6-to-IPv4 packets on inbound interface";
+					min-elements 1;
+					key "name";
+					leaf name {
+						description "Ruleset name";
+						configd:help "Ruleset name";
+						type leafref {
+							path "/service:service/nat:nat/nat64/group/ruleset-name";
+						}
+					}
+				}
+			}
+		}
+	}
+
+	augment /service:service/nat:nat {
+		container nat46 {
+			description "Contains the match and mapping parameters for IPv4 to IPv6 translation";
+			configd:help "IPv4 to IPv6 translation parameters";
+			configd:end "vyatta-dp-npf-nat64 -t nat46";
+			list group {
+				description "NAT46 ruleset";
+				configd:help "NAT46 ruleset";
+				key "ruleset-name";
+				leaf ruleset-name {
+					description "Ruleset name";
+					configd:help "Ruleset name";
+					must "not(../../../nat64/group/ruleset-name = current())" {
+						error-message "Ruleset name must not match a NAT64 group";
+					}
+					type fw-types:rule-name;
+				}
+				leaf description {
+					description "Ruleset description";
+					configd:help "Ruleset description";
+					type string;
+				}
+				list rule {
+					description "Rule number";
+					configd:help "Rule number";
+					key "rule-number";
+					leaf rule-number {
+						type fw-types:rule-number;
+					}
+					must "match/destination/ip-address" {
+						error-message "Must specify destination match parameters";
+					}
+					must "translation/source/mapping" {
+						error-message "Must specify source translation parameters";
+					}
+					must "translation/destination/mapping" {
+						error-message "Must specify destination translation parameters";
+					}
+					container match {
+						description "Match parameters determine which IPv4 packets are translated";
+						configd:help "IPv4 match parameters";
+						leaf protocol {
+							type string {
+								configd:syntax "syntax-check-protocols";
+							}
+							description "L4 protocol to match (name or number)";
+							configd:help "L4 protocol to match (name or number)";
+							configd:allowed "allowed-protocols";
+							must "not(current() = 'ipv6-icmp') and not(current() = 58)" {
+								error-message "Cannot use 'ipv6-icmp' with IPv4";
+							}
+							must "not(current() = 'ip') and not(current() = 'ipv6')" {
+								error-message "'ip' and 'ipv6' are not valid L4 protocols";
+							}
+						}
+						leaf protocol-group {
+							type leafref {
+								path "/resources:resources/res-group:group/res-group:protocol-group/res-group:group-name";
+							}
+							must "not(../protocol)" {
+								error-message "Cannot specify both 'protocol' and 'protocol-group'";
+							}
+							description "Group of L4 protocols to match";
+							configd:help "Group of L4 protocols to match";
+						}
+						container source {
+							description "IPv4 source match parameters";
+							configd:help "IPv4 source match parameters";
+							uses nat64-match-port;
+							container ip-address {
+								description "IPv4 source to match";
+								configd:help "IPv4 source to match";
+								must "not(current()) or count(*) = 1" {
+									error-message "Only one of address-group, host or prefix may be set";
+								}
+								leaf address-group {
+									description "Address group";
+									configd:help "Address group";
+									configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+									type fw-types:group-name;
+								}
+								leaf host {
+									description "IPv4 address";
+									configd:help "IPv4 address";
+									type types:ipv4-address;
+								}
+								leaf prefix {
+									description "IPv4 prefix";
+									configd:help "IPv4 prefix";
+									type types:ipv4-prefix;
+								}
+							}
+						}
+						container destination {
+							description "IPv4 destination match parameters";
+							configd:help "IPv4 destination match parameters";
+							uses nat64-match-port;
+							container ip-address {
+								description "IPv4 destination to match";
+								configd:help "IPv4 destination to match";
+								must "not(current()) or count(*) = 1" {
+									error-message "Only one of address-group, host or prefix may be set";
+								}
+								leaf address-group {
+									description "Address group";
+									configd:help "Address group";
+									configd:allowed "echo $VAR(/resources/group/address-group/@@)";
+									type fw-types:group-name;
+								}
+								leaf host {
+									description "IPv4 address";
+									configd:help "IPv4 address";
+									type types:ipv4-address;
+								}
+								leaf prefix {
+									description "IPv4 prefix";
+									configd:help "IPv4 prefix";
+									type types:ipv4-prefix;
+								}
+							}
+						}
+					}
+					container translation {
+						description "Specifies how IPv4 packets matching the match criteria are translated";
+						configd:help "IPv4 to IPv6 translation parameters";
+						container source {
+							description "Specify how IPv4 source addresses are translated";
+							configd:help "IPv4 source address translation parameters";
+							container mapping {
+								description "Parameters to map an IPv4 source address to an IPv6 address";
+								configd:help "Parameters to map an IPv4 source address to an IPv6 address";
+								must "not(current()) or count(*) = 1" {
+									error-message "IPv4 addresses must be mapped to IPv6 addresses using 'rfc6052'";
+								}
+								container rfc6052 {
+									configd:help "IPv4 address is embedded in IPv6 address according to rfc6052 rules";
+									description "IPv4 address is embedded in IPv6 address according to rfc6052 rules";
+									container ip6-address {
+										configd:help "IPv6 prefix to embed IPv4 address in";
+										description "IPv6 prefix to embed IPv4 address in";
+										leaf prefix {
+											description "IPv6 prefix";
+											configd:help "IPv6 prefix";
+											type types:ipv6-prefix;
+										}
+									}
+								}
+							}
+						}
+						container destination {
+							description "Specify how IPv4 destination addresses are translated";
+							configd:help "IPv4 destination address translation parameters";
+							container mapping {
+								description "Parameters to map an IPv4 destination address to an IPv6 address";
+								configd:help "Parameters to map an IPv4 destination address to an IPv6 address";
+								must "not(current()) or count(*) = 1" {
+									error-message "Specify either 'rfc6052' or 'host-to-host', not both";
+								}
+								container rfc6052 {
+									description "IPv4 address is embedded in IPv6 address according to rfc6052 rules";
+									configd:help "IPv4 address is embedded in IPv6 address according to rfc6052 rules";
+									container ip6-address {
+										configd:help "IPv6 prefix to embed IPv4 address in";
+										description "IPv6 prefix to embed IPv4 address in";
+										leaf prefix {
+											description "IPv6 prefix";
+											configd:help "IPv6 prefix";
+											type types:ipv6-prefix;
+										}
+									}
+								}
+								container host-to-host {
+									configd:help "A single IPv4 address is mapped to a single IPv6 address";
+									container ip6-address {
+										description "IPv6 destination address";
+										configd:help "IPv6 destination address";
+										must "not(current()) or ../../../../../match/destination/ip-address/host" {
+											error-message "Destination host-to-host mapping is only valid when matching a destination host address";
+										}
+										leaf host {
+											description "IPv6 address";
+											configd:help "IPv6 address";
+											type types:ipv6-address;
+										}
+									}
+									leaf port {
+										type union {
+											type types:port;
+											type fw-types:service-name;
+										}
+										configd:help "A single IPv4 address and port are mapped to a single IPv6 address and port";
+										description "A single IPv4 address and port are mapped to a single IPv6 address and port";
+										must "../../../../../match/destination/port" {
+											error-message "Destination host-to-host port mapping is only valid when matching a single destination port";
+										}
+										must "not(../../../../../match/protocol = 'sctp') and not(../../../../../match/protocol = 132)" {
+											error-message "Destination host-to-host port mapping is not valid for SCTP";
+										}
+										must "../ip6-address/host" {
+											error-message "A destination port cannot be specified unless an address is also specified";
+										}
+									}
+								}
+							}
+						}
+					}
+					container log {
+						presence "logging configuration";
+						description "Enable logging for NAT46 rule";
+						configd:help "Enable logging for NAT46 rule";
+						leaf sessions {
+							type empty;
+							description "Enable logging for NAT46 session creation and closure";
+							configd:help "Enable logging for NAT46 session creation and closure";
+						}
+					}
+				}
+			}
+			list interface {
+				description "Interface to initiate an IPv4 to IPv6 session";
+				configd:help "Interface to initiate an IPv4 to IPv6 session";
+				configd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+				key "name";
+				leaf name {
+					description "Interface name";
+					configd:help "Interface name";
+					must "not(../../../nat64/interface/name = current())" {
+						error-message "An interface cannot have both a nat46 and a NAT64 rule";
+					}
+					type string;
+				}
+				list in {
+					description "Ruleset for IPv4-to-IPv6 packets on inbound interface";
+					configd:help "Ruleset for IPv4-to-IPv6 packets on inbound interface";
+					min-elements 1;
+					key "name";
+					leaf name {
+						description "Ruleset name";
+						configd:help "Ruleset name";
+						type leafref {
+							path "/service:service/nat:nat/nat46/group/ruleset-name";
+						}
+					}
+				}
+			}
+		}
+	}
+}

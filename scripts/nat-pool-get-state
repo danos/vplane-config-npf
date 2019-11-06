@@ -1,0 +1,108 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run to get the pool state information from the dataplane
+and provide it in YANG format to provide the "state" node under
+the nat pool configuration."""
+
+
+import sys
+import getopt
+import vplaned
+import json
+from vyatta.npf.npf_debug import NpfDebug
+
+
+DATAPLANE_CMD = 'nat-op show pool'
+
+# class used for printing debugs
+dbg = NpfDebug()
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def process_options():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "d", ['debug'])
+
+    except getopt.GetoptError as r:
+        err(r)
+        err("usage: {} [-d|--debug] ".format(sys.argv[0]))
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ('-d', '--debug'):
+            dbg.enable()
+
+
+def pool_netconf(entry):
+    state_entry = {}
+
+    # Translation Mapping State
+    state_entry['active-mappings'] = entry['map_stats']['active']
+    state_entry['total-mapping-requests'] = entry['map_stats']['reqs']
+    state_entry['total-mapping-failures'] = entry['map_stats']['fails']
+
+    # Port Block Allocation State
+    state_entry['active-port-blocks'] = entry['block_stats']['active']
+    state_entry['total-port-blocks'] = entry['block_stats']['total']
+    state_entry['total-port-block-failures'] = entry['block_stats']['failures']
+    state_entry['total-port-block-max-exceeded'] = \
+        entry['block_stats']['subs_limit']
+    state_entry['total-port-block-freed'] = entry['block_stats']['freed']
+
+    # Last allocated addresses
+    state_entry['last-addr-tcp'] = entry['current']['tcp']
+    state_entry['last-addr-udp'] = entry['current']['udp']
+    state_entry['last-addr-other'] = entry['current']['other']
+
+    # Active state boolean
+    state_entry['active'] = entry['active']
+
+    # Number of address in this pool
+    state_entry['pool-addr-count'] = entry['naddrs']
+
+    # Number of attached policies, and total addrs in those policies
+    state_entry['attached-policy-count'] = entry['nusers']
+    state_entry['attached-policy-addr-count'] = entry['nuser_addrs']
+
+    pool_entry = {}
+    pool_entry['poolname'] = entry['name']
+    pool_entry['state'] = state_entry
+
+    dbg.pprint("netconf entry: {}".format(pool_entry))
+    return pool_entry
+
+
+def get_nat_pool_state():
+    dbg.pprint("get_nat_pool_state()")
+
+    pool_state_list = []
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp_dict = dp.json_command(DATAPLANE_CMD)
+                if dp_dict and dp_dict['pools']:
+                    dbg.pprint("dataplane dict: {}".format(dp_dict['pools']))
+                    for pool in dp_dict['pools']:
+                        pool_state_list.append(pool_netconf(pool))
+
+    if pool_state_list:
+        return { 'pool': pool_state_list }
+    else:
+        return
+
+
+if __name__ == "__main__":
+    process_options()
+    state_list = get_nat_pool_state()
+    if state_list:
+        print(json.dumps(state_list))
+    exit(0)

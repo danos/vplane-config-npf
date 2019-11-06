@@ -1,0 +1,306 @@
+module vyatta-policy-pbr-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-policy-pbr:1";
+	prefix vyatta-policy-pbr-v1;
+
+	import vyatta-types-v1 {
+		prefix types;
+	}
+	import vyatta-interfaces-v1 {
+		prefix if;
+	}
+	import vyatta-interfaces-dataplane-v1 {
+		prefix interfaces-dataplane;
+	}
+	import vyatta-interfaces-l2tpeth-v1 {
+		prefix interfaces-l2tpeth;
+	}
+	import vyatta-interfaces-bonding-v1 {
+		prefix interfaces-bonding;
+	}
+	import vyatta-interfaces-openvpn-v1 {
+		prefix interfaces-openvpn;
+	}
+	import vyatta-interfaces-tunnel-v1 {
+		prefix interfaces-tunnel;
+	}
+	import vyatta-interfaces-vti-v1 {
+		prefix interfaces-vti;
+	}
+	import vyatta-interfaces-vfp-v1 {
+		prefix interfaces-vfp;
+	}
+	import vyatta-policy-v1 {
+		prefix policy;
+	}
+	import vyatta-policy-route-v1 {
+		prefix policy-route;
+	}
+	import vyatta-interfaces-policy-v1 {
+		prefix interfaces-policy;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-npf-v1 {
+		prefix npf;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+			 Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019 AT&T Intellectual Property
+		 All rights reserved.
+
+		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta Policy-based Routing (PBR)";
+
+	revision 2019-02-15 {
+		description "Update PBR commit handling to improve
+			     performance.";
+	}
+	revision 2018-12-18 {
+		description "Changed script for getting state.";
+	}
+	revision 2018-09-12 {
+		description "Updated description and copyright.";
+	}
+	revision 2017-11-03 {
+		description "Add 'main' routing table option.
+			     Add PBR support for vfp interfaces.";
+	}
+
+	revision 2017-02-28 {
+		description "Add operational state data definitions.";
+	}
+
+	revision 2017-01-10 {
+		description "Augment PBR to openvpn, tunnel
+			     and vti interfaces.";
+	}
+
+	revision 2016-10-18 {
+		description "Correct yang path for: policy route pbr.";
+	}
+
+	revision 2016-08-05 {
+		description "Use leafref for referring to rulesets.
+			     Add descriptions to many nodes.";
+	}
+
+	revision 2016-05-19 {
+		description "Relax the rule-pbr action 'must' condition to allow routing-instance
+			     without a routing table. In this case, the 'main' table (254) will be used.";
+	}
+
+	revision 2016-04-06 {
+		description "Deprecated PBR config-trap.";
+	}
+
+	revision 2016-01-31 {
+		description "Make table-ID optional, so it can be omitted when the action is 'drop'.
+			     Refine npf:action-fw-pbr, adding a 'must' to check the
+			     action, address-family, and table configs.";
+	}
+
+	revision 2015-12-07 {
+		description "Remove references to 'firewall' from configd:help in PBR yang.";
+	}
+
+	revision 2015-09-30 {
+		description "Initial revision.";
+	}
+
+	typedef policy-name-suffix {
+		type types:alpha-numeric {
+			length "1..28";
+		}
+	}
+
+	grouping rule-pbr {
+		uses npf:rule-common;
+		uses npf:action-fw-pbr {
+			refine action {
+				must "../address-family and ((current() = 'drop') or ../table or (../*[local-name(.) = 'routing-instance']))" {
+					error-message "'address-family' is mandatory.\n" +
+						      "The 'accept' action requires 'table' (or 'routing-instance', if available).";
+				}
+			}
+		}
+		leaf table {
+			type union {
+				type uint32 {
+					range 1..128;
+				}
+				type enumeration {
+					enum "main" {
+						description "Use the main routing table";
+						configd:help "Use the main routing table";
+					}
+				}
+			}
+			description "Policy Based Routing Table ID";
+			configd:help "Policy Based Routing Table ID";
+		}
+		leaf address-family {
+			type enumeration {
+				enum "ipv4" {
+					description "IPv4 address family";
+					configd:help "IPv4 address family";
+				}
+				enum "ipv6" {
+					description "IPv6 address family";
+					configd:help "IPv6 address family";
+				}
+			}
+			mandatory true;
+			description "Address family for this ruleset";
+			configd:help "Address family for this ruleset";
+		}
+	}
+
+	grouping pbr-if-parameters {
+		container route {
+			configd:help "PBR Options";
+			description "PBR Options";
+			leaf-list pbr {
+				type leafref {
+					path "/policy:policy/policy-route:route/vyatta-policy-pbr-v1:pbr/vyatta-policy-pbr-v1:tagnode";
+				}
+				ordered-by "user";
+				configd:help "Ruleset for PBR routed packets on inbound interface";
+				description "Ruleset for PBR routed packets on inbound interface";
+			}
+			container pbr-state {
+				config false;
+				description "State of rulesets for PBR routed packets on inbound interfaces";
+				uses npf:rule-group-state;
+			}
+		}
+	}
+
+	grouping pbr-vif-if-parameters {
+		uses pbr-if-parameters;
+	}
+
+	augment /policy:policy/policy-route:route {
+		list pbr {
+			configd:priority "310";
+			description "PBR group";
+			configd:help "PBR group";
+			configd:validate "validate-fw-groups --variant=route";
+			configd:delete "vyatta-dp-npf.pl --variant=route --cmd=delete-group --group=$VAR(@)";
+			configd:end "end-pbr-ruleset $VAR(@)";
+			key "tagnode";
+			leaf tagnode {
+				description "PBR group";
+				type policy-name-suffix {
+					configd:help "PBR group";
+				}
+			}
+			leaf description {
+				type string;
+				description "Ruleset description";
+				configd:help "Ruleset description";
+			}
+			list rule {
+				description "Rule number";
+				configd:help "Rule number";
+				key "tagnode";
+				leaf tagnode {
+					type fw-types:rule-number;
+				}
+				uses rule-pbr;
+			}
+			leaf config-trap {
+				description "Provide SNMP configuration traps for PBR events.
+					     Deprecated because the CLI was added by mistake
+					     (cloned from firewall) and had no effect.
+					     Config traps should be provided at a high level
+					     across features rather than per feature.";
+				status deprecated;
+				type enumeration {
+					enum "enable" {
+						configd:help "Enable sending SNMP trap on policy configuration change";
+					}
+					enum "disable" {
+						configd:help "Disable sending SNMP trap on policy configuration change";
+					}
+				}
+				configd:help "SNMP trap generation on policy configuration changes";
+				default "disable";
+			}
+		}
+	}
+	augment /if:interfaces/interfaces-dataplane:dataplane/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-dataplane:dataplane/interfaces-dataplane:vif/interfaces-policy:policy {
+		uses pbr-vif-if-parameters;
+	}
+	augment /if:interfaces/interfaces-l2tpeth:l2tpeth/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-l2tpeth:l2tpeth/interfaces-l2tpeth:vif/interfaces-policy:policy {
+		uses pbr-vif-if-parameters;
+	}
+	augment /if:interfaces/interfaces-bonding:bonding/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-bonding:bonding/interfaces-bonding:vif/interfaces-policy:policy {
+		uses pbr-vif-if-parameters;
+	}
+	augment /if:interfaces/interfaces-openvpn:openvpn/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-tunnel:tunnel/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-vti:vti/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-vfp:virtual-feature-point/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces {
+		configd:get-state "npf-get-state-pbr";
+	}
+}

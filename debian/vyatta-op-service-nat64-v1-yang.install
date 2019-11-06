@@ -1,0 +1,3 @@
+usr/share/configd/yang/vyatta-op-service-nat64-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-npf-nat64-op

@@ -1,0 +1,2 @@
+#!/bin/bash
+vyatta-dp-npf.pl --variant=firewall --cmd=update-global-default

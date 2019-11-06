@@ -1,0 +1,324 @@
+module vyatta-op-system-session-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-op-system-session:1";
+	prefix vyatta-op-system-session-v1;
+
+	import vyatta-opd-extensions-v1 {
+		prefix opd;
+	}
+	import vyatta-op-show-v1 {
+		prefix show;
+	}
+	import vyatta-op-delete-v1 {
+		prefix delete;
+	}
+	import vyatta-op-clear-v1 {
+		prefix clear;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for session-related operation mode commands.";
+
+	revision 2018-06-25 {
+		description "For pattern-help use opd instead of configd.";
+	}
+
+	revision 2017-11-17 {
+		description "Add commands to display detail on a session";
+	}
+
+	revision 2017-09-15 {
+		description "Conversion from node files.";
+	}
+
+	grouping show-session-table-cmds {
+
+		opd:option source {
+			opd:help "Show session table information for srcaddr and optional port";
+			type string {
+				opd:pattern-help "<src-addr[:src-port]>";
+				opd:help "source address with optional port";
+			}
+			opd:on-enter "vyatta-dp-npf-show-sessions --filt=${@: -1}";
+		}
+
+		opd:command statistics {
+			opd:help "Show session statistics";
+			opd:on-enter "vyatta-dp-npf-show-session-stats";
+		}
+	}
+
+	grouping show-session-table-detail-cmds {
+
+		opd:command detail {
+			opd:help "Show session table detail";
+			opd:on-enter "vyatta-dp-npf-show-sessions --variant=detail";
+
+			opd:option source {
+				opd:help "Show session table detail for srcaddr and optional port";
+				type string {
+					opd:pattern-help "<src-addr[:src-port]>";
+					opd:help "source address with optional port";
+				}
+				opd:on-enter "vyatta-dp-npf-show-sessions --variant=detail --filt=${@: -1}";
+			}
+		}
+	}
+
+	opd:augment /show:show {
+
+		opd:command session {
+			opd:help "Show system session information";
+
+			opd:command limit {
+				opd:help "Show session limit information";
+				opd:on-enter "npf-session-limit-show.pl --type=all --name=all --action=show-detail";
+
+				opd:command brief {
+					opd:help "Show session limit brief information";
+					opd:on-enter "npf-session-limit-show.pl --type=all --name=all --action=show-brief";
+				}
+
+				opd:command group {
+					opd:help "Show session limit group information";
+					opd:on-enter "npf-session-limit-show.pl --type=group --name=all --action=show-detail";
+
+					opd:command brief {
+						opd:help "Show session limit group summary";
+						opd:on-enter "npf-session-limit-show.pl --type=group --name=all --action=show-brief";
+
+						opd:command name {
+							opd:help "Show session limit group brief for a specific limit group";
+
+							opd:argument name-arg {
+								opd:allowed "allowed-nodes system session limit group name";
+								type string {
+									opd:pattern-help "<group-name>";
+								}
+								opd:on-enter 'npf-session-limit-show.pl --type=group --name="$7" --action=show-brief';
+							}
+
+							opd:command all {
+								opd:help "Show session limit group brief for all groups";
+								opd:on-enter 'npf-session-limit-show.pl --type=group --name=all --action=show-brief';
+							}
+						}
+					}
+
+					opd:command all {
+						opd:help "Show session limit group information for all groups";
+						opd:on-enter 'npf-session-limit-show.pl --type=group --name=all --action=show-detail';
+					}
+
+					opd:argument group-name {
+						opd:help "Show session limit group information for a specific group";
+						opd:allowed "allowed-nodes system session limit group name";
+						type string {
+							opd:pattern-help "<group-name>";
+						}
+						opd:on-enter 'npf-session-limit-show.pl --type=group --name="$5" --action=show-detail';
+					}
+				}
+
+				opd:command parameter {
+					opd:help "Show session limit parameter information";
+					opd:on-enter "npf-session-limit-show.pl --type=param --name=all --action=show-detail";
+
+					opd:command brief {
+						opd:help "Show session limit parameter summary";
+						opd:on-enter "npf-session-limit-show.pl --type=param --name=all --action=show-brief";
+
+						opd:command name {
+							opd:help "Show session limit parameter brief for a specific limit parameter";
+
+							opd:argument name-arg {
+								opd:allowed "allowed-nodes system session limit parameter name";
+								type string {
+									opd:pattern-help "<parameter-name>";
+								}
+								opd:on-enter 'npf-session-limit-show.pl --type=param --name="$7" --action=show-brief';
+							}
+
+							opd:command all {
+								opd:help "Show session limit parameter brief for all parameters";
+								opd:on-enter 'npf-session-limit-show.pl --type=param --name=all --action=show-brief';
+							}
+						}
+					}
+
+					opd:command all {
+						opd:help "Show session limit parameter information for all parameters";
+						opd:on-enter 'npf-session-limit-show.pl --type=param --name=all --action=show-detail';
+					}
+
+					opd:argument group-name {
+						opd:help "Show session limit parameter information for a specific limit parameter";
+						opd:allowed "allowed-nodes system session limit parameter name";
+						type string {
+							opd:pattern-help "<parameter-name>";
+						}
+						opd:on-enter 'npf-session-limit-show.pl --type=param --name="$5" --action=show-detail';
+					}
+				}
+			}
+
+			opd:command table {
+				opd:help "Show session table information";
+				opd:on-enter "vyatta-dp-npf-show-sessions";
+
+				uses show-session-table-cmds;
+				uses show-session-table-detail-cmds;
+			}
+		}
+
+		opd:command session-table {
+			status obsolete; // replaced by "session table"
+			opd:help "Show session table information";
+			opd:on-enter "vyatta-dp-npf-show-sessions";
+
+			uses show-session-table-cmds;
+		}
+	}
+
+	grouping delete-session-table-cmds {
+
+		opd:option conn-id {
+			opd:help "Delete all session entries with the specified connection ID";
+			type uint32 {
+				opd:help "connection identifier";
+			}
+			opd:on-enter "vyatta-dp-npf-op-delete.pl -id ${@: -1}";
+		}
+
+		opd:option source {
+			opd:help "Delete session entries matching src addr and optional port";
+			type string {
+				opd:pattern-help "<src-addr[:src-port]>";
+				opd:help "source address with optional port";
+			}
+			opd:on-enter "vyatta-dp-npf-op-delete.pl --src ${@: -1}";
+
+			opd:option destination {
+				opd:help "Delete session entries matching src & dst addrs and optional ports";
+				type string {
+					opd:pattern-help "<dst-addr[:dst-port]>";
+					opd:help "destination address with optional port";
+				}
+				opd:on-enter "vyatta-dp-npf-op-delete.pl --src ${@: -3:1} --dst ${@: -1}";
+			}
+		}
+
+		opd:option destination {
+			opd:help "Delete session entries matching dst addr and optional port";
+			type string {
+				opd:pattern-help "<dst-addr[:dst-port]>";
+				opd:help "destination address with optional port";
+			}
+			opd:on-enter "vyatta-dp-npf-op-delete.pl --dst ${@: -1}";
+			opd:option source {
+				opd:help "Delete session entries matching dst & src addrs and optional ports";
+				type string {
+					opd:pattern-help "<src-addr[:src-port]>";
+					opd:help "source address with optional port";
+				}
+				opd:on-enter "vyatta-dp-npf-op-delete.pl --dst ${@: -3:1} --src ${@: -1}";
+			}
+		}
+	}
+
+	opd:augment /delete:delete {
+
+		opd:command session {
+			opd:help "Delete system session information";
+
+			opd:command table {
+				opd:help "Delete all session entries";
+				opd:on-enter "vyatta-dp-npf-op-delete.pl --all";
+
+				uses delete-session-table-cmds;
+			}
+		}
+
+		opd:command session-table {
+			status obsolete; // replaced by "session table"
+			opd:help "Delete all session entries";
+			opd:on-enter "vyatta-dp-npf-op-delete.pl --all";
+
+			uses delete-session-table-cmds;
+		}
+	}
+
+	opd:augment /clear:clear {
+
+		opd:command session {
+			opd:help "Clear system session information";
+
+			opd:command limit {
+				opd:help "Clear session limiter";
+				opd:on-enter "npf-session-limit-clear.pl --type=all --name=all --action=clear";
+
+				opd:command group {
+					opd:help "Clear session limit group information";
+					opd:on-enter "npf-session-limit-clear.pl --type=group --name=all --action=clear";
+				}
+
+				opd:command parameter {
+					opd:help "Clear session limit parameter information";
+					opd:on-enter "npf-session-limit-clear.pl --type=param --name=all --action=clear";
+
+					opd:command all {
+						opd:help "Clear session limit parameter information for all parameters";
+						opd:on-enter 'npf-session-limit-clear.pl --type=param --name=all --action=clear';
+					}
+
+					opd:argument group-name {
+						opd:help "Clear session limit parameter information for a specific parameter";
+						opd:allowed "allowed-nodes system session limit parameter name";
+						type string {
+							opd:pattern-help "<parameter-name>";
+						}
+						opd:on-enter 'npf-session-limit-clear.pl --type=param --name="$5" --action=clear';
+					}
+				}
+			}
+		}
+	}
+}

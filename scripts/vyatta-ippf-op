@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+"""OP-mode commands for IP packet filter"""
+
+import sys
+from vyatta import configd
+from operator import itemgetter
+
+
+def show_stats(client, args):
+    """
+    Show IP packet filter statistics
+
+    @input:  client: configd client session
+
+    @input:  args: arguments to be passed to the dataplane
+                   formatted as a list: [ key, value, ... ]
+
+    @output: return 0 on success; 1 on failure
+    """
+
+    # Parse optional args.
+    #
+    # Keys can be specified more than once,
+    # so convert the input arg list [ key, value, ..., key, value ]
+    # into a dictionary of lists { key: [value, ..., value] }.
+
+    argd = {}
+    while len(args) > 1:
+        key = args.pop(1) + "s"
+
+        if not argd.get(key):
+            argd[key] = []
+        argd[key].append(args.pop(1))
+
+    # Call RPC to get the statistics
+    try:
+        stats = client.call_rpc_dict("vyatta-ippf-v1", "get-statistics", argd)
+    except Exception as exc:
+        print("Failed to get IPPF statistics: '{}'".format(str(exc).strip()))
+        return 1
+
+    if "statistics" not in stats.keys():
+        # No statistics
+        return 1
+
+    outfmt = "{:<15} {:>3} {:>15} {:>4} {:>6} {:>15} {:>15} {:>15} {:>15}"
+    print(outfmt.format("Interface", "Dir", "Group", "Rule", "Action", "HW packets", "SW packets", "HW bytes", "SW bytes"))
+    print(outfmt.format("---------", "---", "-----", "----", "------", "----------", "----------", "--------", "--------"))
+
+    stats = sorted(stats["statistics"], key=itemgetter('interface', 'direction', 'group', 'rule'))
+    for stat in stats:
+        HWstats = stat.get("hardware")
+        if HWstats:
+            HWpackets = HWstats.get("packets", "-")
+            HWbytes = HWstats.get("bytes", "-")
+        else:
+            HWpackets = "-"
+            HWbytes = "-"
+
+        SWstats = stat.get("software")
+        if SWstats:
+            SWpackets = SWstats.get("packets", "-")
+            SWbytes = SWstats.get("bytes", "-")
+        else:
+            SWpackets = "-"
+            SWbytes = "-"
+
+        print(
+            outfmt.format(
+                stat["interface"],
+                stat["direction"],
+                stat["group"],
+                stat["rule"],
+                stat["action"],
+                HWpackets, SWpackets,
+                HWbytes, SWbytes
+            )
+        )
+
+    return 0
+
+
+def clear_stats(client, args):
+    """
+    Clear the IP Packet Filter statistics
+
+    @input:  client: configd client session
+
+    @input:  args: arguments to be passed to the dataplane
+                   formatted as a list: [ key, value, ... ]
+
+    @output: return 0 on success; 1 on failure
+    """
+
+    # Parse optional args.
+    #
+    # Keys can only be specified once,
+    # so convert the input arg list [ key, value, ..., key, value ]
+    # into a dictionary of { key: value } pairs.
+    #
+    # If a key appears more than once, the final value wins.
+
+    argd = {}
+    while len(args) > 1:
+        key = args.pop(1)
+        val = args.pop(1)
+        argd[key] = val
+
+    try:
+        client.call_rpc_dict("vyatta-ippf-v1", "clear-statistics", argd)
+    except Exception as exc:
+        print("Failed to clear IPPF statistics: '{}'".format(str(exc).strip()))
+        return 1
+
+    return 0
+
+
+def main():
+    """
+    Parse IP packet filter op-mode commands
+    """
+
+    # Args are:
+    #
+    # [ show | clear ] security ip-packet-filter statistics
+    #
+    # Followed by zero or more of:
+    #
+    #   [interface <interface-names-list>]
+    #   [direction <direction-name-list>]
+    #   [group <group-name-list>]
+    #   [rule <rule-number-list>]
+    #   [action <action-name-list>]
+
+    # Parse "[ show | clear ] security ip-packet-filter statistics"
+    action = sys.argv.pop(1)    # "show" or "clear"
+    assert sys.argv.pop(1) == "security"
+    assert sys.argv.pop(1) == "ip-packet-filter"
+    assert sys.argv.pop(1) == "statistics"
+
+    # Establish a configd client session
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        print("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
+    if action == "show":
+        return show_stats(client, sys.argv)
+
+    if action == "clear":
+        return clear_stats(client, sys.argv)
+
+    return 1  # Invalid command
+
+
+if __name__ == "__main__":
+    sys.exit(main())

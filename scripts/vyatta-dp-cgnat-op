@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
+"""Scripts for CGNAT error, summary, and policy op-mode commands"""
+
+import sys
+import getopt
+import vplaned
+
+
+# Yes or No string
+def yes_or_no(val):
+    return "Yes" if val else "No"
+
+
+#
+# usage
+#
+def cgn_usage():
+    """Show command help"""
+
+    print("usage: {} --show {{errors | summary | "
+          "policy [<name>]}}".format(sys.argv[0]),
+          file=sys.stderr)
+
+
+#
+# cgn_op_show_summary
+#
+def cgn_op_show_summary():
+    """Show CGN summary"""
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cgn_dict = dp.json_command("cgn-op show summary")
+                summary = cgn_dict.get('summary')
+                if not summary:
+                    return
+
+                #
+                # If we ever change to supporting multiple dataplanes then a
+                # description of the dataplane should be displayed before each
+                # summary.
+                #
+                print("CGNAT Summary")
+                print("  %-32s" % ("Sessions:"))
+                print("    %-30s %18u" % ("Active 3-tuple sessions",
+                                          summary.get('sess_count')))
+                print("    %-30s %18u" % ("Active 5-tuple sessions",
+                                          summary.get('sess2_count')))
+                print("    %-30s %18u" % ("Maximum table size",
+                                          summary.get('max_sess')))
+                print("    %-30s %18s" %
+                      ("Table full",
+                       yes_or_no(summary.get('sess_table_full'))))
+                print("    %-30s %18u" % ("Sessions created",
+                                          summary.get('sess_created')))
+                print("    %-30s %18u" % ("Sessions destroyed",
+                                          summary.get('sess_destroyed')))
+                print("  %-32s" % ("Public address mapping table:"))
+                print("    %-30s %18u" % ("Used",
+                                          summary.get('apm_table_used')))
+                print("    %-30s %18u" % ("Max",
+                                          summary.get('apm_table_max')))
+                print("  %-32s" % ("Subscriber address table:"))
+                print("    %-30s %18u" % ("Used",
+                                          summary.get('subs_table_used')))
+                print("    %-30s %18u" % ("Max",
+                                          summary.get('subs_table_max')))
+
+                print("  %-32s %18u" % ("Out, packets",
+                                        summary.get('pkts_out')))
+                print("  %-32s %18u" % ("     bytes",
+                                        summary.get('bytes_out')))
+                print("  %-32s %18u" % ("In,  packets",
+                                        summary.get('pkts_in')))
+                print("  %-32s %18u" % ("     bytes",
+                                        summary.get('bytes_in')))
+
+                print("  %-32s %18u" % ("Hairpinned packets",
+                                        summary.get('pkts_hairpinned')))
+
+                print("  %-32s %18u" % ("Did not match CGNAT policy",
+                                        summary.get('nopolicy')))
+                print("  %-32s %18u" % ("Did not match CGNAT session",
+                                        summary.get('nosess')))
+                print("  %-32s %18u" % ("Untranslatable packets",
+                                        summary.get('etrans')))
+                print("  %-32s %18u" % ("Memory allocation failures",
+                                        summary.get('enomem')))
+                print("  %-32s %18u" % ("Resource limitation failures",
+                                        summary.get('enospc')))
+                print("  %-32s %18u" % ("Thread contention errors",
+                                        summary.get('ethread')))
+                print("  %-32s %18u" % ("Packet buffer errors",
+                                        summary.get('embuf')))
+                print()
+
+
+#
+# Get error counts
+#
+def cgn_op_get_errors():
+    """Get cgnat error counts.  Returns 4 lists"""
+
+    # Sum of counts from all dataplanes
+    in_sum = []
+    out_sum = []
+
+    # Description and name strings
+    desc = []
+    name = []
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cgn_dict = dp.json_command("cgn-op show errors")
+                errors = cgn_dict.get('errors')
+                if not errors:
+                    return [], [], [], []
+
+                in_errors = errors.get('in')
+                out_errors = errors.get('out')
+
+                for i in range(0, len(in_errors)):
+                    if in_errors[i].get('errno') != out_errors[i].get('errno'):
+                        # should never happen
+                        return [], [], [], []
+
+                    in_count = in_errors[i].get('count')
+                    out_count = out_errors[i].get('count')
+
+                    if len(in_sum) < i+1:
+                        # First dataplane
+                        in_sum.append(in_count)
+                        out_sum.append(out_count)
+                        desc.append(in_errors[i].get('desc'))
+                        name.append(in_errors[i].get('name'))
+                    else:
+                        # subsequent dataplanes
+                        in_sum[i] += in_count
+                        out_sum[i] += out_count
+
+    # Returns 4 lists
+    return in_sum, out_sum, desc, name
+
+
+#
+# cgn_op_show_errors
+#
+def cgn_op_show_errors():
+    """Show CGN errors"""
+
+    in_sum, out_sum, desc, name = cgn_op_get_errors()
+
+    print("%-58s %12s %12s" % ("CGNAT Global Counts", "In", "Out"))
+
+    for i in range(0, len(in_sum)):
+        #
+        # Match on error name in order to determine section starts
+        #
+        if name[i] == "PCY_ENOENT":
+            print("  Unable to translate packet:")
+
+        if name[i] == "MBU_ENOSPC":
+            print("  Resource limitations:")
+
+        if name[i] == "S1_ENOMEM":
+            print("  Memory allocation failures:")
+
+        if name[i] == "S1_EEXIST":
+            print("  Thread contention errors:")
+
+        if name[i] == "BUF_ENOL3":
+            print("  Packet buffer errors:")
+
+        if name[i] == "ERR_UNKWN":
+            print("  Other:")
+
+        print("    %-54s %12u %12u" % (desc[i], in_sum[i], out_sum[i]))
+
+    print()
+
+
+#
+# cgn_op_show_policy_one
+#
+def cgn_op_show_policy_one(pol):
+    """Show one CGN policy"""
+
+    print("Policy: %s" % (pol.get('name')))
+    print("  %-32s %18s" % ("Prefix", pol.get('prefix')))
+    print("  %-32s %18s" % ("Interface", pol.get('interface')))
+    print("  %-32s %18s" % ("Priority", pol.get('priority')))
+    print("  %-32s %18s" % ("Pool", pol.get('pool')))
+    print("  %-32s %18s" % ("Ref count", pol.get('refcnt')))
+    print("  %-32s %18s" % ("Log all sessions",
+                            yes_or_no(pol.get('log_sess_all'))))
+    log_grp = pol.get('log_sess_group')
+    if log_grp:
+        print("  %-32s %18s" % ("Log select sessions", log_grp))
+    print("    %-30s %18s" % ("Log session start",
+                              yes_or_no(pol.get('log_sess_start'))))
+    print("    %-30s %18s" % ("Log session end",
+                              yes_or_no(pol.get('log_sess_end'))))
+    print("    %-30s %18s" % ("Log session periodically",
+                              yes_or_no(pol.get('log_sess_periodic'))))
+
+    sess_crtd = pol.get('sess_created')
+    sess_dstrd = pol.get('sess_destroyed')
+
+    print("  %-32s %18u" % ("Active subscribers", pol.get('source_count')))
+    print("  %-32s %18u" % ("Active sessions", sess_crtd - sess_dstrd))
+    print("  %-32s %18u" % ("Sessions created", sess_crtd))
+    print("  %-32s %18u" % ("Sessions destroyed", sess_dstrd))
+    print("  %-32s %18u" % ("Out, packets", pol.get('out_pkts')))
+    print("  %-32s %18u" % ("     bytes", pol.get('out_bytes')))
+    print("  %-32s %18u" % ("In,  packets", pol.get('in_pkts')))
+    print("  %-32s %18u" % ("     bytes", pol.get('in_bytes')))
+    print()
+
+
+#
+# cgn_op_show_policy
+#
+def cgn_op_show_policy(n_opt):
+    """Show a CGN policy"""
+
+    policy_list = []
+
+    cmd = "cgn-op show policy"
+    if n_opt:
+        cmd = "%s %s" % (cmd, n_opt)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cgn_dict = dp.json_command(cmd)
+                tmp_list = cgn_dict.get('policies')
+                if tmp_list:
+                    policy_list.extend(tmp_list)
+
+    #
+    # The json returned by the dataplane should already be in order of
+    # interface and priority
+    #
+    for pol in policy_list:
+        cgn_op_show_policy_one(pol)
+
+
+#
+# cgn_op_main
+#
+def cgn_op_main():
+    """Main function"""
+
+    s_opt = None
+    n_opt = None
+
+    #
+    # Parse options
+    #
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],
+                                   "",
+                                   ['show=', 'name='])
+
+    except getopt.GetoptError as r:
+        print(r, file=sys.stderr)
+        cgn_usage()
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in '--show':
+            s_opt = arg
+
+        if opt in '--name':
+            n_opt = arg
+
+    # show ...
+    if s_opt:
+        if s_opt == 'policy':
+            cgn_op_show_policy(n_opt)
+
+        if s_opt == 'errors':
+            cgn_op_show_errors()
+
+        if s_opt == 'summary':
+            cgn_op_show_summary()
+
+
+#
+# main
+#
+if __name__ == '__main__':
+    cgn_op_main()

@@ -1,0 +1,6 @@
+usr/share/configd/yang/vyatta-op-system-session-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-npf-show-session-stats
+opt/vyatta/sbin/vyatta-dp-npf-show-sessions
+opt/vyatta/sbin/npf-session-limit-clear.pl
+opt/vyatta/sbin/npf-session-limit-show.pl

@@ -1,0 +1,12 @@
+usr/share/configd/yang/vyatta-system-session-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-npf-op-delete.pl
+opt/vyatta/sbin/vyatta-dp-npf-timeouts.pl
+opt/vyatta/sbin/end-custom-timeout
+
+opt/vyatta/sbin/npf-session-limit.pl
+opt/vyatta/sbin/end-session-limit-param
+opt/vyatta/sbin/end-session-limit-group
+opt/vyatta/sbin/end-session-limit-global
+opt/vyatta/sbin/validate-session-limit.pl
+opt/vyatta/sbin/end-session-log

@@ -1,0 +1,33 @@
+build-stamp
+config.*
+config
+configure
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache
+# autoconf debris
+INSTALL
+ChangeLog
+NEWS
+generated-templates
+
+# Ignore tags and cscope files everywhere.
+tags
+TAGS
+cscope.*
+
+*.o
+*.orig
+*~
+\#*#
+
+generated-templates/
+debian/files
+debian/*.log
+debian/*.debhelper
+debian/debhelper*
+debian/*.substvars
+debian/*-yang
+debian/tmp
+debian/vplane-config-npf

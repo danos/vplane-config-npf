@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
+"""Scripts for CGNAT public address op-mode commands"""
+
+import sys
+import getopt
+import vplaned
+import socket
+import struct
+
+
+#
+# int2ip
+#
+def int2ip(addr):
+    """Convert a uint to an IP address string"""
+
+    return socket.inet_ntoa(struct.pack("!I", addr))
+
+
+#
+# cgn_get_public_list
+#
+def cgn_get_public_list(prefix):
+    """Get sorted list of active cgnat public addresses.
+
+    Fetches a list of uints from the dataplane, sorts them, then converts to
+    IP address strings.  An optional address or prefix/length may be
+    specified, in which case the dataplane will only return active public
+    addresses matching that value.
+
+    """
+
+    pub_list = []
+    base_cmd = "cgn-op list public"
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cmd = base_cmd
+                if prefix:
+                    cmd = "%s prefix %s" % (cmd, prefix)
+
+                cgn_dict = dp.json_command(cmd)
+
+                # Remove outer object
+                tmp_list = cgn_dict.get('public')
+
+                if tmp_list:
+                    pub_list.extend(tmp_list)
+
+    #
+    # Remove duplicates from pub_list
+    #
+    # There may be up to three entries per address (one per proto)
+    # so use the list-to-dict-to-list trick to remove duplicates
+    #
+    pub_list = list(dict.fromkeys(pub_list))
+
+    # Sort list while it is in number format
+    pub_list.sort()
+
+    # Return list of addresses in IP address string format
+    return [int2ip(addr) for addr in pub_list]
+
+
+#
+# cgn_op_show_pub_one
+#
+def cgn_op_show_pub_one(pub):
+    """Show one CGN public address"""
+
+    addr = pub.get('address')
+
+    port_range = "%u-%u" % (pub.get('port_start'), pub.get('port_end'))
+    nports = pub.get('port_end') - pub.get('port_start') + 1
+
+    # Get port-block array
+    blocks = pub.get('blocks')
+
+    blks_used = "%u/%u" % (len(blocks), pub.get('nblocks'))
+
+    pfx = "%15s %11s %5s %9s" % (addr, port_range, nports, blks_used)
+
+    # Remember the length of pfx before blocks and port ranges are added.
+    # This is used for lines where pfx is empty.
+    pfx_len = len(pfx)
+
+    for block in blocks:
+        port_range = "%u-%u" % (block.get('port_start'), block.get('port_end'))
+        nports = block.get('port_end') - block.get('port_start') + 1
+
+        pfx = "%43s %4s %11s" % (pfx, block.get('block'), port_range)
+
+        # Protocol list
+        protocols = block.get('protocols')
+
+        for proto in protocols:
+            ports_used = "%5u" % (proto.get('ports_used'))
+            bms = proto.get('bitmaps')
+            name = proto.get('protocol')
+
+            if not bms:
+                continue
+
+            # Second and later bitmaps are on a line (at the end) by themselves
+            for bm in bms:
+                print("%s %5s %5s 0x%016x" % (pfx, name, ports_used, bm))
+                # pfx is a blank string after first bm
+                pfx = ' ' * (pfx_len + 12)
+                name = ' ' * 10
+                ports_used = ' ' * 5
+
+            # First bm in subsequent protocols is a partially blank line
+            pfx = ' ' * (pfx_len + 17)
+
+        # First bm in subsequent blocks is a partially blank line
+        pfx = ' ' * (pfx_len)
+
+
+#
+# cgn_op_show_pub_addr
+#
+def cgn_op_show_pub_addr(addr):
+    """
+    Show one CGN pub addr
+    addr may be a prefix/length or host.  If it is a host, then up to 3 apm
+    entries may be returned - one per proto.
+    """
+
+    pub_list = []
+
+    cmd = "cgn-op show apm"
+    if addr:
+        cmd = "%s address %s" % (cmd, addr)
+
+    cmd = "%s detail" % (cmd)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cgn_dict = dp.json_command(cmd)
+
+                # Get list
+                new = cgn_dict.get('apm')
+
+                # Extend session list
+                if new:
+                    pub_list.extend(new)
+
+    for pub in pub_list:
+        cgn_op_show_pub_one(pub)
+
+
+#
+# cgn_op_show_public
+#
+def cgn_op_show_public(pa_opt):
+    """Show CGN public"""
+
+    # Get list of sorted public addresses
+    addr_list = cgn_get_public_list(pa_opt)
+
+    print("%15s %11s %5s %9s "
+          "%4s %11s %5s %5s %18s" % ("Public Address",
+                                     "Port Range",
+                                     "#Prts", "Blks Used",
+                                     "Blk", "Port range", "Proto",
+                                     "Ports", "Bitmaps"))
+
+    for addr in addr_list:
+        cgn_op_show_pub_addr(addr)
+
+
+#
+# usage
+#
+def cgn_usage():
+    """Show command help"""
+
+    print("usage: {} --show | --clear".format(sys.argv[0]),
+          file=sys.stderr)
+
+
+#
+# cgn_op_main
+#
+def cgn_op_main():
+    """Main function"""
+
+    s_opt = False
+    pa_opt = None
+
+    #
+    # Parse options
+    #
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],
+                                   "",
+                                   ['show', 'pub-addr='])
+
+    except getopt.GetoptError as r:
+        print(r, file=sys.stderr)
+        cgn_usage()
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in '--show':
+            s_opt = True
+
+        if opt in '--pub-addr':
+            pa_opt = arg
+
+    # show ...
+    if s_opt:
+        cgn_op_show_public(pa_opt)
+
+
+#
+# main
+#
+if __name__ == '__main__':
+    cgn_op_main()

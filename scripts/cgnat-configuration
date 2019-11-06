@@ -1,0 +1,417 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run after there has been a change under 'service nat'.
+It looks for changes in the CGNAT configuration and sends the changes to
+the dataplane. """
+
+
+import sys
+import getopt
+
+from vyatta import configd
+from vyatta.npf.npf_debug import NpfDebug
+from vyatta.npf.npf_store import store_cfg
+
+FORCE = False
+
+CONFIG_CANDIDATE = configd.Client.CANDIDATE
+CONFIG_RUNNING = configd.Client.RUNNING
+
+BASE_ADDRESS_PATH = "service nat cgnat"
+
+# class used for printing debugs
+dbg = NpfDebug()
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def set_cgnat_config(key, cmd):
+    fcmd = "cgn-cfg {} ".format(cmd)
+    store_cfg(key, fcmd, "SET", dbg)
+
+
+def delete_cgnat_config(key, cmd):
+    fcmd = "cgn-cfg {}".format(cmd)
+    store_cfg(key, fcmd, "DELETE", dbg)
+
+
+def process_options():
+    global FORCE
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "fd", ['force', 'debug'])
+
+    except getopt.GetoptError as r:
+        err(r)
+        err("usage: {} [-f|--force] [-d|--debug] ".format(sys.argv[0]))
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ('-f', '--force'):
+            FORCE = True
+        elif opt in ('-d', '--debug'):
+            dbg.enable()
+
+
+def send_cgnat_policy_config(commands):
+    for name in commands:
+
+        rc = commands[name].get('running')
+        cc = commands[name].get('cand')
+
+        if rc is None:
+            if cc is not None:
+                # this is new configuration
+                set_cgnat_config(cc[0], "policy add {} {}".format(name, cc[1]))
+        else:
+            if cc is None:
+                # configuration is being deleted
+                delete_cgnat_config(rc[0], "policy delete {}".format(name))
+            else:
+                # configuration is being updated
+                if cc[1] != rc[1]:
+                    # only send if changed
+                    set_cgnat_config(cc[0], "policy add {} {}".format(name,
+                                     cc[1]))
+                else:
+                    dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
+                               format(cc[0], cc[1]))
+
+
+def send_cgnat_disable_hairpinning_config(commands):
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc, "hairpinning off")
+    else:
+        if cc is None:
+            # configuration is being deleted
+            delete_cgnat_config(rc, "hairpinning on")
+
+
+def send_cgnat_max_sessions_config(commands):
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc[0], "max-sessions {}".format(cc[1]))
+    else:
+        if cc is None:
+            # configuration is being deleted - 0 indicates use default
+            delete_cgnat_config(rc[0], "max-sessions 0")
+        else:
+            # configuration is being updated
+            if cc[1] != rc[1]:
+                # only send if changed
+                set_cgnat_config(cc[0], "max-sessions {}".format(cc[1]))
+            else:
+                dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
+                           format(cc[0], cc[1]))
+
+
+def send_cgnat_max_dest_per_session_config(commands):
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc[0], "max-dest-per-session {}".format(cc[1]))
+    else:
+        if cc is None:
+            # configuration is being deleted - 0 indicates use default
+            delete_cgnat_config(rc[0], "max-dest-per-session 0")
+        else:
+            # configuration is being updated
+            if cc[1] != rc[1]:
+                # only send if changed
+                set_cgnat_config(cc[0], "max-dest-per-session {}".format(
+                    cc[1]))
+            else:
+                dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".format(
+                    cc[0], cc[1]))
+
+
+def send_cgnat_sess_timeout_config(commands):
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc[0], cc[1])
+    else:
+        if cc is None:
+            # configuration is being deleted - put back to defaults
+            delete_cgnat_config(rc[0], "session-timeouts tcp-opening=240 "
+                                "tcp-estab=7440 tcp-closing=240 "
+                                "udp-opening=30 udp-estab=300 "
+                                "other-opening=30 other-estab=240")
+        else:
+            # configuration is being updated
+            if cc[1] != rc[1]:
+                # only send if changed
+                set_cgnat_config(cc[0], cc[1])
+            else:
+                dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".format(
+                    cc[0], cc[1]))
+
+
+def send_cgnat_interface_config(commands):
+    for ifname in commands:
+        for policy in commands[ifname]:
+
+            rc = commands[ifname][policy].get('running')
+            cc = commands[ifname][policy].get('cand')
+
+            if rc is None:
+                if cc is not None:
+                    # this is new configuration
+                    set_cgnat_config(cc[0], "policy attach {}".format(cc[1]))
+            else:
+                if cc is None:
+                    # configuration is being deleted
+                    delete_cgnat_config(rc[0], "policy detach {}".format(
+                        rc[1]))
+                else:
+                    # configuration is being updated
+                    if cc[1] != rc[1]:
+                        # only send if changed
+                        set_cgnat_config(cc[0], "policy attach {}".format(
+                            cc[1]))
+                    else:
+                        dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
+                                   format(cc[0], cc[1]))
+
+
+def send_cgnat_config(commands):
+    dbg.pprint("send_cgnat_config()")
+
+    if 'policy' in commands:
+        send_cgnat_policy_config(commands['policy'])
+
+    if 'disable-hairpinning' in commands:
+        send_cgnat_disable_hairpinning_config(commands['disable-hairpinning'])
+
+    if 'max-sessions' in commands:
+        send_cgnat_max_sessions_config(commands['max-sessions'])
+
+    if 'max-dest-per-session' in commands:
+        send_cgnat_max_dest_per_session_config(
+            commands['max-dest-per-session'])
+
+    if 'session-timeout' in commands:
+        send_cgnat_sess_timeout_config(commands['session-timeout'])
+
+    if 'interface' in commands:
+        send_cgnat_interface_config(commands['interface'])
+
+
+def build_cgnat_log_command(cfg):
+
+        log_cmd = ''
+        log_sess_all = 'no'
+        log_sess_creation = 'no'
+        log_sess_deletion = 'no'
+        log_sess_periodic = 0
+        log_subs = 'no'
+
+        if 'log' in cfg:
+            if 'session' in cfg['log']:
+                s = cfg['log']['session']
+                if 'address-group' in s:
+                    log_cmd += "log-sess-group={} ".format(s['address-group'])
+                if 'all-subscribers' in s:
+                    log_sess_all = 'yes'
+                if 'creation' in s:
+                    log_sess_creation = 'yes'
+                if 'deletion' in s:
+                    log_sess_deletion = 'yes'
+                if 'periodic' in s:
+                    log_sess_periodic = s['periodic']
+            if 'subscriber' in cfg['log']:
+                log_subs = 'yes'
+
+        log_cmd += ("log-sess-all={} log-sess-creation={} "
+                    "log-sess-deletion={} log-sess-periodic={} "
+                    "log-subs={} ").format(
+                    log_sess_all, log_sess_creation, log_sess_deletion,
+                    log_sess_periodic, log_subs)
+
+        return log_cmd
+
+
+def build_cgnat_policy_config(commands, cfg, tree):
+    for name in cfg:
+        key = "{} policy {}".format(BASE_ADDRESS_PATH, name)
+        cmd = ""
+        dbg.pprint("name: {}".format(name))
+        p = cfg[name]
+
+        if 'priority' in p:
+            cmd += "priority={} ".format(p['priority'])
+
+        if ('match' in p and 'source' in p['match'] and
+            'ip-address' in p['match']['source'] and
+           'prefix' in p['match']['source']['ip-address']):
+            cmd += "src-addr={} ".format(
+                p['match']['source']['ip-address']['prefix'])
+
+        if 'translation' in p and 'pool' in p['translation']:
+            cmd += "pool={} ".format(p['translation']['pool'])
+
+        cmd += build_cgnat_log_command(p)
+
+        if name not in commands.keys():
+            commands[name] = {}
+        commands[name][tree] = (key, cmd)
+        dbg.pprint("POLICY - KEY: {}".format(key))
+        dbg.pprint("         CMD: {}".format(cmd))
+
+
+def build_cgnat_sess_timeout_command(cfg):
+
+    state_to_cmd = {
+        'established': 'estab',
+        'partially-open': 'opening',
+        'partially-closed': 'closing'
+    }
+
+    cmd = "session-timeouts "
+
+    for prot in cfg:
+        for state in cfg[prot]:
+            if state not in state_to_cmd:
+                err("Unexpected state of {} for {}".format(state, prot))
+                continue
+            cmd += "{}-{}={} ".format(
+                prot, state_to_cmd[state], cfg[prot][state])
+
+    return cmd
+
+
+def build_cgnat_interface_config(commands, cfg, tree):
+    for ifname in cfg:
+        key = "{} interface {}".format(BASE_ADDRESS_PATH, ifname)
+        dbg.pprint("ifname: {}".format(ifname))
+        if ifname not in commands.keys():
+            commands[ifname] = {}
+
+        if 'policy' in cfg[ifname]:
+            for policy in cfg[ifname]['policy']:
+                pkey = "{} {}".format(key, policy)
+                cmd = "intf={} name={}".format(ifname, policy)
+                if policy not in commands[ifname].keys():
+                    commands[ifname][policy] = {}
+                commands[ifname][policy][tree] = (pkey, cmd)
+                dbg.pprint("INTERFACE - KEY: {}".format(pkey))
+                dbg.pprint("            CMD: {}".format(cmd))
+
+
+def build_cgnat_config(commands, cfg, tree):
+
+    if 'policy' in cfg:
+        if 'policy' not in commands.keys():
+            commands['policy'] = {}
+        build_cgnat_policy_config(commands['policy'], cfg['policy'], tree)
+
+    if 'disable-hairpinning' in cfg:
+        key = "{} disable-hairpinning".format(BASE_ADDRESS_PATH)
+        if 'disable-hairpinning' not in commands.keys():
+            commands['disable-hairpinning'] = {}
+        commands['disable-hairpinning'][tree] = key
+
+    if 'max-sessions' in cfg:
+        key = "{} max-sessions".format(BASE_ADDRESS_PATH)
+        if 'max-sessions' not in commands.keys():
+            commands['max-sessions'] = {}
+        commands['max-sessions'][tree] = (key, cfg['max-sessions'])
+
+    if 'max-dest-per-session' in cfg:
+        key = "{} max-dest-per-session".format(BASE_ADDRESS_PATH)
+        if 'max-dest-per-session' not in commands.keys():
+            commands['max-dest-per-session'] = {}
+        commands['max-dest-per-session'][tree] = (
+            key, cfg['max-dest-per-session'])
+
+    if 'session-timeout' in cfg:
+        key = "{} session-timeout".format(BASE_ADDRESS_PATH)
+        if 'session-timeout' not in commands.keys():
+            commands['session-timeout'] = {}
+        cmd = build_cgnat_sess_timeout_command(cfg['session-timeout'])
+        commands['session-timeout'][tree] = (key, cmd)
+        dbg.pprint("SESS-TIMEOUT KEY: {}".format(key))
+        dbg.pprint("             CMD: {}".format(cmd))
+
+    if 'interface' in cfg:
+        if 'interface' not in commands.keys():
+            commands['interface'] = {}
+        build_cgnat_interface_config(commands['interface'], cfg['interface'],
+                                     tree)
+
+
+def program_cgnat_config():
+    global FORCE
+    dbg.pprint("program_cgnat_config()")
+
+    commands = {}
+
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        err("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
+    try:
+        status = client.node_get_status(CONFIG_CANDIDATE, BASE_ADDRESS_PATH)
+
+        if status == client.UNCHANGED and not FORCE:
+            dbg.pprint("unchanged: {} so no work to do".
+                       format(BASE_ADDRESS_PATH))
+            return 0
+
+        try:
+            cand_cfg = (client.tree_get_dict(BASE_ADDRESS_PATH,
+                                             CONFIG_CANDIDATE, 'internal')
+                        ['cgnat'])
+            dbg.pprint("BUILD CANDIDATE")
+            build_cgnat_config(commands, cand_cfg, 'cand')
+        except configd.Exception:
+            dbg.pprint("failed getting candidtate tree for {}".
+                       format(BASE_ADDRESS_PATH))
+
+    except configd.Exception:
+        dbg.pprint("there is no configuration under {}".format(
+                   BASE_ADDRESS_PATH))
+
+    try:
+        running_cfg = client.tree_get_dict(BASE_ADDRESS_PATH, CONFIG_RUNNING,
+                                           'internal')['cgnat']
+        dbg.pprint("BUILD RUNNING")
+        build_cgnat_config(commands, running_cfg, 'running')
+    except configd.Exception:
+        dbg.pprint("failed getting running tree for {}".format(
+                   BASE_ADDRESS_PATH))
+
+    # send commands to the dataplane using cstore which will change
+    # the running configuration into the candidate configuration
+    send_cgnat_config(commands)
+    return 0
+
+
+if __name__ == "__main__":
+    process_options()
+    ret = program_cgnat_config()
+    exit(ret)

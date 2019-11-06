@@ -1,0 +1,513 @@
+module vyatta-ippf-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-ippf:1";
+	prefix vyatta-ippf-v1;
+
+	import vyatta-security-v1 {
+		prefix security;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-types-v1 {
+		prefix vy-types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2019, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms, with or without
+		 modification, are permitted provided that the following conditions
+		 are met:
+
+		 1. Redistributions of source code must retain the above copyright
+		    notice, this list of conditions and the following disclaimer.
+		 2. Redistributions in binary form must reproduce the above
+		    copyright notice, this list of conditions and the following
+		    disclaimer in the documentation and/or other materials provided
+		    with the distribution.
+		 3. Neither the name of the copyright holder nor the names of its
+		    contributors may be used to endorse or promote products derived
+		    from this software without specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+		 'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+		 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+		 FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+		 COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+		 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+		 BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+		 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+		 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+		 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+		 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+		 POSSIBILITY OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta IP Packet Filter";
+
+	revision 2019-06-20 {
+		description "Initial revision.";
+	}
+
+	feature ip-packet-filter {
+		description "IP Packet Filter support";
+	}
+
+	grouping ippf-address-group {
+		description "An IPv4 or IPv6 host address, prefix or port";
+		container ipv4 {
+			description  "Match IPv4";
+			configd:help "Match IPv4";
+			presence "IPv4 match criteria; mandatory child nodes when configured";
+			must "count( prefix | host ) = 1" {
+				error-message "Configure either 'prefix' or 'host'";
+			}
+			must "not (../../../../ip-version = 'ipv6')" {
+				error-message "'match ipv4' isn't available in IPv6 groups";
+			}
+			leaf prefix {
+				description  "Match an IPv4 prefix";
+				configd:help "Match an IPv4 prefix";
+				type vy-types:ipv4-prefix {
+					configd:help "IPv4 prefix to match";
+					configd:normalize "normalize ipv4-prefix";
+					configd:pattern-help "IPv4 prefix, /1 through /31";
+					pattern '.*/(([1-9])|([1-2][0-9])|(3[0-1]))' {
+						error-message "Must be <IPv4-address>/<x>, where <x> is 1 through 31";
+					}
+				}
+			}
+			leaf host {
+				description  "Match an IPv4 address";
+				configd:help "Match an IPv4 address";
+				type vy-types:ipv4-address {
+					configd:help "IPv4 address to match";
+					configd:normalize "normalize ipv4";
+				}
+			}
+		}
+		container ipv6 {
+			description  "Match IPv6";
+			configd:help "Match IPv6";
+			presence "IPv6 match criteria; mandatory child nodes when configured";
+			must "count( prefix | host ) = 1" {
+				error-message "Configure either 'prefix' or 'host'";
+			}
+			must "not (../../../../ip-version = 'ipv4')" {
+				error-message "'match ipv6' isn't available in IPv4 groups";
+			}
+			must "not (../ipv4)" {
+				error-message "Configure either 'ipv4' or 'ipv6'";
+			}
+			leaf prefix {
+				description  "Match an IPv6 prefix";
+				configd:help "Match an IPv6 prefix";
+				type vy-types:ipv6-prefix {
+					configd:help "IPv6 prefix to match";
+					configd:normalize "normalize ipv6-prefix";
+					configd:pattern-help "IPv6 prefix, /1 through /127";
+					pattern '.*/(([1-9])|([1-9][0-9])|(1[0-1][0-9])|(12[0-7]))' {
+						error-message "Must be <IPv6-address>/<x>, where <x> is 1 through 127";
+					}
+				}
+			}
+			leaf host {
+				description  "Match an IPv6 address";
+				configd:help "Match an IPv6 address";
+				type vy-types:ipv6-address {
+					configd:help "IPv6 address to match";
+				}
+			}
+		}
+	}
+
+	grouping ippf-protocol {
+		description "Definition of a layer 4 protocol, either by name or by number";
+		leaf name {
+			description  "IP L4 header protocol name to match";
+			configd:help "IP L4 header protocol name to match";
+			type enumeration {
+				enum "tcp" {
+					description  "Match TCP packets (protocol 6)";
+					configd:help "Match TCP packets (protocol 6)";
+				}
+				enum "udp" {
+					description  "Match UDP packets (protocol 17)";
+					configd:help "Match UDP packets (protocol 17)";
+				}
+				enum "udplite" {
+					description  "Match UDPlite packets (protocol 136)";
+					configd:help "Match UDPlite packets (protocol 136)";
+				}
+				enum "dccp" {
+					description  "Match DCCP packets (protocol 33)";
+					configd:help "Match DCCP packets (protocol 33)";
+				}
+				enum "sctp" {
+					description  "Match SCTP packets (protocol 132)";
+					configd:help "Match SCTP packets (protocol 132)";
+				}
+				enum "icmp" {
+					description  "Match ICMP packets (protocol 1)";
+					configd:help "Match ICMP packets (protocol 1)";
+				}
+				enum "igmp" {
+					description  "Match IGMP packets (protocol 2)";
+					configd:help "Match IGMP packets (protocol 2)";
+				}
+				enum "gre" {
+					description  "Match GRE packets (protocol 47)";
+					configd:help "Match GRE packets (protocol 47)";
+				}
+				enum "ipv6-icmp" {
+					description  "Match IPv6 ICMP packets (protocol 58)";
+					configd:help "Match IPv6 ICMP packets (protocol 58)";
+				}
+				enum "esp" {
+					description  "Match IPSEC ESP packets (protocol 50)";
+					configd:help "Match IPSEC ESP packets (protocol 50)";
+				}
+			}
+		}
+		leaf number {
+			description  "IP L4 header protocol number to match";
+			configd:help "IP L4 header protocol number to match";
+			type uint32 {
+				range 0..255 {
+					error-message "Must be between 0 and 255";
+				}
+			}
+		}
+	}
+
+	grouping ippf-match {
+		description "Definition of a single IP packet filter match rule";
+		leaf fragment {
+			description  "Match fragments";
+			configd:help "Match fragments";
+			type enumeration {
+				enum "any" {
+					description  "Match any fragment";
+					configd:help "Match any fragment";
+				}
+			}
+		}
+		container protocol {
+			description  "Protocol parameters";
+			configd:help "Protocol parameters";
+			container base {
+				uses ippf-protocol;
+				presence "Base protocol match criteria; mandatory child nodes when configured";
+				must "count( name | number ) = 1" {
+					error-message "Configure either 'name' or 'number'";
+				}
+			}
+			container final {
+				uses ippf-protocol;
+				presence "Final protocol match criteria; mandatory child nodes when configured";
+				must "count( name | number ) = 1" {
+					error-message "Configure either 'name' or 'number'";
+				}
+			}
+		}
+		container source {
+			description  "Source parameters";
+			configd:help "Source parameters";
+			uses ippf-address-group;
+		}
+		container destination {
+			description  "Destination parameters";
+			configd:help "Destination parameters";
+			uses ippf-address-group;
+		}
+	}
+
+	grouping ippf-action {
+		description "Definition of an IP packet filter rule action";
+		leaf accept {
+			description  "Accept matching packets";
+			configd:help "Accept matching packets";
+			type empty;
+		}
+		leaf drop {
+			description  "Drop matching packets";
+			configd:help "Drop matching packets";
+			type empty;
+		}
+	}
+
+	augment /security:security {
+		if-feature ip-packet-filter;
+		description "Top-level IP packet filter command";
+		container ip-packet-filter {
+			description  "IP packet filter";
+			configd:help "IP packet filter";
+			configd:validate "validate-fw-groups --variant ippf";
+			configd:validate "validate-ippf";
+			configd:end "end-ippf-ruleset --commit";
+			presence "IP packet filter criteria; mandatory child nodes when configured";
+			list group {
+				description  "IP packet filter group";
+				configd:help "IP packet filter group";
+				configd:end "end-ippf-ruleset --group $VAR(@)";
+				key "group-name";
+				min-elements 1;
+				leaf group-name {
+					description  "Group name";
+					configd:help "Group name";
+					type vy-types:alpha-numeric {
+						configd:help "Group name";
+					}
+				}
+				leaf description {
+					description  "Group description";
+					configd:help "Group description";
+					type string;
+				}
+				leaf ip-version {
+					description  "IP version for this group";
+					configd:help "IP version for this group";
+					mandatory true;
+					type enumeration {
+						enum "ipv4" {
+							description  "Group only applies to IPv4 traffic";
+							configd:help "Group only applies to IPv4 traffic";
+						}
+						enum "ipv6" {
+							description  "Group only applies to IPv6 traffic";
+							configd:help "Group only applies to IPv6 traffic";
+						}
+					}
+				}
+				container counters {
+					description  "Configure counters";
+					configd:help "Configure counters";
+					presence "Group counter criteria; mandatory child nodes when configured";
+					leaf sharing {
+						description  "Configured counter sharing";
+						configd:help "Configured counter sharing";
+						mandatory true;
+						type enumeration {
+							enum "per-interface" {
+								description  "Unique counter applied to multiple interfaces";
+								configd:help "Unique counter applied to multiple interfaces";
+							}
+						}
+					}
+					leaf-list count {
+						description  "Configure what to count";
+						configd:help "Configure what to count";
+						min-elements 1;
+						type enumeration {
+							enum "packets" {
+								description  "Count packets";
+								configd:help "Count packets";
+							}
+						}
+					}
+					container type {
+						description  "Configure counter type";
+						configd:help "Configure counter type";
+						presence "Counter type criteria; mandatory child nodes when configured";
+						must "count(*) = 1" {
+							error-message "'counter type' must be configured";
+						}
+						leaf auto-per-rule {
+							description  "Auto per rule";
+							configd:help "Auto per rule";
+							type empty;
+						}
+					}
+				}
+				list rule {
+					description  "Rule number";
+					configd:help "Rule number";
+					min-elements 1;
+					must "action or disable" {
+						error-message "Either configure an 'action', or 'disable' this rule";
+					}
+					key "number";
+					leaf number {
+						description  "rule number";
+						configd:help "rule number";
+						type fw-types:rule-number;
+					}
+					leaf disable {
+						description  "Disable rule";
+						configd:help "Disable rule";
+						type empty;
+					}
+					leaf description {
+						description  "Rule description";
+						configd:help "Rule description";
+						type string;
+					}
+					container match {
+						description  "Configure match criteria";
+						configd:help "Configure match criteria";
+						uses ippf-match;
+					}
+					container action {
+						description  "Configure actions";
+						configd:help "Configure actions";
+						uses ippf-action;
+						must "count(accept | drop) = 1" {
+							error-message "Configure either 'accept' or 'drop'";
+						}
+					}
+				}
+			}
+			list interface {
+				description  "Interface for IP packet filter";
+				configd:help "Interface for IP packet filter";
+				configd:allowed "vyatta-interfaces.pl --show all";
+				configd:end "end-ippf-ruleset --interface $VAR(@)";
+				must "in" {
+					error-message "Configure at least one group for input";
+				}
+				/* There's a limit of one group per address-family.
+				 * Here we ensure there are no more than two groups.
+				 * Until nested predicates are supported
+				 * a higher level configd:validate ensures they have different AFs.
+				 */
+				must "count(in) <= 2" {
+					error-message "Configure only one group per address-family";
+				}
+				key "interface-name";
+				leaf interface-name {
+					description  "Interface name";
+					configd:help "Interface name";
+					type vy-types:interface-ifname;
+				}
+				leaf-list in {
+					description  "Input group";
+					configd:help "Input group";
+					configd:allowed "echo $VAR(/security/ip-packet-filter/group/@@)";
+					ordered-by "user";
+					type leafref {
+						path "/security:security/ip-packet-filter/group/group-name";
+					}
+				}
+			}
+		}
+	}
+
+	rpc get-statistics {
+		if-feature ip-packet-filter;
+		description "Get IP Packet Filter statistics. The inputs specify optional filters to limit the returned statistics";
+		configd:call-rpc "vyatta-ippf-rpc --show";
+
+		input {
+			leaf-list interfaces {
+				description "Get statistics for the named interfaces";
+				type string;
+			}
+			leaf-list directions {
+				description "Get statistics for the named directions";
+				type string;
+			}
+			leaf-list groups {
+				description "Get statistics for the named groups";
+				type string;
+			}
+			leaf-list rules {
+				description "Get statistics for the numbered rules";
+				type uint32;
+			}
+			leaf-list actions {
+				description "Get statistics for the named actions";
+				type string;
+			}
+		}
+		output {
+			list statistics {
+				key row;
+				leaf row {
+					description "Row number";
+					type uint32;
+				}
+				leaf interface {
+					description "Interface name";
+					type string;
+				}
+				leaf direction {
+					description "The group direction";
+					type string;
+				}
+				leaf group {
+					description "The group name";
+					type string;
+				}
+				leaf rule {
+					description "The rule number";
+					type uint32;
+				}
+				leaf action {
+					description "The group action";
+					type string;
+				}
+				container hardware {
+					leaf packets {
+						description "Count of packets matching the hardware rule";
+						type uint64;
+					}
+					leaf bytes {
+						description "Count of bytes matching the hardware rule";
+						type uint64;
+					}
+				}
+				container software {
+					leaf packets {
+						description "Count of packets matching the software rule";
+						type uint64;
+					}
+					leaf bytes {
+						description "Count of bytes matching the software rule";
+						type uint64;
+					}
+				}
+			}
+		}
+	}
+
+	rpc clear-statistics {
+		if-feature ip-packet-filter;
+		description "Clear IP Packet Filter statistics. The inputs specify optional filters to limit the cleared statistics";
+		configd:call-rpc "vyatta-ippf-rpc --clear";
+		input {
+			leaf interface {
+				description "Clear statistics for the named interface";
+				type string;
+			}
+			leaf direction {
+				description "Clear statistics for the named direction";
+				type string;
+			}
+			leaf group {
+				description "Clear statistics for the named group";
+				type string;
+			}
+			leaf rule {
+				description "Clear statistics for the numbered rule";
+				type uint32;
+			}
+			leaf action {
+				description "Clear statistics for the named action";
+				type string;
+			}
+		}
+		/* This RPC has no output */
+	}
+}

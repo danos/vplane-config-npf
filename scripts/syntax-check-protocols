@@ -1,0 +1,3 @@
+#!/opt/vyatta/bin/cliexpr
+syntax:expression: exec "vyatta-validate-type -q official_protocol $VAR(@)"; "Invalid protocol name"
+syntax:expression: $VAR(@) != "all" ; "Invalid protocol name"

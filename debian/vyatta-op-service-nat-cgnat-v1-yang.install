@@ -1,0 +1,7 @@
+usr/share/configd/yang/vyatta-op-service-nat-cgnat-v1.yang
+
+opt/vyatta/sbin/vyatta-dp-cgnat-sess-op-yang
+opt/vyatta/sbin/vyatta-dp-cgnat-op
+opt/vyatta/sbin/vyatta-dp-cgnat-pub-op
+opt/vyatta/sbin/vyatta-dp-cgnat-subs-op
+opt/vyatta/sbin/vyatta-dp-cgnat-sess-op
