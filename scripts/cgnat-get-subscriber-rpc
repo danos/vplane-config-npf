@@ -54,11 +54,27 @@ def sub_rpc(entry):
 
     rpc_entry = {}
     rpc_entry['subscriber'] = entry['address']
+    rpc_entry['paired-address'] = entry['paired_addr']
     rpc_entry['duration'] = entry['duration']
+    rpc_entry['expired'] = ((entry['flags'] & 0x01) != 0)
     rpc_entry['active-blocks'] = entry['block_count']
     rpc_entry['active-mappings'] = entry['map_active']
     rpc_entry['total-mapping-requests'] = entry['map_reqs']
     rpc_entry['total-mapping-failures'] = entry['map_fails']
+    rpc_entry['sessions-created'] = entry['sess_crtd']
+    rpc_entry['sessions-destroyed'] = entry['sess_dstrd']
+    rpc_entry['session-rate-20s'] = entry['sess_rate_20s']
+    rpc_entry['session-rate-1m'] = entry['sess_rate_1m']
+    rpc_entry['session-rate-5m'] = entry['sess_rate_5m']
+    rpc_entry['session-rate-max'] = entry['sess_rate_max']
+    rpc_entry['session-rate-max-time'] = entry['sess_rate_max_tm']
+    rpc_entry['session-rate-1m-max'] = entry['sess_rate_1m_max']
+    rpc_entry['session-rate-1m-max-time'] = entry['sess_rate_1m_max_tm']
+    rpc_entry['packets-in'] = entry['in_pkts']
+    rpc_entry['packets-in'] = entry['in_pkts']
+    rpc_entry['bytes-out'] = entry['out_bytes']
+    rpc_entry['bytes-in'] = entry['in_bytes']
+    rpc_entry['assigned-ports'] = entry['port_count']
     rpc_entry['protocols'] = rpc_prot_list
 
     dbg.pprint("rpc entry: {}".format(rpc_entry))

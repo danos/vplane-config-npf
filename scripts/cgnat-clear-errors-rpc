@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run to clear the CGNAT error counters """
+
+
+import vplaned
+
+
+def clear_cgnat_errors():
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command('cgn-op clear errors')
+
+    return 0
+
+
+if __name__ == "__main__":
+    ret = clear_cgnat_errors()
+    exit(ret)

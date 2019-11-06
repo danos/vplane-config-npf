@@ -3,6 +3,7 @@ share_perl5_npfdir = $(datarootdir)/perl5/Vyatta/Npf
 yangdir = /usr/share/configd/yang
 vrf_mgr_del_tabledir = $(sysconfdir)/vrf-manager-del-table.d
 lib_python_npfdir = /usr/lib/python3/dist-packages/vyatta/npf
+tech_support_dir = /opt/vyatta/share/vyatta-op/functions/tech-support.d
 
 cpiop = find  . ! -regex '\(.*~\|.*\.bak\|.*\.swp\|.*\#.*\#\)' -print0 | \
 	cpio -0pd
@@ -72,6 +73,10 @@ sbin_SCRIPTS += scripts/cgnat-get-subscriber-rpc
 sbin_SCRIPTS += scripts/cgnat-get-public-rpc
 sbin_SCRIPTS += scripts/cgnat-get-sessions-rpc
 sbin_SCRIPTS += scripts/cgnat-clear-sessions-rpc
+sbin_SCRIPTS += scripts/cgnat-clear-session-stats-rpc
+sbin_SCRIPTS += scripts/cgnat-clear-subs-stats-rpc
+sbin_SCRIPTS += scripts/cgnat-clear-policy-stats-rpc
+sbin_SCRIPTS += scripts/cgnat-clear-errors-rpc
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-sess-op-yang
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-op
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-pub-op
@@ -93,9 +98,12 @@ lib_python_npf_DATA = lib/python3/npf_traps.py
 lib_python_npf_DATA += lib/python3/npf_debug.py
 lib_python_npf_DATA += lib/python3/npf_store.py
 lib_python_npf_DATA += lib/python3/npf_warning.py
+lib_python_npf_DATA += lib/python3/npf_addr_group.py
 
 vrf_mgr_del_table_SCRIPTS = etc/vrf-manager-del-table.d/pbr-groups
 
 install-exec-hook:
 	mkdir -p $(DESTDIR)$(yangdir)
 	cd yang && $(cpiop) $(DESTDIR)$(yangdir)
+	mkdir -p $(DESTDIR)$(tech_support_dir)
+	cd scripts/tech-support && $(cpiop) $(DESTDIR)$(tech_support_dir)

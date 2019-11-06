@@ -9,6 +9,8 @@
 import sys
 import getopt
 import vplaned
+from time import localtime, strftime
+from vyatta.npf.npf_addr_group import npf_show_address_group
 
 
 # Yes or No string
@@ -98,6 +100,9 @@ def cgn_op_show_summary():
                                         summary.get('ethread')))
                 print("  %-32s %18u" % ("Packet buffer errors",
                                         summary.get('embuf')))
+                if summary.get('bypass'):
+                    print("  %-32s %18u" % ("ALG packets",
+                                            summary.get('bypass')))
                 print()
 
 
@@ -193,16 +198,27 @@ def cgn_op_show_policy_one(pol):
     """Show one CGN policy"""
 
     print("Policy: %s" % (pol.get('name')))
-    print("  %-32s %18s" % ("Prefix", pol.get('prefix')))
+
+    if "match_group" in pol:
+        npf_show_address_group(pol.get('match_group'), "ipv4",
+                               "Match address-group",
+                               2, 22, 28,
+                               4, 14, 34)
+
     print("  %-32s %18s" % ("Interface", pol.get('interface')))
     print("  %-32s %18s" % ("Priority", pol.get('priority')))
     print("  %-32s %18s" % ("Pool", pol.get('pool')))
     print("  %-32s %18s" % ("Ref count", pol.get('refcnt')))
     print("  %-32s %18s" % ("Log all sessions",
                             yes_or_no(pol.get('log_sess_all'))))
+
     log_grp = pol.get('log_sess_group')
     if log_grp:
-        print("  %-32s %18s" % ("Log select sessions", log_grp))
+        npf_show_address_group(log_grp, "ipv4",
+                               "Log select sessions",
+                               2, 22, 28,
+                               6, 12, 34)
+
     print("    %-30s %18s" % ("Log session start",
                               yes_or_no(pol.get('log_sess_start'))))
     print("    %-30s %18s" % ("Log session end",
@@ -221,6 +237,25 @@ def cgn_op_show_policy_one(pol):
     print("  %-32s %18u" % ("     bytes", pol.get('out_bytes')))
     print("  %-32s %18u" % ("In,  packets", pol.get('in_pkts')))
     print("  %-32s %18u" % ("     bytes", pol.get('in_bytes')))
+
+    print("  %s" % ("Max Session Rates:"))
+    print("    %-16s %-8s  %-8s" % ("Subscriber", "Max Rate", "Time"))
+
+    # Subscriber max session rate list.  Always returns 5 entries.
+    # Stop when we reach the first 'empty' entry.
+    #
+    sr_list = pol.get('subs_sess_rates')
+
+    for i in range(0, len(sr_list)):
+        if sr_list[i].get('max_sess_rate') == 0:
+            break
+        max_rate_tm = sr_list[i].get('time') / 1000000
+        tmp = "%s" % (strftime("%F %H:%M:%S +0000", localtime(max_rate_tm)))
+
+        print("    %-16s %8u  %s" % (sr_list[i].get('subscriber'),
+                                     sr_list[i].get('max_sess_rate'),
+                                     tmp))
+
     print()
 
 
@@ -253,6 +288,34 @@ def cgn_op_show_policy(n_opt):
 
 
 #
+# cgn_op_clear_policy_stats
+#
+def cgn_op_clear_policy_stats(n_opt):
+    """Clear a CGN policies statistics"""
+
+    cmd = "cgn-op clear policy %s statistics" % (n_opt)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(cmd)
+
+
+#
+# cgn_op_clear_errors
+#
+def cgn_op_clear_errors():
+    """Clear CGNAT errors"""
+
+    cmd = "cgn-op clear errors"
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(cmd)
+
+
+#
 # cgn_op_main
 #
 def cgn_op_main():
@@ -260,6 +323,8 @@ def cgn_op_main():
 
     s_opt = None
     n_opt = None
+    c_opt = None
+    stats_opt = False
 
     #
     # Parse options
@@ -267,7 +332,8 @@ def cgn_op_main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
-                                   ['show=', 'name='])
+                                   ['show=', 'name=',
+                                    'clear=', 'stats'])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -281,6 +347,12 @@ def cgn_op_main():
         if opt in '--name':
             n_opt = arg
 
+        if opt in '--clear':
+            c_opt = arg
+
+        if opt in '--stats':
+            stats_opt = True
+
     # show ...
     if s_opt:
         if s_opt == 'policy':
@@ -291,6 +363,14 @@ def cgn_op_main():
 
         if s_opt == 'summary':
             cgn_op_show_summary()
+
+    # clear ...
+    if c_opt:
+        if c_opt == 'policy' and stats_opt:
+            cgn_op_clear_policy_stats(n_opt)
+
+        if c_opt == 'errors':
+            cgn_op_clear_errors()
 
 
 #

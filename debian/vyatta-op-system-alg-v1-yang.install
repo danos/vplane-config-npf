@@ -1,0 +1,2 @@
+yang/vyatta-op-system-alg-v1.yang usr/share/configd/yang/
+scripts/vyatta-dp-npf-show-alg-state opt/vyatta/sbin/

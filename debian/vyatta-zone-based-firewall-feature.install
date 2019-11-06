@@ -1,0 +1,4 @@
+features /opt/vyatta/etc/
+scripts/vyatta-dp-npf-zone.pl opt/vyatta/sbin/
+scripts/vyatta-show-zone.pl opt/vyatta/sbin/
+scripts/validate-zbf-rules.pl opt/vyatta/sbin/

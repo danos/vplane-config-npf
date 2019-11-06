@@ -13,6 +13,8 @@ import getopt
 import socket
 import re
 
+import vci
+
 from vyatta import configd
 from vyatta.npf.npf_debug import NpfDebug
 from vyatta.npf.npf_store import store_cfg, dataplane_commit
@@ -319,6 +321,9 @@ def program_dscp_groups():
 
     Names are converted to values prior to being passed down.
     """
+    created = []
+    modified = []
+    deleted = []
 
     dbg.pprint("program_dscp_groups()")
 
@@ -326,7 +331,7 @@ def program_dscp_groups():
 
     if cand_cfg == {} and running_cfg == {}:
         dbg.pprint("unchanged so no work to do")
-        return
+        return (created, modified, deleted)
 
     # Look for deleted groups
     for group in sorted(running_cfg):
@@ -336,6 +341,7 @@ def program_dscp_groups():
             dbg.pprint("No new group {}". format(group))
             # Whole group removed
             delete_dscp_group(group)
+            deleted.append(group)
             continue
 
         # Compare running and candidate configs
@@ -343,9 +349,11 @@ def program_dscp_groups():
         if running_cfg[group]['dscp'] != cand_cfg[group]['dscp']:
             dbg.pprint("changed group {}". format(group))
             group_cfg = ";".join("{}".format(dscpTable.get(c, c))
-                for c in sorted(cand_cfg[group]['dscp']))
+                for c in sorted(cand_cfg[group]['dscp'],
+                                key=lambda x: dscpTable.get(x, x)))
             delete_dscp_group(group)
             create_dscp_group(group, group_cfg)
+            modified.append(group)
 
     # Look for added configuration
     for group in sorted(cand_cfg):
@@ -354,8 +362,12 @@ def program_dscp_groups():
         if group not in running_cfg:
             dbg.pprint("New group {}". format(group))
             group_cfg = ";".join("{}".format(dscpTable.get(c, c))
-                for c in sorted(cand_cfg[group]['dscp']))
+                for c in sorted(cand_cfg[group]['dscp'],
+                                key=lambda x: dscpTable.get(x, x)))
             create_dscp_group(group, group_cfg)
+            created.append(group)
+
+    return (created, modified, deleted)
 
 
 # ===== ICMP and ICMPv6 =====
@@ -538,6 +550,28 @@ def getPort(p):
             raise NameError("{} is not a recognised port".format(p))
 
 
+def getPortKey(p):
+    """
+    Get the key to use for ordering, after converting any port names
+    into a number. Note that ranges are sorted using the first number in
+    the range.
+
+    @p: the port to get the key for
+    """
+
+    try:
+        return int(p)
+    except ValueError:
+        # Is it a port range, ie "<digits>-<digits>" ?
+        match = re.search(r"(\d+)-\d+", p)
+        if match:
+            return int(match.group(1))
+        try:
+            return socket.getservbyname(p)
+        except OSError:
+            raise NameError("{} is not a recognised port".format(p))
+
+
 def program_port_groups():
     """
     Create and delete port groups.
@@ -577,7 +611,7 @@ def program_port_groups():
             cfg = cand_cfg[group].get('port')
             if cfg:
                 group_cfg = ";".join("{}".format(getPort(c))
-                    for c in sorted(cfg))
+                    for c in sorted(cfg, key=getPortKey))
             else:
                 group_cfg = "1-65535"        # default
             delete_port_group(group)
@@ -592,7 +626,7 @@ def program_port_groups():
             cfg = cand_cfg[group].get('port')
             if cfg:
                 group_cfg = ";".join("{}".format(getPort(c))
-                    for c in sorted(cfg))
+                    for c in sorted(cfg, key=getPortKey))
             else:
                 group_cfg = "1-65535"        # default
             create_port_group(group, group_cfg)
@@ -741,13 +775,28 @@ def program_resource_groups_main():
         running_cfg = {}
 
     program_address_groups()
-    program_dscp_groups()
+    (created, modified, deleted) = program_dscp_groups()
     program_icmp_groups(ICMPv4)
     program_icmp_groups(ICMPv6)
     program_port_groups()
     program_protocol_groups()
 
     dataplane_commit(dbg)
+
+    # Tell any listening VCI components that the NPF dscp-groups config has
+    # changed
+    dscp_groups = {}
+    if created:
+        dscp_groups['created'] = created
+    if modified:
+        dscp_groups['modified'] = modified
+    if deleted:
+        dscp_groups['deleted'] = deleted
+
+    if dscp_groups:
+        cl = vci.Client()
+        cl.emit("vyatta-npf-v1", "configuration-updated",
+                {"dscp-groups":dscp_groups})
 
     send_npf_snmp_traps([RG_BASE], dbg)
     return 0

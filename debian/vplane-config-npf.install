@@ -25,3 +25,5 @@ opt/vyatta/sbin/vyatta-dp-npf-show-nptv6
 opt/vyatta/sbin/vyatta-dp-npf-show-rules
 opt/vyatta/sbin/vyatta-dp-npf-snmptrap.pl
 opt/vyatta/sbin/npf-show-logs
+
+opt/vyatta/share/vyatta-op/functions/tech-support.d

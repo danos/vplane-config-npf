@@ -33,6 +33,9 @@ my %variant_info = (
     "dpi" => {
         print_sess_fn => \&print_sess_dpi,
     },
+    "counters" => {
+        print_sess_fn => \&print_sess_counters,
+    },
 );
 
 sub print_with_tabs {
@@ -230,6 +233,45 @@ sub print_sess_dpi {
     }
 }
 
+sub print_sess_counters {
+    my ( $id, $entry, $header_printed ) = @_;
+
+    my $fmt_str = "%-9s %-15s %-31s %-31s %-9s %15s %15s %15s %15s\n";
+    if ( $$header_printed == 0 ) {
+        $$header_printed = 1;
+        printf( $fmt_str,
+            "Conn ID", "Interface", "Source", "Destination", "Protocol",
+            "Pkts In", "Bytes In", "Pkts Out", "Bytes Out" );
+        printf( $fmt_str,
+            "-------", "---------", "------", "-----------", "--------",
+            "-------", "--------", "--------", "---------" );
+    }
+
+    my $intf = $entry->{interface} // "inactive";
+
+    my $src = "$entry->{src_addr}:$entry->{src_port}";
+    my $dst = "$entry->{dst_addr}:$entry->{dst_port}";
+
+    # Use the shorter name ICMPv6 for nicer layout
+    my $proto;
+    if ( $entry->{proto} == $ICMPV6_PROT_NUM ) {
+        $proto = "icmpv6";
+    } else {
+        $proto = get_proto_name( $entry->{proto} ) // $entry->{proto};
+    }
+
+    my $pkts_in   = "$entry->{counters}->{packets_in}";
+    my $bytes_in  = "$entry->{counters}->{bytes_in}";
+    my $pkts_out  = "$entry->{counters}->{packets_out}";
+    my $bytes_out = "$entry->{counters}->{bytes_out}";
+
+    printf( $fmt_str,
+        $id, $intf, $src, $dst, $proto,
+        $pkts_in, $bytes_in, $pkts_out, $bytes_out );
+
+    return 1;
+}
+
 sub format_sessions {
     my ( $decoded, $variant, $filt, $header_printed ) = @_;
 
@@ -260,23 +302,26 @@ sub format_sessions {
 }
 
 sub usage {
-    print "Usage: $0 --variant=[standard|detail|dpi] --filt=[filter]\n";
+    print "Usage: $0 --variant=[standard|detail|dpi|counters] " +
+          "--filt=[filter] -id=[conn id]\n";
     exit 1;
 }
 
-my ( $filt, $fabric );
+my ( $filt, $fabric, $conn_id );
 
 my $variant = 'standard';
 
 GetOptions(
     'filt=s'    => \$filt,
     'variant=s' => \$variant,
+    'id=s'      => \$conn_id,
 ) or usage();
 
 usage()
   if ( defined($variant)
     && ( $variant ne 'standard' )
     && ( $variant ne 'detail' )
+    && ( $variant ne 'counters' )
     && ( $variant ne 'dpi' ) );
 
 my ( $dp_ids, $dp_conns, $local_controller ) =
@@ -294,12 +339,20 @@ for my $dp_id ( sort @{$dp_ids} ) {
     my $ret_count;
 
     # Optimize for the standard case - no feature json
-    my $full = "full ";
-    $full = '' if ( $variant eq 'standard');
+    my $full =
+      ( $variant eq 'standard' || $variant eq 'counters') ? '' : "full ";
+
+    # Connection ID, if defined.
+    my $conn = defined($conn_id) ? "id $conn_id " : "";
 
     do {
         my $t =
-          $sock->execute( "session-op show sessions " . $full . $start . " " . $req_count );
+          $sock->execute( "session-op show sessions "
+	      . $full
+	      . $conn
+	      . $start
+	      . " "
+	      . $req_count );
         if ( defined($t) && $t !~ /^\s*$/ ) {
             my $decoded = decode_json($t);
             $ret_count =

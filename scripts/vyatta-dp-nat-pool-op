@@ -9,6 +9,7 @@
 import sys
 import getopt
 import vplaned
+from vyatta.npf.npf_addr_group import npf_show_address_group
 
 
 # Yes or No string
@@ -56,6 +57,12 @@ def ratio_str(val1, val2):
     return str
 
 
+def np_op_addr_or_none(addr):
+    if addr == "0.0.0.0":
+        return "none"
+    return addr
+
+
 #
 # np_op_show_pool_one
 #
@@ -86,9 +93,15 @@ def np_op_show_pool_one(pool):
 
     cur = pool.get('current')
     print("  %-32s" % ("Last Allocated Address:"))
-    print("    %-30s %18s" % ("TCP", cur.get('tcp')))
-    print("    %-30s %18s" % ("UDP", cur.get('udp')))
-    print("    %-30s %18s" % ("Other", cur.get('other')))
+    print("    %-30s %18s" % ("TCP", np_op_addr_or_none(cur.get('tcp'))))
+    print("    %-30s %18s" % ("UDP", np_op_addr_or_none(cur.get('udp'))))
+    print("    %-30s %18s" % ("Other", np_op_addr_or_none(cur.get('other'))))
+
+    if "blacklist" in pool:
+        npf_show_address_group(pool.get('blacklist'), "ipv4",
+                               "Blacklist address-group",
+                               2, 24, 26,
+                               4, 14, 34)
 
     print("  %-32s" % ("Ports:"))
     print("    %-30s %18s" % ("Port allocation", pool.get('port_allocn')))

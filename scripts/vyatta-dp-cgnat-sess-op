@@ -136,7 +136,7 @@ def npf_proto2num(name):
     # else uncommon protocol
     try:
         return socket.getprotobyname(name)
-    except:
+    except socket.error:
         return 0
 
 
@@ -277,8 +277,16 @@ def cgn_get_sessions_subs(addr, fltrs):
 #
 # col1_width
 #
+# Column 1 is the two-part sessions ID column and can vary in length quite a
+# bit.  As such, we make it dynamic.  It starts at 6 chars wide and grows as
+# the size of sessions IDs grow.
+#
 def col1_width(tmp):
     """Column 1 width static variable."""
+
+    # 6 is minimum
+    if tmp < 6:
+        tmp = 6
 
     if 'cnt' not in col1_width.__dict__:
         col1_width.cnt = 0
@@ -353,7 +361,7 @@ def cgn_count_str(c):
 #
 # cgn_sess_show_one
 #
-def cgn_sess_show_one(outer, inner):
+def cgn_sess_show_one(outer, inner, show_hdr):
     """Show one session"""
 
     state = cgn_sess_state_str(outer, inner, False)
@@ -369,12 +377,18 @@ def cgn_sess_show_one(outer, inner):
     else:
         dst_addr = "-"
         dst_port = "-"
+        if outer.get('init_dst_port'):
+            dst_port = "%u" % (outer.get('init_dst_port'))
         sid = "%u.0" % (outer.get('id'))
         etime = outer.get('cur_to')
         pkts_out = outer.get('out_pkts')
         pkts_in = outer.get('in_pkts')
 
     col1 = col1_width(len(sid))
+
+    # Do not display header until col1 width has been determined
+    if show_hdr:
+        cgn_sess_show_hdr()
 
     print("%-*s %-5s %-8s %15s %5s %15s %5s %10s %15s %5s %7s %6s %6s" %
           (col1, sid, npf_num2proto(outer.get('proto')), state,
@@ -388,7 +402,7 @@ def cgn_sess_show_one(outer, inner):
 #
 # cgn_sess_show_outer_brief
 #
-def cgn_sess_show_outer_brief(outer):
+def cgn_sess_show_outer_brief(outer, show_hdr):
     """Show 3-tuple outer session"""
 
     dst_list = []
@@ -404,9 +418,9 @@ def cgn_sess_show_outer_brief(outer):
 
     if dst_list:
         for dst in dst_list:
-            cgn_sess_show_one(outer, dst)
+            cgn_sess_show_one(outer, dst, show_hdr)
     else:
-        cgn_sess_show_one(outer, None)
+        cgn_sess_show_one(outer, None, show_hdr)
 
 
 #
@@ -517,7 +531,7 @@ def cgn_sess_show_outer_detail(outer, sort_key):
 #
 # cgn_op_show_sess
 #
-def cgn_op_show_sess(fltrs, count_opt, d_opt):
+def cgn_op_show_sess(fltrs, count_opt, d_opt, sa_opt):
     """Fetch and display sessions from the dataplane
 
     Fetches in batches of 1000 or more.  Will not split fetching nested
@@ -531,13 +545,15 @@ def cgn_op_show_sess(fltrs, count_opt, d_opt):
     else:
         count = 1000
 
+    if sa_opt:
+        if fltrs:
+            fltrs = "%s subs-addr %s" % (fltrs, sa_opt)
+        else:
+            fltrs = "subs-addr %s" % (sa_opt)
+
     base_cmd = "cgn-op show session count %u" % (count)
     if fltrs:
         base_cmd = "%s %s" % (base_cmd, fltrs)
-
-    if not d_opt:
-        # Table format, so display banner
-        cgn_sess_show_hdr()
 
     with vplaned.Controller() as controller:
         for dp in controller.get_dataplanes():
@@ -559,13 +575,16 @@ def cgn_op_show_sess(fltrs, count_opt, d_opt):
                     if not sess_list:
                         break
 
+                    show_hdr = True
+
                     for sess in sess_list:
                         if "__error" in sess:
                             print(sess["__error"])
                         elif d_opt:
                             cgn_sess_show_outer_detail(sess, None)
                         else:
-                            cgn_sess_show_outer_brief(sess)
+                            cgn_sess_show_outer_brief(sess, show_hdr)
+                            show_hdr = False
 
                     # If a count was specified then assume user only wants
                     # that number.  Also exit if number of sessions returned
@@ -589,11 +608,8 @@ def cgn_op_show_sess_ordered(fltrs, count_opt, d_opt, sa_opt):
 
     """
 
-    if not d_opt:
-        # Table format, so display banner
-        cgn_sess_show_hdr()
-
     count = 0
+    show_hdr = True
 
     # Get sorted list of subscriber address strings
     subs_list = cgn_get_subscriber_list(sa_opt)
@@ -608,7 +624,8 @@ def cgn_op_show_sess_ordered(fltrs, count_opt, d_opt, sa_opt):
             if d_opt:
                 cgn_sess_show_outer_detail(sess, None)
             else:
-                cgn_sess_show_outer_brief(sess)
+                cgn_sess_show_outer_brief(sess, show_hdr)
+                show_hdr = False
 
             # If a count option was specified then assume the user only wants
             # that many sessions
@@ -628,7 +645,59 @@ def cgn_op_clear_sess(clr_opts):
     with vplaned.Controller() as controller:
         for dp in controller.get_dataplanes():
             with dp:
-                dp.string_command(cmd)
+                try:
+                    dp.string_command(cmd)
+                except:
+                    # Likely a zmq timeout occurred.  However zmq exceptions
+                    # are not translated back to vplaned exceptions, so just
+                    # return.  This can occur when clearing a full (32 million
+                    # entries) session table.
+                    return
+
+
+#
+# Clear session statistics
+#
+def cgn_op_clear_sess_stats(clr_opts):
+    """Clear CGN session statistics"""
+
+    cmd = "cgn-op clear session %s statistics" % (clr_opts)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                try:
+                    dp.string_command(cmd)
+                except:
+                    # Likely a zmq timeout occurred.  However zmq exceptions
+                    # are not translated back to vplaned exceptions, so just
+                    # return.  This can occur when clearing a full (32 million
+                    # entries) session table.
+                    return
+
+
+#
+# Update session statistics
+#
+def cgn_op_update_sess_stats(upd_opts):
+    """Update CGN session statistics"""
+
+    if upd_opts:
+        cmd = "cgn-op update session %s statistics" % (upd_opts)
+    else:
+        cmd = "cgn-op update session statistics"
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                try:
+                    dp.string_command(cmd)
+                except:
+                    # Likely a zmq timeout occurred.  However zmq exceptions
+                    # are not translated back to vplaned exceptions, so just
+                    # return.  This can occur when clearing a full (32 million
+                    # entries) session table.
+                    return
 
 
 #
@@ -649,13 +718,17 @@ def cgn_op_main():
 
     s_opt = False
     c_opt = False
+    u_opt = False
     d_opt = False
+    stats_opt = False
     intf_opt = None
     pool_opt = None
     pa_opt = None
     pp_opt = None
     sa_opt = None
     sp_opt = None
+    da_opt = None
+    dp_opt = None
     id_opt = None
     proto_opt = None
     count = None
@@ -668,12 +741,14 @@ def cgn_op_main():
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
                                    ['show', 'clear', 'detail',
-                                    'exclude-inner',
+                                    'update', 'exclude-inner',
                                     'interface=', 'pool=',
                                     'id1=', 'id2=',
                                     'pub-addr=', 'pub-port=',
                                     'subs-addr=', 'subs-port=',
-                                    'proto=', 'count=', 'unordered'])
+                                    'dst-addr=', 'dst-port=',
+                                    'proto=', 'count=', 'unordered',
+                                    'stats'])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -688,6 +763,9 @@ def cgn_op_main():
 
         if opt in '--clear':
             c_opt = True
+
+        if opt in '--update':
+            u_opt = True
 
         if opt in '--detail':
             d_opt = True
@@ -721,12 +799,21 @@ def cgn_op_main():
             fltrs = "%s pub-port %u" % (fltrs, pp_opt)
 
         if opt in '--subs-addr':
+            # sa_opt is passed to the show functions instead of
+            # being added to the filter
             sa_opt = arg
-            fltrs = "%s subs-addr %s" % (fltrs, sa_opt)
 
         if opt in '--subs-port':
             sp_opt = int(arg)
             fltrs = "%s subs-port %u" % (fltrs, sp_opt)
+
+        if opt in '--dst-addr':
+            da_opt = arg
+            fltrs = "%s dst-addr %s" % (fltrs, da_opt)
+
+        if opt in '--dst-port':
+            dp_opt = int(arg)
+            fltrs = "%s dst-port %u" % (fltrs, dp_opt)
 
         if opt in '--proto':
             proto_opt = npf_proto2num(arg)
@@ -738,6 +825,9 @@ def cgn_op_main():
         if opt in '--unordered':
             unordered = True
 
+        if opt in '--stats':
+            stats_opt = True
+
     #
     # clearing sessions is all done in the dataplane
     #
@@ -745,8 +835,14 @@ def cgn_op_main():
         if not fltrs:
             fltrs = "all"
 
-        cgn_op_clear_sess(fltrs)
+        if stats_opt:
+            cgn_op_clear_sess_stats(fltrs)
+        else:
+            cgn_op_clear_sess(fltrs)
         return
+
+    if u_opt and stats_opt:
+        cgn_op_update_sess_stats(fltrs)
 
     if not s_opt:
         return
@@ -759,7 +855,7 @@ def cgn_op_main():
     # Show sessions unordered.  All filtering is done in dataplane.
     #
     if unordered:
-        cgn_op_show_sess(fltrs, count, d_opt)
+        cgn_op_show_sess(fltrs, count, d_opt, sa_opt)
     else:
         cgn_op_show_sess_ordered(fltrs, count, d_opt, sa_opt)
 

@@ -1,0 +1,165 @@
+#! /usr/bin/perl
+
+# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2016, Brocade Communications Systems, Inc.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+use strict;
+use warnings;
+
+use Getopt::Long;
+use JSON qw( decode_json );
+use Data::Dumper;
+
+use lib "/opt/vyatta/share/perl5";
+
+use Vyatta::Dataplane;
+use Vyatta::FWHelper qw(get_proto_name get_vrf_name_from_id);
+
+# Flag values we want to use - must keep in-sync with npf_alg.h
+my $NPF_TUPLE_KEEP     = 1;    # bit indicating a permanent tuple entry
+my $NPF_TUPLE_REMOVING = 32;
+my $NPF_TUPLE_EXPIRED  = 64;
+
+sub build_alg_entry {
+    my ( $printed_header, $vrfid, $name, $protocol, $port ) = @_;
+    my $output;
+    if ( !$$printed_header ) {
+        $output .= sprintf "\nVRF: %s\n\n",      get_vrf_name_from_id($vrfid);
+        $output .= sprintf "%10s  %10s  %10s\n", "Name", "Protocol", "Port";
+        $output .= sprintf "%10s  %10s  %10s\n", "----", "--------", "----";
+        $$printed_header = 1;
+    }
+
+    $output .= sprintf "%10s  ", $name;
+
+    if ( defined($protocol) ) {
+
+        # Replace protocol number with a name.
+        my $protocol_name = get_proto_name($protocol);
+        $protocol_name = $protocol
+          if !defined($protocol_name);
+        $output .= sprintf "%10s  %10s", $protocol_name, $port;
+    }
+    $output .= "\n";
+
+    return $output;
+}
+
+sub build_alg_output {
+    my $result = shift;
+    my $output = "";
+
+    my $alg = $result->{alg};
+    return $output
+      if ( !defined($alg) );
+
+    for my $instance ( @{ $alg->{instances} } ) {
+        my $vrfid = $instance->{vrfid};
+        return $output
+          if ( !defined($vrfid) );
+
+        # check in case dataplane does not yet "algs" json info
+        next if !defined( $instance->{algs} );
+
+        my %alg_enabled;
+        for my $alg ( @{ $instance->{algs} } ) {
+            $alg_enabled{ $alg->{name} } = 1
+              if $alg->{enabled};
+        }
+
+        my $printed_header = 0;
+        my %printed_alg;
+        for my $tuple ( @{ $instance->{tuples} } ) {
+
+            next if ( $tuple->{flags} & $NPF_TUPLE_KEEP ) == 0;
+            next
+              if (
+                $tuple->{flags} & ( $NPF_TUPLE_REMOVING | $NPF_TUPLE_EXPIRED ) )
+              != 0;
+
+            # Ignore "keep" entries which are used as wildcard source tuples
+            # for SIP sessions - these have the source port set.
+            next if defined $tuple->{sport};
+
+            my $name = $tuple->{alg};
+            next if !defined( $alg_enabled{$name} );
+
+            my $protocol = $tuple->{protocol};
+            my $port     = $tuple->{dport};
+            next if !defined($name) || !defined($protocol) || !defined($port);
+
+            $output .=
+              build_alg_entry( \$printed_header, $vrfid, $name, $protocol,
+                $port );
+            $printed_alg{$name} = 1;
+        }
+
+        # print out info for any alg enabled, which has no ports
+        for my $alg ( @{ $instance->{algs} } ) {
+            my $aname = $alg->{name};
+
+            # print "ALG: $alg->{name}\n";
+            if (   !defined( $printed_alg{$aname} )
+                and defined( $alg_enabled{$aname} ) )
+            {
+                $output .=
+                  build_alg_entry( \$printed_header, $vrfid, $aname, "n/a",
+                    "n/a" );
+            }
+        }
+    }
+    return $output;
+}
+
+sub usage {
+    print "Usage: $0\n";
+    exit 1;
+}
+
+my $fabric;
+
+my ( $dp_ids, $dp_conns, $local_controller ) =
+  Vyatta::Dataplane::setup_fabric_conns($fabric);
+
+my $response = vplane_exec_cmd( "npf-op fw dump-alg", $dp_ids, $dp_conns, 1 );
+my @results;
+
+my $identical = 1;
+my $prev_output;
+my $last_dp_id;
+
+# Decode the response from each vplane and create what would be output.
+# Check if output from each vplane is identical.
+for my $dp_id ( @{$dp_ids} ) {
+    next unless defined( $response->[$dp_id] );
+    my $decoded = decode_json( $response->[$dp_id] );
+    $results[$dp_id] = build_alg_output($decoded);
+    $identical = 0
+      if ( defined($prev_output)
+        and ( $prev_output ne $results[$dp_id] ) );
+    $prev_output = $results[$dp_id];
+    $last_dp_id  = $dp_id;
+}
+
+if ( !defined($last_dp_id) ) {    # no responses
+    print "no response from dataplane(s)\n";
+} elsif ( $local_controller || $identical ) {
+
+    # only print from one
+    print $results[$last_dp_id];
+} else {
+    foreach my $dp_id ( @{$dp_ids} ) {
+        print "vplane $dp_id:\n";
+        print $results[$dp_id];
+        print "-----------------------------------------------------\n\n";
+    }
+}
+
+# Close down ZMQ sockets. This is needed or sometimes a hang
+# can occur due to timing issues with libzmq - see VRVDR-17233 .
+Vyatta::Dataplane::close_fabric_conns( $dp_ids, $dp_conns );
+
+exit 0;

@@ -13,7 +13,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${perl:Depends}, libreadonly-perl, libsnmp-perl, python3:any,
  vplane-config, libvyatta-file-perl, libvyatta-dscp-perl, libvyatta-rate-perl,
  libvyatta-typechecker-perl, libvyatta-interface-perl, libvyatta-cfg1,
- libmodule-load-conditional-perl,
+ libmodule-load-conditional-perl, vyatta-dataplane-cfg-qos-6,
  vyatta-dataplane-cfg-npf-cfg-2, vyatta-dataplane-op-npf-op-0,
  python3-vyatta-interfaces (>= 1.52),
  python3, python3-vyatta-cfgclient, ${python3:Depends},
@@ -214,7 +214,7 @@ Description: vyatta operational NAT pool yang and scripts
 
 Package: vyatta-service-nat-cgnat-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any, td-agent-bit,
  vplane-config-npf (= ${binary:Version})
 Description: vyatta CGNAT yang and scripts
  YANG module and scripts for Vyatta CGNAT configuration
@@ -241,3 +241,33 @@ Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
  python3:any, vyatta-ippf-v1-yang
 Description: vyatta IP Packet Filter op-mode yang and scripts
  YANG module for Vyatta IP packet filter op-mode
+
+Package: vyatta-system-alg-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+ vplane-config, libvyatta-cfg1, libmodule-load-conditional-perl
+Description: vyatta alg yang and scripts
+ YANG module and scripts for Vyatta ALG configuration and operation
+Breaks: vyatta-security-firewall-v1.yang (<< 1.11.4)
+
+Package: vyatta-system-alg-routing-instance-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, vyatta-system-alg-v1-yang
+Description: vyatta alg yang and scripts for routing instances
+ YANG module for Vyatta ALG configuration and operation
+
+Package: vyatta-op-system-alg-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, vplane-config-npf,
+Description: operational CLI yang for vyatta-system-alg
+ The Vyatta operation YANG for ALG commands
+
+Package: vyatta-zone-based-firewall-feature
+Architecture: all
+Depends: ${misc:Depends}, libvyatta-interface-perl (>= 1.46)
+Breaks: vyatta-op-security-firewall-v1-yang (<< 1.10.5),
+ vyatta-security-firewall-v1-yang (<< 1.10.5)
+Replaces: vyatta-op-security-firewall-v1-yang (<< 1.10.5),
+ vyatta-security-firewall-v1-yang (<< 1.10.5)
+Description: Vyatta Zone-Based Firewall feature flag
+ The feature flag for the Zone-Based Firewall feature

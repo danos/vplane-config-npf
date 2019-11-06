@@ -114,6 +114,14 @@ sub action_group_features {
         }
     }
 
+    # check if both 'pcp' and 'dscp' are configured for same action group
+    my $act_grp_name = $config->returnParent("..");
+    if ( ( $config->exists("mark pcp") || $config->exists("mark pcp-inner") )
+        && $config->exists("mark dscp") ) {
+        npf_config_warning( "action group '$act_grp_name' has both"
+              . " 'pcp' and 'dscp' marks configured." );
+    }
+
     my $policer = "";
 
     my $tc_val = $config->returnValue("police tc");

@@ -29,6 +29,12 @@ module vyatta-service-nat-cgnat-v1 {
     import vyatta-service-nat-pool-v1 {
         prefix nat-pool;
     }
+    import vyatta-routing-v1 {
+        prefix routing;
+    }
+    import vyatta-system-v1 {
+        prefix system;
+    }
 
     organization "AT&T Inc.";
     contact
@@ -40,36 +46,64 @@ module vyatta-service-nat-cgnat-v1 {
     description
         "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
 
-        Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions
-        are met:
+        Redistribution and use in source and binary forms,
+        with or without modification, are permitted provided
+        that the following conditions are met:
 
-        1. Redistributions of source code must retain the above copyright
-           notice, this list of conditions and the following disclaimer.
-        2. Redistributions in binary form must reproduce the above
-           copyright notice, this list of conditions and the following
-           disclaimer in the documentation and/or other materials provided
-           with the distribution.
-        3. Neither the name of the copyright holder nor the names of its
-           contributors may be used to endorse or promote products derived
-           from this software without specific prior written permission.
+        1. Redistributions of source code must retain the
+           above copyright notice, this list of conditions and
+           the following disclaimer.
+        2. Redistributions in binary form must reproduce
+           the above copyright notice, this list of conditions
+           and the following disclaimer in the documentation
+           and/or other materials provided with the distribution.
+        3. Neither the name of the copyright holder nor the
+           names of its contributors may be used to endorse or
+           promote products derived from this software without
+           specific prior written permission.
 
-        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-        'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-        LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-        FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-        COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-        INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-        POSSIBILITY OF SUCH DAMAGE.
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+        AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+        WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+        PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+        THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+        ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+        OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+        TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+        OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+        HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+        IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+        NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+        USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+        OF SUCH DAMAGE.
 
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT configuration";
+
+    revision 2019-10-31 {
+        description "Add CGNAT off-box logging commands. " +
+                    "Rework CGNAT CLI. " +
+                    "Add destination params to filter. " +
+                    "Add global alg-bypass config. " +
+                    "Add clear-errors-rpc.";
+    }
+
+    revision 2019-09-23 {
+        description "Add CGNAT resource warnings." +
+                    "Add 1 minute max rate to subscriber RPC info." +
+                    "Add max-rate fields to policy RPC information. " +
+                    "Add rpc clear commands for policy and suscriber. " +
+                    "Address-group replaces ip-address in policy match. " +
+                    "Limit length of CGNAT policy name.";
+    }
+
+    revision 2019-07-19 {
+        description "Add state history to session RPC info. " +
+                    "Add more fields to global state information. " +
+                    "Add more fields to subscriber RPC output.";
+    }
 
     revision 2019-07-09 {
         description "Initial revision.";
@@ -80,6 +114,13 @@ module vyatta-service-nat-cgnat-v1 {
             range 1..max;
         }
         units "seconds";
+    }
+
+    typedef threshold_percent {
+        type uint8 {
+            range "1..99";
+        }
+        units "percent";
     }
 
     typedef ipv4-addr-or-prefix {
@@ -207,11 +248,86 @@ module vyatta-service-nat-cgnat-v1 {
                 description "An unknown or unexpected error occurred " +
                             "(other)";
             }
+            enum "pool-addr-echo-req" {
+                description "ICMP Echo Request for a CGNAT pool address";
+            }
+            enum "alg-packet" {
+                description "The packet is an ALG packet configured " +
+                            "to bypass CGNAT";
+            }
+        }
+    }
+
+    grouping cgnat-log-type {
+        container using {
+            description  "Export using ...";
+            configd:help "Export using ...";
+            container kafka {
+                description  "Log type Kafka";
+                configd:help "Log type Kafka";
+                presence "min elements in cluster";
+                list cluster {
+                    description  "Configure cluster";
+                    configd:help "Configure cluster";
+                    min-elements 1;
+                    key "clustername";
+                    leaf clustername {
+                        description  "Cluster name";
+                        configd:help "Cluster name";
+                        type leafref {
+                            path "/system:system/export/kafka/cluster/clustername";
+                        }
+                    }
+                }
+                container with {
+                    description  "Kafka options";
+                    configd:help "Kafka options";
+                    leaf topic {
+                        description  "Configure Kafka topic";
+                        configd:help "Configure Kafka topic";
+                        type string {
+                            length 1..249;
+                            pattern '[a-zA-Z0-9._-]*' {
+                                error-message "Use only alphanumeric characters, dot, hyphen, or underscore";
+                            }
+                        }
+                        mandatory true;
+                    }
+                    leaf field-delimiter {
+                        description  "Configure Kafka field delimiter";
+                        configd:help "Configure Kafka field delimiter";
+                        type string {
+                            length 1..8;
+                            pattern '[a-zA-Z0-9._-]*' {
+                                error-message "Use only alphanumeric characters, dot, hyphen, or underscore";
+                            }
+                        }
+                    }
+                    leaf priority {
+                        description  "Kafka priority";
+                        configd:help "Kafka priority";
+                        type enumeration {
+                            enum "critical" {
+                                description  "Critical";
+                                configd:help "Critical";
+                            }
+                        }
+                    }
+                    leaf storage-limit {
+                        description  "Kafka storage limit (megabytes)";
+                        configd:help "Kafka storage limit (megabytes)";
+                        type uint32 {
+                            range 1..1048576;
+                        }
+                    }
+                }
+            }
         }
     }
 
     grouping log-group {
         container log {
+            status deprecated;
             description "Configure session and subscriber " +
                         "logging for CGNAT";
             configd:help "CGNAT logging";
@@ -284,13 +400,113 @@ module vyatta-service-nat-cgnat-v1 {
         }
     }
 
+    grouping event-group {
+        uses log-group;
+        container select {
+            must "not(.) or not(../log)" {
+                error-message "Cannot configure both 'select' and 'log'";
+            }
+            description  "Select";
+            configd:help "Select";
+            container event {
+                description "Configure session and subscriber " +
+                            "events for CGNAT";
+                configd:help "CGNAT events";
+                container session {
+                    must "not(creation or deletion or periodic) or " +
+                         "all-subscribers or address-group" {
+                        error-message "Either 'all-subscribers' or " +
+                                      "'address-group' must be configured if " +
+                                      "enabling session event reporting " +
+                                      "on a CGNAT policy";
+                    }
+                    must "not(all-subscribers or address-group) or " +
+                         "count(creation|deletion|periodic) > 0" {
+                        error-message "At least one of 'creation', 'deletion' " +
+                                      "or 'periodic' must be configured if " +
+                                      "enabling session event reporting for all " +
+                                      "subscribers or an address group on a " +
+                                      "CGNAT policy";
+                    }
+                    description "Configure session events and whether to " +
+                                "raise events for all subscribers " +
+                                "or those in a named address group";
+                    configd:help "CGNAT session event reporting";
+                    leaf creation {
+                        type empty;
+                        description "Log on CGNAT session creation";
+                        configd:help "Log on CGNAT session creation";
+                    }
+                    leaf deletion {
+                        type empty;
+                        description "Log on CGNAT session deletion";
+                        configd:help "Log on CGNAT session deletion";
+                    }
+                    leaf periodic {
+                        description "Log sessions at periodic intervals";
+                        configd:help "Log sessions at periodic intervals";
+                        units "seconds";
+                        must "current() mod 10 = 0" {
+                            error-message "The periodic value must be a multiple " +
+                                          "of 10";
+                        }
+                        type uint32 {
+                            range 300..86400;
+                            configd:help "How often to raise session events (in seconds) " +
+                                         "- multiples of 10";
+                        }
+                    }
+                    leaf all-subscribers {
+                        must "not(../address-group)" {
+                            error-message "Cannot configure both 'all-subscribers' and 'address-group'";
+                        }
+                        type empty;
+                        description "Log sessions for all subscribers";
+                        configd:help "Log sessions for all subscribers";
+                    }
+                    leaf address-group {
+                        description "Log sessions if the subscribers address " +
+                                    "matches addresses in the named address-group";
+                        configd:help "The address-group identifying subscriber " +
+                                     "addresses to raise session events";
+                        type leafref {
+                            path "/resources:resources/res-group:group/" +
+                                 "res-group:address-group/res-group:tagnode";
+                        }
+                    }
+                }
+                leaf subscriber {
+                    type empty;
+                    description "Log information about the subscriber when the " +
+                                "subscriber is created and deleted";
+                    configd:help "Log on CGNAT subscriber creation and deletion";
+                }
+            }
+        }
+    }
+
+    grouping resource-warning {
+        leaf threshold {
+            description  "Configure resource level (%) above which warning is triggered";
+            configd:help "Configure resource level (%) above which warning is triggered";
+            type threshold_percent;
+            mandatory true;
+        }
+        leaf interval {
+            description  "Configure resource warning interval (seconds)";
+            configd:help "Configure resource warning interval (seconds)";
+            type timeout;
+            units seconds;
+        }
+    }
+
     augment /service:service/nat:nat {
         container cgnat {
             configd:priority "315";
             presence "Carrier-grade NAT configured";
             description "Configuration of Carrier-grade NAT (CGNAT)";
             configd:help "CGNAT settings";
-            configd:end "cgnat-configuration";
+            configd:end "cgnat-configuration --cgnat";
             configd:get-state "cgnat-get-state";
             list policy {
                 description "CGNAT policy name";
@@ -300,7 +516,7 @@ module vyatta-service-nat-cgnat-v1 {
                 leaf policyname {
                     description "Name of CGNAT policy";
                     configd:help "Name of CGNAT policy";
-                    type fw-types:group-name {
+                    type fw-types:cgnat-policy-name {
                         configd:help "Name of CGNAT policy";
                     }
                 }
@@ -321,17 +537,14 @@ module vyatta-service-nat-cgnat-v1 {
                     container source {
                         description "CGNAT source parameters";
                         configd:help "CGNAT source parameters";
-                        container ip-address {
-                            description "CGNAT IPv4 source address parameters";
-                            configd:help "CGNAT IPv4 source address parameters";
-                            leaf prefix {
-                                mandatory true;
-                                description "IPv4 address and mask";
-                                configd:help "IPv4 address and mask";
-                                type types:ipv4-prefix {
-                                    configd:help "IPv4 address and mask";
-                                    configd:normalize "normalize ipv4-prefix";
-                                }
+                        leaf address-group {
+                            mandatory true;
+                            description "Source addresses in the address-group" +
+                                        "will match this policy.";
+                            configd:help "Address-group of source addresses to match";
+                            type leafref {
+                                path "/resources:resources/res-group:group/" +
+                                     "res-group:address-group/res-group:tagnode";
                             }
                         }
                     }
@@ -353,7 +566,7 @@ module vyatta-service-nat-cgnat-v1 {
                         }
                     }
                 }
-                uses log-group;
+                uses event-group;
 
                 container state {
                     config false;
@@ -366,8 +579,8 @@ module vyatta-service-nat-cgnat-v1 {
                         type uint64;
                     }
                     leaf sessions-destroyed {
-                        description "Total number of CGNAT sessions " +
-                                    "destroyed using this policy.";
+                        description "Total number of this subscriber's CGNAT " +
+                                    "sessions which were destroyed.";
                         type uint64;
                     }
                     leaf packets-out {
@@ -395,12 +608,32 @@ module vyatta-service-nat-cgnat-v1 {
                                     "using this policy.";
                         type uint64;
                     }
+                    leaf max-rate-subs {
+                        description "Subscriber with highest max session rate.";
+                        type types:ipv4-address;
+                    }
+                    leaf max-rate-rate {
+                        description "Highest max session rate value.";
+                        type uint64;
+                    }
+                    leaf max-rate-time {
+                        description "Highest max session rate timestamp. " +
+                                    "Time in microseconds since  " +
+                                    "01-01-1970 00:00:00.";
+                        type uint64;
+                        units "microseconds";
+                    }
                 }
             }
             leaf disable-hairpinning {
                 type empty;
                 description "Disable hairpinning in CGNAT device";
                 configd:help "Disable hairpinning in CGNAT device";
+            }
+            leaf snat-alg-bypass {
+                type empty;
+                description "Enable SNAT ALG traffic to bypass CGNAT";
+                configd:help "Enable SNAT ALG traffic to bypass CGNAT";
             }
             container session-timeout {
                 description "Configure how long to wait when the session is " +
@@ -505,6 +738,47 @@ module vyatta-service-nat-cgnat-v1 {
                 }
                 default 64;
             }
+            container select {
+                description  "Select";
+                configd:help "Select";
+                container warning {
+                    description  "Select warnings";
+                    configd:help "Select warnings";
+                    container event {
+                        description  "Select warning event";
+                        configd:help "Select warning event";
+                        container resource-constraint {
+                            description  "Configure CGNAT resource warnings";
+                            configd:help "Configure CGNAT resource warnings";
+
+                            container public-addresses {
+                                description  "Configure public-addresses resource warning";
+                                configd:help "Configure public-addresses resource warning";
+                                presence "CGNAT resource criteria; mandatory child nodes when configured";
+                                uses resource-warning;
+                            }
+                            container mapping-table {
+                                description  "Configure mapping-table resource warning";
+                                configd:help "Configure mapping-table resource warning";
+                                presence "CGNAT resource criteria; mandatory child nodes when configured";
+                                uses resource-warning;
+                            }
+                            container session-table {
+                                description  "Configure session-table resource warning";
+                                configd:help "Configure session-table resource warning";
+                                presence "CGNAT resource criteria; mandatory child nodes when configured";
+                                uses resource-warning;
+                            }
+                            container subscriber-table {
+                                description  "Configure subscriber-table resource warning";
+                                configd:help "Configure subscriber-table resource warning";
+                                presence "CGNAT resource criteria; mandatory child nodes when configured";
+                                uses resource-warning;
+                            }
+                        }
+                    }
+                }
+            }
             list interface {
                 description "The interfaces that CGNAT policies should be " +
                             "applied to";
@@ -540,9 +814,20 @@ module vyatta-service-nat-cgnat-v1 {
                                     "the system.";
                         type uint64;
                     }
+                    leaf public-address-mappings-max {
+                        description "The maximum number of public addresses " +
+                                    "that could be mapped to by CGNAT " +
+                                    "subscribers on the system.";
+                        type uint64;
+                    }
                     leaf active-subscribers {
                         description "Number of active CGNAT subscribers on " +
                                     "the system.";
+                        type uint64;
+                    }
+                    leaf subscribers-max {
+                        description "The maximum number of CGNAT subscribers " +
+                                    "that could use the system.";
                         type uint64;
                     }
                     leaf sessions-created {
@@ -553,6 +838,24 @@ module vyatta-service-nat-cgnat-v1 {
                     leaf sessions-destroyed {
                         description "Total number of CGNAT sessions destroyed.";
                         type uint64;
+                    }
+                    leaf sessions-3-tuple-active {
+                        description "Total number of active CGNAT 3-tuple " +
+                                    "sessions.";
+                        type uint64;
+                    }
+                    leaf sessions-5-tuple-active {
+                        description "Total number of active CGNAT 5-tuple " +
+                                    "sessions.";
+                        type uint64;
+                    }
+                    leaf sessions-table-max-size {
+                        description "The maximum size of the session table.";
+                        type uint64;
+                    }
+                    leaf sessions-table-full {
+                        description "Set to true if the session table is full.";
+                        type boolean;
                     }
                     leaf packets-out {
                         description "Number of packets sent out the CGNAT " +
@@ -574,6 +877,10 @@ module vyatta-service-nat-cgnat-v1 {
                                     "CGNAT interface by all sessions.";
                         type uint64;
                     }
+                    leaf packets-hairpinned {
+                        description "Number of packets hairpinned by CGNAT.";
+                        type uint64;
+                    }
                 }
                 container errors {
                     list error-causes {
@@ -590,6 +897,244 @@ module vyatta-service-nat-cgnat-v1 {
                             description "Count of errors for the 'out' " +
                                         "direction (i.e. to subscriber)";
                             type uint64;
+                        }
+                    }
+                }
+            }
+            container log {
+                description  "Specify logging type";
+                configd:help "Specify logging type";
+                container event {
+                    description  "Log events";
+                    configd:help "Log events";
+                    container session {
+                        presence "Session logging enabled";
+                        description  "Enable session logging";
+                        configd:help "Enable session logging";
+                    }
+                    container port-block-allocation {
+                        presence "Port block allocation logging enabled";
+                        description  "Enable port block logging";
+                        configd:help "Enable port block logging";
+                    }
+                    container subscriber {
+                        presence "Subscriber logging enabled";
+                        description  "Enable subscriber logging";
+                        configd:help "Enable subscriber logging";
+                    }
+                    container resource-constraint {
+                        presence "Resource constraint logging enabled";
+                        description  "Enable resource constraint logging";
+                        configd:help "Enable resource constraint logging";
+                    }
+                }
+            }
+            container export {
+                description  "Enable export";
+                configd:help "Enable export";
+
+                container event {
+                    description  "Export events";
+                    configd:help "Export events";
+                    container session {
+                        description  "Export session events";
+                        configd:help "Export session events";
+                        uses cgnat-log-type;
+                    }
+                    container port-block-allocation {
+                        description  "Export port block events";
+                        configd:help "Export port block events";
+                        uses cgnat-log-type;
+                    }
+                    container subscriber {
+                        description  "Export subscriber events";
+                        configd:help "Export subscriber events";
+                        uses cgnat-log-type;
+                    }
+                    container resource-constraint {
+                        description  "Export resource constraint events";
+                        configd:help "Export resource constraint events";
+                        uses cgnat-log-type;
+                    }
+                }
+            }
+        }
+    }
+
+    augment /service:service/nat:nat/cgnat/export/event/port-block-allocation/using/kafka/with {
+        list key-field {
+            description  "Configure Kafka key fields";
+            configd:help "Configure Kafka key fields";
+            key name;
+            leaf name {
+                description  "Key name";
+                configd:help "Key name";
+                type enumeration {
+                    enum "cgn-instance" {
+                        description  "Use CGN instance as a Kafka key";
+                        configd:help "Use CGN instance as a Kafka key";
+                    }
+                    enum "subscriber-ip-address" {
+                        description  "Use subscriber IP address as a Kafka key";
+                        configd:help "Use subscriber IP address as a Kafka key";
+                    }
+                    enum "public-ip-address" {
+                        description  "Use public IP address as a Kafka key";
+                        configd:help "Use public IP address as a Kafka key";
+                    }
+                }
+            }
+        }
+    }
+
+    augment /service:service/nat:nat/cgnat/export/event/session/using/kafka/with {
+        list key-field {
+            description  "Configure Kafka key fields";
+            configd:help "Configure Kafka key fields";
+            key name;
+            leaf name {
+                description  "Key name";
+                configd:help "Key name";
+                type enumeration {
+                    enum "cgn-instance" {
+                        description  "Use CGN instance as a Kafka key";
+                        configd:help "Use CGN instance as a Kafka key";
+                    }
+                    enum "session-id" {
+                        description  "Use session ID as a Kafka key";
+                        configd:help "Use session ID as a Kafka key";
+                    }
+                    enum "sub-session-id" {
+                        description  "Use sub session ID as a Kafka key";
+                        configd:help "Use sub session ID as a Kafka key";
+                    }
+                    enum "ip-protocol" {
+                        description  "Use IP protocol as a Kafka key";
+                        configd:help "Use IP protocol as a Kafka key";
+                    }
+                    enum "subscriber-ip-address" {
+                        description  "Use subscriber IP address as a Kafka key";
+                        configd:help "Use subscriber IP address as a Kafka key";
+                    }
+                    enum "subscriber-port" {
+                        description  "Use subscriber port as a Kafka key";
+                        configd:help "Use subscriber port as a Kafka key";
+                    }
+                    enum "public-ip-address" {
+                        description  "Use public IP address as a Kafka key";
+                        configd:help "Use public IP address as a Kafka key";
+                    }
+                    enum "public-port" {
+                        description  "Use public port as a Kafka key";
+                        configd:help "Use public port as a Kafka key";
+                    }
+                    enum "destination-ip-address" {
+                        description  "Use destination IP address as a Kafka key";
+                        configd:help "Use destination IP address as a Kafka key";
+                    }
+                    enum "destination-port" {
+                        description  "Use destination port as a Kafka key";
+                        configd:help "Use destination port as a Kafka key";
+                    }
+                    enum "interface" {
+                        description  "Use interface as a Kafka key";
+                        configd:help "Use interface as a Kafka key";
+                    }
+                }
+            }
+        }
+    }
+
+    augment /service:service/nat:nat/cgnat/export/event/subscriber/using/kafka/with {
+        list key-field {
+            description  "Configure Kafka key fields";
+            configd:help "Configure Kafka key fields";
+            key name;
+            leaf name {
+                description  "Key name";
+                configd:help "Key name";
+                type enumeration {
+                    enum "cgn-instance" {
+                        description  "Use CGN instance as a Kafka key";
+                        configd:help "Use CGN instance as a Kafka key";
+                    }
+                    enum "subscriber-ip-address" {
+                        description  "Use subscriber IP address as a Kafka key";
+                        configd:help "Use subscriber IP address as a Kafka key";
+                    }
+                }
+            }
+        }
+    }
+
+    augment /service:service/nat:nat/cgnat/export/event/resource-constraint/using/kafka/with {
+        list key-field {
+            description  "Configure Kafka key fields";
+            configd:help "Configure Kafka key fields";
+            key name;
+            leaf name {
+                description  "Key name";
+                configd:help "Key name";
+                type enumeration {
+                    enum "cgn-instance" {
+                        description  "Use CGN instance as a Kafka key";
+                        configd:help "Use CGN instance as a Kafka key";
+                    }
+                }
+            }
+        }
+    }
+
+    augment /system:system {
+        container export {
+            description  "Configure exports";
+            configd:help "Configure exports";
+            configd:end "cgnat-configuration --export";
+            container kafka {
+                description  "Configure Kafka exporter";
+                configd:help "Configure Kafka exporter";
+                list cluster {
+                    max-elements 1;
+                    description  "Configure a Kafka cluster";
+                    configd:help "Configure a Kafka cluster";
+                    key clustername;
+                    leaf clustername {
+                        type string {
+                            length 1..32;
+                            pattern '[a-zA-Z0-9._-]*' {
+                                error-message "Use only alphanumeric characters, dot, hyphen, or underscore";
+                            }
+                        }
+                    }
+                    container bootstrap {
+                        description  "Configure cluster bootstrap addresses";
+                        configd:help "Configure cluster bootstrap addresses";
+                        list ipv4-address {
+                            description  "Bootstrap IPv4 address";
+                            configd:help "Bootstrap IPv4 address";
+                            max-elements 10;
+                            key address;
+                            leaf address {
+                                type types:ipv4-address;
+                            }
+                        }
+                        list ipv6-address {
+                            description  "Bootstrap IPv6 address";
+                            configd:help "Bootstrap IPv6 address";
+                            max-elements 10;
+                            key address;
+                            leaf address {
+                                type types:ipv6-address;
+                            }
+                        }
+                        must "ipv4-address or ipv6-address" {
+                            error-message "Configure at least one ipv4-address"
+                                        + " or one ipv6-address";
+                        }
+                        uses routing:routing-instance-or-default-leaf {
+                            refine routing-instance {
+                                default default;
+                            }
                         }
                     }
                 }
@@ -629,11 +1174,21 @@ module vyatta-service-nat-cgnat-v1 {
                                 "identifies a subscriber.";
                     type types:ipv4-address;
                 }
+                leaf paired-address {
+                    description "The IPv4 address that the subscriber is " +
+                                "being mapped to.";
+                    type types:ipv4-address;
+                }
                 leaf duration {
                     description "The amount of time that this subscriber has " +
                                 "been active (in microseconds).";
                     units "microseconds";
                     type uint64;
+                }
+                leaf expired {
+                    description "Set to true if the subscriber entry has " +
+                                "been expired.";
+                    type boolean;
                 }
                 leaf active-blocks {
                     description "The number of active address blocks " +
@@ -655,6 +1210,93 @@ module vyatta-service-nat-cgnat-v1 {
                 leaf total-mapping-failures {
                     description "Total number of CGNAT mapping requests by " +
                                 "this subscriber that were failed.";
+                    type uint64;
+                }
+                leaf sessions-created {
+                    description "Total number of CGNAT sessions which " +
+                                "were created by this subscriber (including " +
+                                "those destroyed).";
+                    type uint64;
+                }
+                leaf sessions-destroyed {
+                    description "Total number of CGNAT sessions of this " +
+                                "subscriber which were destroyed.";
+                    type uint64;
+                }
+                leaf session-rate-20s {
+                    description "The rate (in sessions-per-second) of " +
+                                "session creation by this subscriber over " +
+                                "a recent 20 second period.";
+                    units "sessions-per-second";
+                    type uint64;
+                }
+                leaf session-rate-1m {
+                    description "The rate (in sessions-per-second) of " +
+                                "session creation by this subscriber over " +
+                                "a recent 1 minute period.";
+                    units "sessions-per-second";
+                    type uint64;
+                }
+                leaf session-rate-5m {
+                    description "The rate (in sessions-per-second) of " +
+                                "session creation by this subscriber over " +
+                                "a recent 5 minute period.";
+                    units "sessions-per-second";
+                    type uint64;
+                }
+                leaf session-rate-max {
+                    description "The maximum rate (in sessions-per-second) " +
+                                "of session creation by this subscriber " +
+                                "(calculated over 20 second periods).";
+                    units "sessions-per-second";
+                    type uint64;
+                }
+                leaf session-rate-max-time {
+                    description "The time that the maximum session creation " +
+                                "rate in 'session-rate-max' occurred. " +
+                                "Time in microseconds since  " +
+                                "01-01-1970 00:00:00.";
+                    units "microseconds";
+                    type uint64;
+                }
+                leaf session-rate-1m-max {
+                    description "The maximum rate (in sessions-per-second) " +
+                                "of session creation by this subscriber " +
+                                "(calculated over 1 minute periods).";
+                    units "sessions-per-second";
+                    type uint64;
+                }
+                leaf session-rate-1m-max-time {
+                    description "The time that the maximum session creation " +
+                                "rate in 'session-rate-1m-max' occurred. " +
+                                "Time in microseconds since  " +
+                                "01-01-1970 00:00:00.";
+                    units "microseconds";
+                    type uint64;
+                }
+                leaf packets-out {
+                    description "Number of packets sent out the CGNAT " +
+                                "interface by this subscriber.";
+                    type uint64;
+                }
+                leaf packets-in {
+                    description "Number of packets received into the " +
+                                "CGNAT interface by this subscriber.";
+                    type uint64;
+                }
+                leaf bytes-out {
+                    description "Number of bytes sent out the CGNAT " +
+                                "interface by this subscriber.";
+                    type uint64;
+                }
+                leaf bytes-in {
+                    description "Number of bytes received into the " +
+                                "CGNAT interface by this subscriber.";
+                    type uint64;
+                }
+                leaf assigned-ports {
+                    description "The number of ports currently assigned " +
+                                "to this subscriber.";
                     type uint64;
                 }
                 list protocols {
@@ -756,6 +1398,19 @@ module vyatta-service-nat-cgnat-v1 {
                         "ports will be selected.";
             type inet:port-number;
         }
+        leaf destination-ip-address-prefix {
+            description "Filter destination IP address with optional mask. " +
+                        "If not provided then all destination addresses will " +
+                        "be selected. Only applies to sessions for which "+
+                        "destination address is known";
+            type ipv4-addr-or-prefix;
+        }
+        leaf destination-port {
+            description "Filter destination port. If not provided then all " +
+                        "destination ports will be selected. Only applies to " +
+                        "sessions for which destination port is known";
+            type inet:port-number;
+        }
         leaf session-id {
             description "Filter the ID assigned to the session. If not " +
                         "provided then all sessions will be selected.";
@@ -775,7 +1430,7 @@ module vyatta-service-nat-cgnat-v1 {
             description "Filter the name of the pool that the session's " +
                         "public address was allocated from. If not provided " +
                         "then all pools will be selected.";
-            type fw-types:group-name;
+            type fw-types:nat-pool-name;
         }
     }
 
@@ -846,7 +1501,7 @@ module vyatta-service-nat-cgnat-v1 {
                     description "The sub-identifier assigned to the session. " +
                                 "It has a different number for different " +
                                 "destinations for the same public address " +
-                                "and port. This wll be 0 if destination " +
+                                "and port. This will be 0 if destination " +
                                 "address tracking is not enabled.";
                     type uint32;
                 }
@@ -863,6 +1518,21 @@ module vyatta-service-nat-cgnat-v1 {
                         enum "closing";
                         enum "closed";
                     }
+                }
+                leaf state-history {
+                    description "The state history of the session. Note: " +
+                                "this only appears if destination address " +
+                                "tracking is enabled and the protocol is " +
+                                "TCP. The value is a bit-map as follows: " +
+                                "Bit 0 (0x01): reached established state; " +
+                                "Bit 1 (0x02): forward FIN flag seen; " +
+                                "Bit 2 (0x04): backward FIN flag seen; " +
+                                "Bit 3 (0x08): forward RST flag seen; " +
+                                "Bit 4 (0x10): backward RST flag seen; " +
+                                "Bit 5 (0x20): forward ACK flag seen; " +
+                                "Bit 6 (0x40): backward ACK flag seen; " +
+                                "Bit 7 (0x80): forwards direction is in.";
+                    type uint32;
                 }
                 leaf subscriber-ip-address {
                     description "The subscriber IP address of the session.";
@@ -888,7 +1558,7 @@ module vyatta-service-nat-cgnat-v1 {
                 leaf pool-name {
                     description "The pool that the session's public address " +
                                 "was allocated from.";
-                    type fw-types:group-name;
+                    type fw-types:nat-pool-name;
                 }
                 leaf destination-ip-address {
                     description "The destination IP address of the session. " +
@@ -898,8 +1568,10 @@ module vyatta-service-nat-cgnat-v1 {
                 }
                 leaf destination-port {
                     description "The destination port of the session. Note " +
-                                "this only appears if destination address " +
-                                "tracking is enabled.";
+                                "this only appears if the destination port " +
+                                "is known, which will happen if destination " +
+                                "address tracking is enabled or only one " +
+                                "destination address is in use by the session.";
                     type inet:port-number;
                 }
                 leaf timeout {
@@ -915,8 +1587,9 @@ module vyatta-service-nat-cgnat-v1 {
                     units "seconds";
                 }
                 leaf start-time {
-                    description "The time the session started. This is the " +
-                                "time in microseconds since 1970.";
+                    description "The time the session started, " +
+                                "in microseconds since  " +
+                                "01-01-1970 00:00:00.";
                     units "microseconds";
                     type uint64;
                 }
@@ -977,5 +1650,39 @@ module vyatta-service-nat-cgnat-v1 {
         input {
             uses session-filter;
         }
+    }
+    rpc clear-session-statistics {
+        description "Clear CGNAT session statistics";
+        configd:call-rpc "cgnat-clear-session-stats-rpc";
+        input {
+            uses session-filter;
+        }
+    }
+    rpc clear-subscriber-statistics {
+        description "Clear CGNAT subscriber statistics";
+        configd:call-rpc "cgnat-clear-subs-stats-rpc";
+        input {
+            leaf ip-address-prefix {
+                description "Clear statistics for subscribers " +
+                            "matching this IP address with optional mask. If " +
+                            "not provided then all subscribers will be " +
+                            "cleared.";
+                type ipv4-addr-or-prefix;
+            }
+        }
+    }
+    rpc clear-policy-statistics {
+        description "Clear CGNAT policy statistics";
+        configd:call-rpc "cgnat-clear-policy-stats-rpc";
+        input {
+            leaf policyname {
+                description "Name of CGNAT policy";
+                type fw-types:cgnat-policy-name;
+            }
+        }
+    }
+    rpc clear-errors {
+        description "Clear CGNAT error counters";
+        configd:call-rpc "cgnat-clear-errors-rpc";
     }
 }

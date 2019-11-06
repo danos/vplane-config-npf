@@ -186,24 +186,7 @@ sub raw_tag {
 # Change 'tag' to 'table' for showing policies
 sub pbr_tag {
     my ($tag) = @_;
-    my $pbr_table;
-
-    if ( is_vrf_available() ) {
-
-        # Will error in the non-VRF case since we wouldn't have added a mapping
-        my $cmd = "/opt/vyatta/sbin/getvrftable --kernel-table $tag";
-        $pbr_table = `$cmd 2>/dev/null | tail -1`;
-
-        # so fall back to tag in this case
-        $pbr_table = $tag
-          if $pbr_table eq "";
-    } else {
-
-        # If VRF isn't available then getvrftable isn't
-        # available, but we can rely on the identity mapping
-        # for the default VRF
-        $pbr_table = $tag;
-    }
+    my $pbr_table = $tag;
 
     # Shown 'main' rather than the main table ID.
     $pbr_table = 'main' if ( $pbr_table == $main_table_id );

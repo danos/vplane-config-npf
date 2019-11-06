@@ -236,9 +236,11 @@ def cgn_subs_show_detail(subs):
     rate_1m = subs.get('sess_rate_1m')
     rate_5m = subs.get('sess_rate_5m')
     max_rate = subs.get('sess_rate_max')
+    max_rate_1m = subs.get('sess_rate_1m_max')
 
     # Epoch in seconds
     max_rate_tm = subs.get('sess_rate_max_tm') / 1000000
+    max_rate_1m_tm = subs.get('sess_rate_1m_max_tm') / 1000000
 
     print("Subscriber: %s" % (subs.get('address')))
     print("  %-32s %18s" % ("Paired address", subs.get('paired_addr')))
@@ -249,14 +251,21 @@ def cgn_subs_show_detail(subs):
     print("    %-30s %18u" % ("Sessions created", sess_crtd))
     print("    %-30s %18u" % ("Sessions destroyed", sess_dstrd))
 
-    print("    %-30s %18u" % ("Session rate 20 secs", rate_20s))
+    tm_20s = "-"
+    tm_1m = "-"
 
     if max_rate > 0:
-        tmp = "%s" % (strftime("%F %H:%M:%S +0000", localtime(max_rate_tm)))
-        print("      %-28s %18u (%s)" % ("Max", max_rate, tmp))
+        tm_20s = "%s" % (strftime("%F %H:%M:%S +0000", localtime(max_rate_tm)))
 
-    print("    %-30s %18u" % ("Session rate 1 min", rate_1m))
-    print("    %-30s %18u" % ("Session rate 5 mins", rate_5m))
+    if max_rate_1m > 0:
+        tm_1m = "%s" % (strftime("%F %H:%M:%S +0000",
+                                 localtime(max_rate_1m_tm)))
+
+    print("  %-19s %15s %15s" % ("Session rate:", "Current", "Maximum"))
+    print("    %-17s %15u %15u (%s)" % ("20 secs", rate_20s, max_rate, tm_20s))
+    print("    %-17s %15u %15u (%s)" % ("1 minute", rate_1m, max_rate_1m,
+                                        tm_1m))
+    print("    %-17s %15u" % ("5 minutes", rate_5m))
 
     print("  %-32s %18u" % ("Mapping requests", map_reqs))
     print("    %-30s %18u" % ("Ok", map_ok))
@@ -313,6 +322,34 @@ def cgn_op_show_subs(sa_opt, d_opt):
 
 
 #
+# cgn_op_clear_subs_stats
+#
+def cgn_op_clear_subs_stats(sa_opt):
+    """Clear CGN subs"""
+
+    cmd = "cgn-op clear subscriber %s statistics" % (sa_opt)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(cmd)
+
+
+#
+# cgn_op_update_subs_stats
+#
+def cgn_op_update_subs_stats(sa_opt):
+    """Update CGN subs"""
+
+    cmd = "cgn-op update subscriber %s statistics" % (sa_opt)
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(cmd)
+
+
+#
 # usage
 #
 def cgn_usage():
@@ -331,6 +368,9 @@ def cgn_op_main():
     s_opt = False
     d_opt = False
     sa_opt = None
+    c_opt = False
+    u_opt = False
+    stats_opt = False
 
     #
     # Parse options
@@ -339,7 +379,8 @@ def cgn_op_main():
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
                                    ['show', 'detail',
-                                    'subs-addr='])
+                                    'subs-addr=',
+                                    'clear', 'stats', 'update'])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -356,10 +397,26 @@ def cgn_op_main():
         if opt in '--subs-addr':
             sa_opt = arg
 
+        if opt in '--clear':
+            c_opt = True
+
+        if opt in '--update':
+            u_opt = True
+
+        if opt in '--stats':
+            stats_opt = True
+
     # show ...
     if s_opt:
         cgn_op_show_subs(sa_opt, d_opt)
-        return
+
+    # clear ...
+    if c_opt and stats_opt:
+        cgn_op_clear_subs_stats(sa_opt)
+
+    # update ...
+    if u_opt and stats_opt:
+        cgn_op_update_subs_stats(sa_opt)
 
 
 #

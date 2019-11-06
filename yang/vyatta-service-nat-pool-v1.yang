@@ -37,36 +37,52 @@ module vyatta-service-nat-pool-v1 {
     description
         "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
 
-        Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions
-        are met:
+        Redistribution and use in source and binary forms,
+        with or without modification, are permitted provided
+        that the following conditions are met:
 
-        1. Redistributions of source code must retain the above copyright
-           notice, this list of conditions and the following disclaimer.
-        2. Redistributions in binary form must reproduce the above
-           copyright notice, this list of conditions and the following
-           disclaimer in the documentation and/or other materials provided
-           with the distribution.
-        3. Neither the name of the copyright holder nor the names of its
-           contributors may be used to endorse or promote products derived
-           from this software without specific prior written permission.
+        1. Redistributions of source code must retain the
+           above copyright notice, this list of conditions and
+           the following disclaimer.
+        2. Redistributions in binary form must reproduce
+           the above copyright notice, this list of conditions
+           and the following disclaimer in the documentation
+           and/or other materials provided with the distribution.
+        3. Neither the name of the copyright holder nor the
+           names of its contributors may be used to endorse or
+           promote products derived from this software without
+           specific prior written permission.
 
-        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-        'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-        LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-        FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-        COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-        INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-        POSSIBILITY OF SUCH DAMAGE.
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+        AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+        WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+        PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+        THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+        ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+        OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+        TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+        OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+        HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+        IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+        NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+        USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+        OF SUCH DAMAGE.
 
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for NAT pool configuration";
+
+    revision 2019-10-01 {
+        description "Deprecated 'service nat pool NNNN log block-allocation'
+                     in favour of new
+                     'service nat pool NNNN select event port-block-allocation'
+                     for consistency with updated CGNAT CLI.";
+    }
+
+    revision 2019-09-23 {
+        description "Limit length of NAT pool and pool entry names.";
+    }
 
     revision 2019-06-20 {
         description "Initial revision.";
@@ -84,7 +100,7 @@ module vyatta-service-nat-pool-v1 {
             leaf poolname {
                 description "Name of NAT pool";
                 configd:help "Name of NAT pool";
-                type fw-types:group-name {
+                type fw-types:nat-pool-name {
                     configd:help "Name of NAT pool";
                 }
             }
@@ -137,7 +153,7 @@ module vyatta-service-nat-pool-v1 {
                 leaf "entry-name" {
                     description "Name of address entry";
                     configd:help "Name of address entry";
-                    type fw-types:group-name {
+                    type fw-types:nat-pool-name {
                         configd:help "Name of address mapping";
                     }
                 }
@@ -257,6 +273,7 @@ module vyatta-service-nat-pool-v1 {
                 }
             }
             container log {
+                status deprecated;
                 description "Decide if a log message should be made when a " +
                             "block is allocated to a subscriber or removed " +
                             "from a subscriber";
@@ -267,6 +284,24 @@ module vyatta-service-nat-pool-v1 {
                                 "or freed";
                     configd:help "Log when block is allocated to a " +
                                  "subscriber or freed";
+                }
+            }
+            container select {
+                must "not(.) or not(../log)" {
+                    error-message "Cannot configure both 'select' and 'log'";
+                }
+                description  "Select";
+                configd:help "Select";
+                container event {
+                    description  "Select events";
+                    configd:help "Select events";
+                    leaf port-block-allocation {
+                        type empty;
+                        description  "Raise an event when a port block is " +
+                                     "allocated to a subscriber or freed";
+                        configd:help "Raise an event when a port block is " +
+                                     "allocated to a subscriber or freed";
+                    }
                 }
             }
             container blacklist {

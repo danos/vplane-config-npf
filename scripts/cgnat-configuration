@@ -11,19 +11,27 @@ It looks for changes in the CGNAT configuration and sends the changes to
 the dataplane. """
 
 
+import os
 import sys
 import getopt
 
+from subprocess import call
 from vyatta import configd
 from vyatta.npf.npf_debug import NpfDebug
 from vyatta.npf.npf_store import store_cfg
 
 FORCE = False
+DO_CGNAT = False
+DO_EXPORT = False
+CFG_DIR = "/etc/td-agent-bit"
+FLUENTBIT_STOP_CMD = "systemctl stop td-agent-bit.service"
+FLUENTBIT_START_CMD = "systemctl restart td-agent-bit.service"
 
 CONFIG_CANDIDATE = configd.Client.CANDIDATE
 CONFIG_RUNNING = configd.Client.RUNNING
 
-BASE_ADDRESS_PATH = "service nat cgnat"
+BASE_CGNAT_PATH = "service nat cgnat"
+BASE_SYSTEM_CGNAT_PATH = "system export"
 
 # class used for printing debugs
 dbg = NpfDebug()
@@ -44,13 +52,19 @@ def delete_cgnat_config(key, cmd):
 
 
 def process_options():
-    global FORCE
+
+    """ Process command line options """
+
+    global FORCE, DO_CGNAT, DO_EXPORT
+
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "fd", ['force', 'debug'])
+        opts, args = getopt.getopt(sys.argv[1:], "fd",
+                                   ['force', 'debug', 'cgnat', 'export'])
 
     except getopt.GetoptError as r:
         err(r)
-        err("usage: {} [-f|--force] [-d|--debug] ".format(sys.argv[0]))
+        err("usage: {} [-f|--force] [-d|--debug] "
+            "[--cgnat] [--export]".format(sys.argv[0]))
         sys.exit(2)
 
     for opt, arg in opts:
@@ -58,9 +72,340 @@ def process_options():
             FORCE = True
         elif opt in ('-d', '--debug'):
             dbg.enable()
+        elif opt in '--cgnat':
+            DO_CGNAT = True
+        elif opt in '--export':
+            DO_EXPORT = True
+
+
+def build_cgnat_event_command(cfg):
+
+    """ Build the command for "cgnat policy select" and "cgnat policy log" """
+
+    event_cmd = ''
+    event_sess_all = 'no'
+    event_sess_creation = 'no'
+    event_sess_deletion = 'no'
+    event_sess_periodic = 0
+    event_subs = 'no'
+
+    s = None
+    if 'select' in cfg:
+        if 'event' in cfg['select']:
+            if 'subscriber' in cfg['select']['event']:
+                event_subs = 'yes'
+            if 'session' in cfg['select']['event']:
+                s = cfg['select']['event']['session']
+
+    if 'log' in cfg:
+        if 'subscriber' in cfg['log']:
+            event_subs = 'yes'
+        if 'session' in cfg['log']:
+            s = cfg['log']['session']
+
+    if s:
+        if 'address-group' in s:
+            event_cmd += "log-sess-group={} ".format(s['address-group'])
+        if 'all-subscribers' in s:
+            event_sess_all = 'yes'
+        if 'creation' in s:
+            event_sess_creation = 'yes'
+        if 'deletion' in s:
+            event_sess_deletion = 'yes'
+        if 'periodic' in s:
+            event_sess_periodic = s['periodic']
+
+    event_cmd += ("log-sess-all={} log-sess-creation={} "
+                  "log-sess-deletion={} log-sess-periodic={} "
+                  "log-subs={} ").format(
+                event_sess_all, event_sess_creation, event_sess_deletion,
+                event_sess_periodic, event_subs)
+
+    return event_cmd
+
+
+def build_cgnat_policy_config(commands, cfg, tree):
+
+    """ Process 'cgnat policy' """
+
+    for name in cfg:
+        key = "{} policy {}".format(BASE_CGNAT_PATH, name)
+        cmd = ""
+        dbg.pprint("name: {}".format(name))
+        p = cfg[name]
+
+        if 'priority' in p:
+            cmd += "priority={} ".format(p['priority'])
+
+        # Policy match parameters
+        if 'match' in p:
+            if 'source' in p['match']:
+                if 'address-group' in p['match']['source']:
+                    cmd += "match-ag={} ".format(
+                        p['match']['source']['address-group'])
+
+        # Policy translation parameters
+        if 'translation' in p:
+            if 'pool' in p['translation']:
+                cmd += "pool={} ".format(p['translation']['pool'])
+
+        cmd += build_cgnat_event_command(p)
+
+        if name not in commands.keys():
+            commands[name] = {}
+        commands[name][tree] = (key, cmd)
+        dbg.pprint("POLICY - KEY: {}".format(key))
+        dbg.pprint("         CMD: {}".format(cmd))
+
+
+def build_cgnat_sess_timeout_command(cfg):
+
+    """ Process 'cgnat session-timeout' """
+
+    state_to_cmd = {
+        'established': 'estab',
+        'partially-open': 'opening',
+        'partially-closed': 'closing'
+    }
+
+    cmd = "session-timeouts "
+
+    for prot in cfg:
+        for state in cfg[prot]:
+            if state not in state_to_cmd:
+                err("Unexpected state of {} for {}".format(state, prot))
+                continue
+            cmd += "{}-{}={} ".format(
+                prot, state_to_cmd[state], cfg[prot][state])
+
+    return cmd
+
+
+def build_cgnat_interface_config(commands, cfg, tree):
+
+    """ Process 'cgnat interface' """
+
+    for ifname in cfg:
+        key = "{} interface {}".format(BASE_CGNAT_PATH, ifname)
+        dbg.pprint("ifname: {}".format(ifname))
+        if ifname not in commands.keys():
+            commands[ifname] = {}
+
+        if 'policy' in cfg[ifname]:
+            for policy in cfg[ifname]['policy']:
+                pkey = "{} {}".format(key, policy)
+                cmd = "intf={} name={}".format(ifname, policy)
+                if policy not in commands[ifname].keys():
+                    commands[ifname][policy] = {}
+                commands[ifname][policy][tree] = (pkey, cmd)
+                dbg.pprint("INTERFACE - KEY: {}".format(pkey))
+                dbg.pprint("            CMD: {}".format(cmd))
+
+
+def build_cgnat_warning_config(commands, cfg, tree):
+
+    """ Process 'cgnat select warning event resource constraint' """
+
+    for name in cfg:
+        key = "{} select warning {}".format(BASE_CGNAT_PATH, name)
+        cmd = ""
+        p = cfg[name]
+
+        if 'threshold' in p:
+            cmd += "threshold {}".format(p['threshold'])
+            if 'interval' in p:
+                cmd += " interval {}".format(p['interval'])
+
+        if name not in commands.keys():
+            commands[name] = {}
+
+        commands[name][tree] = (key, cmd)
+        dbg.pprint("POLICY - KEY: {}".format(key))
+        dbg.pprint("         CMD: {}".format(cmd))
+
+
+def build_cgnat_events_config(commands, cfg, tree, kind):
+
+    """ Process 'cgnat log' and 'cgnat export' """
+
+    # kind = 'rte_log' | 'protobuf'
+
+    for event in cfg:   # event = session, subscriber, resource-constraint, ...
+        key = "{} events {} {}".format(BASE_CGNAT_PATH, kind, event)
+        dbg.pprint("event: {}".format(event))
+        cmd = "{} enable".format(event)
+        if event not in commands.keys():
+            commands[event] = {}
+        if 'enable' not in commands[event].keys():
+            commands[event]['enable'] = {}
+        commands[event]['enable'][tree] = (key, cmd)
+
+        dbg.pprint("EVENTS - KEY: {}".format(key))
+        dbg.pprint("         CMD: {}".format(cmd))
+
+        # Save any kafka config
+        if 'using' in cfg[event]:
+            if 'kafka' in cfg[event]['using']:
+                if 'cluster' in cfg[event]['using']['kafka']:
+                    if 'cluster' not in commands[event].keys():
+                        commands[event]['cluster'] = {}
+                    commands[event]['cluster'][tree] = \
+                        cfg[event]['using']['kafka']['cluster']
+
+                if 'with' in cfg[event]['using']['kafka']:
+                    if 'with' not in commands[event].keys():
+                        commands[event]['with'] = {}
+                    if tree not in commands[event]['with'].keys():
+                        commands[event]['with'][tree] = {}
+                    commands[event]['with'][tree]['topic'] = \
+                        cfg[event]['using']['kafka']['with'] \
+                        .get('topic')
+                    commands[event]['with'][tree]['key-field'] = \
+                        cfg[event]['using']['kafka']['with'] \
+                        .get('key-field')
+                    commands[event]['with'][tree]['field-delimiter'] = \
+                        cfg[event]['using']['kafka']['with'] \
+                        .get('field-delimiter')
+                    commands[event]['with'][tree]['priority'] = \
+                        cfg[event]['using']['kafka']['with'] \
+                        .get('priority')
+                    commands[event]['with'][tree]['storage-limit'] = \
+                        cfg[event]['using']['kafka']['with'] \
+                        .get('storage-limit')
+
+
+def build_cgnat_config(commands, cfg, tree):
+
+    """ Process keywords under the top-level 'cgnat' """
+
+    if 'policy' in cfg:
+        if 'policy' not in commands.keys():
+            commands['policy'] = {}
+        build_cgnat_policy_config(commands['policy'], cfg['policy'], tree)
+
+    if 'disable-hairpinning' in cfg:
+        key = "{} disable-hairpinning".format(BASE_CGNAT_PATH)
+        if 'disable-hairpinning' not in commands.keys():
+            commands['disable-hairpinning'] = {}
+        commands['disable-hairpinning'][tree] = key
+
+    if 'snat-alg-bypass' in cfg:
+        key = "{} snat-alg-bypass".format(BASE_CGNAT_PATH)
+        if 'snat-alg-bypass' not in commands.keys():
+            commands['snat-alg-bypass'] = {}
+        commands['snat-alg-bypass'][tree] = key
+
+    if 'max-sessions' in cfg:
+        key = "{} max-sessions".format(BASE_CGNAT_PATH)
+        if 'max-sessions' not in commands.keys():
+            commands['max-sessions'] = {}
+        commands['max-sessions'][tree] = (key, cfg['max-sessions'])
+
+    if 'max-dest-per-session' in cfg:
+        key = "{} max-dest-per-session".format(BASE_CGNAT_PATH)
+        if 'max-dest-per-session' not in commands.keys():
+            commands['max-dest-per-session'] = {}
+        commands['max-dest-per-session'][tree] = (
+            key, cfg['max-dest-per-session'])
+
+    if 'session-timeout' in cfg:
+        key = "{} session-timeout".format(BASE_CGNAT_PATH)
+        if 'session-timeout' not in commands.keys():
+            commands['session-timeout'] = {}
+        cmd = build_cgnat_sess_timeout_command(cfg['session-timeout'])
+        commands['session-timeout'][tree] = (key, cmd)
+        dbg.pprint("SESS-TIMEOUT KEY: {}".format(key))
+        dbg.pprint("             CMD: {}".format(cmd))
+
+    if 'interface' in cfg:
+        if 'interface' not in commands.keys():
+            commands['interface'] = {}
+        build_cgnat_interface_config(commands['interface'], cfg['interface'],
+                                     tree)
+
+    if 'select' in cfg:
+        if 'warning' in cfg['select']:
+            if 'event' in cfg['select']['warning']:
+                if 'resource-constraint' in cfg['select']['warning']['event']:
+                    key = "{} resource-constraint".format(BASE_CGNAT_PATH)
+                    if 'resource-constraint' not in commands.keys():
+                        commands['resource-constraint'] = {}
+                    cmd = build_cgnat_warning_config(
+                        commands['resource-constraint'],
+                        cfg['select']['warning']['event']
+                           ['resource-constraint'],
+                        tree)
+                    # TODO: not using cmd here?
+
+    if 'log' in cfg:
+        if 'event' in cfg['log']:
+            if 'events' not in commands.keys():
+                commands['events'] = {}
+            if 'rte_log' not in commands['events'].keys():
+                commands['events']['rte_log'] = {}
+            build_cgnat_events_config(commands['events']['rte_log'],
+                                      cfg['log']['event'],
+                                      tree, "rte_log")
+    if 'export' in cfg:
+        if 'event' in cfg['export']:
+            if 'events' not in commands.keys():
+                commands['events'] = {}
+            if 'protobuf' not in commands['events'].keys():
+                commands['events']['protobuf'] = {}
+            build_cgnat_events_config(commands['events']['protobuf'],
+                                      cfg['export']['event'],
+                                      tree, "protobuf")
+
+
+def build_export_kafka_cluster_config(commands, cfg):
+
+    """ Process 'system export kafka cluster' """
+
+    if 'bootstrap' not in cfg.keys():
+        return
+
+    if 'ipv4-address' not in commands.keys():
+        commands['ipv4-address'] = {}
+    commands['ipv4-address'] = cfg['bootstrap'].get('ipv4-address')
+
+    if 'ipv6-address' not in commands.keys():
+        commands['ipv6-address'] = {}
+    commands['ipv6-address'] = cfg['bootstrap'].get('ipv6-address')
+
+    if 'routing-instance' not in commands.keys():
+        commands['routing-instance'] = {}
+    commands['routing-instance'] = cfg['bootstrap'].get('routing-instance')
+
+
+def build_export_kafka_config(commands, cfg, tree):
+
+    """ Process 'system export kafka' """
+
+    if 'cluster' in cfg:
+        for cluster in cfg['cluster']:
+            if cluster not in commands.keys():
+                commands[cluster] = {}
+            if tree not in commands[cluster].keys():
+                commands[cluster][tree] = {}
+            build_export_kafka_cluster_config(
+                    commands[cluster][tree],
+                    cfg['cluster'][cluster])
+
+
+def build_export_config(commands, cfg, tree):
+
+    """ Process 'system export' """
+
+    if 'kafka' in cfg:
+        if 'export' not in commands.keys():
+            commands['export'] = {}
+        build_export_kafka_config(commands['export'], cfg['kafka'], tree)
 
 
 def send_cgnat_policy_config(commands):
+
+    """ Send config for 'cgnat policy' """
+
     for name in commands:
 
         rc = commands[name].get('running')
@@ -86,6 +431,9 @@ def send_cgnat_policy_config(commands):
 
 
 def send_cgnat_disable_hairpinning_config(commands):
+
+    """ Send config for 'cgnat disable-hairpinning' """
+
     rc = commands.get('running')
     cc = commands.get('cand')
 
@@ -99,7 +447,27 @@ def send_cgnat_disable_hairpinning_config(commands):
             delete_cgnat_config(rc, "hairpinning on")
 
 
+def send_cgnat_snat_alg_bypass_config(commands):
+
+    """ Send config for 'cgnat snat-alg-bypass' """
+
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc, "snat-alg-bypass off")
+    else:
+        if cc is None:
+            # configuration is being deleted
+            delete_cgnat_config(rc, "snat-alg-bypass on")
+
+
 def send_cgnat_max_sessions_config(commands):
+
+    """ Send config for 'cgnat max-sessions' """
+
     rc = commands.get('running')
     cc = commands.get('cand')
 
@@ -122,6 +490,9 @@ def send_cgnat_max_sessions_config(commands):
 
 
 def send_cgnat_max_dest_per_session_config(commands):
+
+    """ Send config for 'cgnat max-dest-per-session' """
+
     rc = commands.get('running')
     cc = commands.get('cand')
 
@@ -145,6 +516,9 @@ def send_cgnat_max_dest_per_session_config(commands):
 
 
 def send_cgnat_sess_timeout_config(commands):
+
+    """ Send config for 'cgnat session-timeout' """
+
     rc = commands.get('running')
     cc = commands.get('cand')
 
@@ -170,6 +544,9 @@ def send_cgnat_sess_timeout_config(commands):
 
 
 def send_cgnat_interface_config(commands):
+
+    """ Send config for 'cgnat interface' """
+
     for ifname in commands:
         for policy in commands[ifname]:
 
@@ -196,7 +573,251 @@ def send_cgnat_interface_config(commands):
                                    format(cc[0], cc[1]))
 
 
+def send_cgnat_resource_constraint_config(commands):
+
+    """ Send config for 'cgnat resource-constraint' """
+
+    for name in commands:
+
+        rc = commands[name].get('running')
+        cc = commands[name].get('cand')
+
+        if rc is None:
+            if cc is not None:
+                # this is new configuration
+                set_cgnat_config(cc[0], "warning add {} {}".format(name,
+                                                                   cc[1]))
+        else:
+            if cc is None:
+                # configuration is being deleted
+                delete_cgnat_config(rc[0], "warning del {}".format(name))
+            else:
+                # configuration is being updated
+                if cc[1] != rc[1]:
+                    # only send if changed
+                    set_cgnat_config(cc[0], "warning add {} {}".format(name,
+                                     cc[1]))
+                else:
+                    dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
+                               format(cc[0], cc[1]))
+
+
+def send_cgnat_fluentbit_service_config():
+
+    """ Write the fluentbit service file """
+
+    # TODO: this could be a static file
+
+    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
+    f = open("{}/cgnat-service.conf".format(CFG_DIR), "w")
+
+    f.write("[SERVICE]\n")
+    f.write("    Flush             1\n")
+    f.write("    Daemon            Off\n")
+
+    if dbg.is_enabled():
+        f.write("    Log_Level         debug\n")
+    else:
+        f.write("    Log_Level         info\n")
+
+    f.write("    HTTP_Server       On\n")
+    f.write("    HTTP_Listen       127.0.0.1\n")
+    f.write("    HTTP_Port         2020\n")
+    f.write("    Grace             0\n")
+
+    f.write("    storage.path      /var/log/vyatta/fluentbit-storage\n")
+    f.write("    storage.sync      full\n")
+    f.write("    storage.checksum  on\n")
+
+    f.write("\n")
+
+    f.close()
+
+
+def send_cgnat_fluentbit_input_config(commands):
+
+    """ Write the fluentbit input config file """
+
+    # Define High Water Mark
+    zmq_hwm_critical = 100000      # ie very large but not infinite
+    zmq_hwm_noncritical = 10000    # ie large but finite
+
+    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
+    f = open("{}/cgnat-input.conf".format(CFG_DIR), "w")
+
+    # First, tell the dataplane to stop existing kafka exports.
+
+    for event in commands:    # 'session', 'subscriber', ...
+        if 'enable' in commands[event]:
+            if 'running' in commands[event]['enable']:
+                rc = commands[event]['enable']['running']
+                delete_cgnat_config(rc[0],
+                                    "events protobuf {} disable"
+                                    .format(event))
+
+    # Now rewrite the input config file
+
+    for event in commands:    # 'session', 'subscriber', ...
+
+        # 'cluster' and 'with' are mandatory
+        if 'cluster' not in commands[event] or 'with' not in commands[event]:
+            continue
+
+        cluster = commands[event]['cluster'].get('cand')
+        withcfg = commands[event]['with'].get('cand')
+
+        # These are mandatory in the yang,
+        # but check anyway.
+        if not cluster or not withcfg:
+            continue
+
+        f.write("[INPUT]\n")
+        f.write("    Name            zmq\n")
+        f.write("    Endpoint        "
+                "ipc:///var/run/vyatta/cgnat-event-{}\n".format(event))
+
+        # TODO: del_cgnat_config("cgnat events protobuf {} hwm".format(event))
+        if withcfg.get('priority') == 'critical':
+            # priority critical
+            f.write("    Storage.type    filesystem\n")
+            f.write("    Hwm             {}\n".format(zmq_hwm_critical))
+            # TODO: compare this key with the other cc[0] keys
+            set_cgnat_config("cgnat events protobuf {} hwm"
+                             .format(event),
+                             "events protobuf {} hwm {}"
+                             .format(event, zmq_hwm_critical))
+        else:
+            # priority not critical
+            f.write("    Storage.type    memory\n")
+            f.write("    Hwm             {}\n".format(zmq_hwm_noncritical))
+            set_cgnat_config("cgnat events protobuf {} hwm"
+                             .format(event),
+                             "events protobuf {} hwm {}"
+                             .format(event, zmq_hwm_noncritical))
+
+        if withcfg.get('storage-limit') is not None:
+            f.write("    Mem_Buf_Limit   {}M\n"
+                    .format(withcfg['storage-limit']))
+        else:
+            # default storage-limit
+            f.write("    Mem_Buf_Limit   5M\n")
+
+        f.write("    Log_Type        {}\n".format(event))
+        f.write("    Tag             cgnat-{}\n".format(event))
+        f.write("    Topic           {}\n".format(withcfg['topic']))
+
+        if withcfg.get('key-field') is not None:
+            f.write("    Key_field      ")
+            for keyfield in withcfg['key-field']:
+                f.write(" {}".format(keyfield))
+            f.write("\n")
+
+        if withcfg.get('field-delimiter') is not None:
+            f.write("    Field_delimiter {}\n".
+                    format(withcfg['field-delimiter']))
+        else:
+            # default field_delimiter
+            f.write("    Field_delimiter _\n")
+
+        f.write("\n")
+
+    f.close()
+
+    # Finally, tell the dataplane to re-enable existing kafka exports.
+
+    for event in commands:    # 'session', 'subscriber', ...
+        if 'enable' in commands[event]:
+            if 'running' in commands[event]['enable']:
+                rc = commands[event]['enable']['running']
+                set_cgnat_config(rc[0],
+                                 "events protobuf {} enable"
+                                 .format(event))
+
+
+def send_cgnat_events_cfg_dataplane(commands):
+
+    """ Configure the dataplane rte_log and protobuf exports. """
+
+    for kind in commands:               # 'rte_log' or 'protobuf'
+        for event in commands[kind]:    # 'session', 'subscriber', ...
+
+            if 'enable' in commands[kind][event]:
+                rc = commands[kind][event]['enable'].get('running')
+                cc = commands[kind][event]['enable'].get('cand')
+
+                if rc is None:
+                    if cc is not None:
+                        # this is new configuration
+                        set_cgnat_config(cc[0],
+                                         "events {} {} enable"
+                                         .format(kind, event))
+                else:
+                    if cc is None:
+                        # configuration is being deleted
+                        delete_cgnat_config(rc[0],
+                                            "events {} {} disable"
+                                            .format(kind, event))
+                    else:
+                        # configuration is being updated
+                        if cc[1] != rc[1]:
+                            # only send if changed
+                            set_cgnat_config(cc[0],
+                                             "events {} {}"
+                                             .format(kind, event))
+
+                        else:
+                            dbg.pprint("No change so not sent: "
+                                       "KEY: {}; PARAM: {}"
+                                       .format(cc[0], cc[1]))
+
+
+def restart_fluentbit(r):
+
+    """ Start or stop fluentbit as required """
+
+    if r:
+        call(FLUENTBIT_START_CMD.split())
+    else:
+        call(FLUENTBIT_STOP_CMD.split())
+
+
+def send_cgnat_events_config(commands):
+
+    """ Send config for 'cgnat log event' and 'cgnat export event' """
+
+    global client
+
+    if 'protobuf' in commands:
+        # Ensure that the fluentbit config wrapper and service file exist
+        write_fluentbit_wrapper_config()
+        send_cgnat_fluentbit_service_config()
+
+        send_cgnat_fluentbit_input_config(commands['protobuf'])
+
+        # Now update the fluentbit OUTPUT file
+        program_system_export_config(True)
+
+        # If "system export ..." config has NOT changed
+        # then we need to restart fluentbit here,
+        # in order for it to pick up the config file changes.
+        #
+        # However if the config has changed
+        # then we leave the fluentbit restart
+        # to the "system export ..." parser
+        # to avoid restarting fluentbit twice.
+        if client.node_get_status(CONFIG_CANDIDATE,
+                                  BASE_SYSTEM_CGNAT_PATH) \
+           == client.UNCHANGED:
+            restart_fluentbit(True)
+
+    # Finally, tell the dataplane which events to export
+    send_cgnat_events_cfg_dataplane(commands)
+
+
 def send_cgnat_config(commands):
+
+    """ Send config for top-level 'cgnat' """
+
     dbg.pprint("send_cgnat_config()")
 
     if 'policy' in commands:
@@ -204,6 +825,9 @@ def send_cgnat_config(commands):
 
     if 'disable-hairpinning' in commands:
         send_cgnat_disable_hairpinning_config(commands['disable-hairpinning'])
+
+    if 'snat-alg-bypass' in commands:
+        send_cgnat_snat_alg_bypass_config(commands['snat-alg-bypass'])
 
     if 'max-sessions' in commands:
         send_cgnat_max_sessions_config(commands['max-sessions'])
@@ -218,200 +842,235 @@ def send_cgnat_config(commands):
     if 'interface' in commands:
         send_cgnat_interface_config(commands['interface'])
 
+    if 'resource-constraint' in commands:
+        send_cgnat_resource_constraint_config(commands['resource-constraint'])
 
-def build_cgnat_log_command(cfg):
-
-        log_cmd = ''
-        log_sess_all = 'no'
-        log_sess_creation = 'no'
-        log_sess_deletion = 'no'
-        log_sess_periodic = 0
-        log_subs = 'no'
-
-        if 'log' in cfg:
-            if 'session' in cfg['log']:
-                s = cfg['log']['session']
-                if 'address-group' in s:
-                    log_cmd += "log-sess-group={} ".format(s['address-group'])
-                if 'all-subscribers' in s:
-                    log_sess_all = 'yes'
-                if 'creation' in s:
-                    log_sess_creation = 'yes'
-                if 'deletion' in s:
-                    log_sess_deletion = 'yes'
-                if 'periodic' in s:
-                    log_sess_periodic = s['periodic']
-            if 'subscriber' in cfg['log']:
-                log_subs = 'yes'
-
-        log_cmd += ("log-sess-all={} log-sess-creation={} "
-                    "log-sess-deletion={} log-sess-periodic={} "
-                    "log-subs={} ").format(
-                    log_sess_all, log_sess_creation, log_sess_deletion,
-                    log_sess_periodic, log_subs)
-
-        return log_cmd
-
-
-def build_cgnat_policy_config(commands, cfg, tree):
-    for name in cfg:
-        key = "{} policy {}".format(BASE_ADDRESS_PATH, name)
-        cmd = ""
-        dbg.pprint("name: {}".format(name))
-        p = cfg[name]
-
-        if 'priority' in p:
-            cmd += "priority={} ".format(p['priority'])
-
-        if ('match' in p and 'source' in p['match'] and
-            'ip-address' in p['match']['source'] and
-           'prefix' in p['match']['source']['ip-address']):
-            cmd += "src-addr={} ".format(
-                p['match']['source']['ip-address']['prefix'])
-
-        if 'translation' in p and 'pool' in p['translation']:
-            cmd += "pool={} ".format(p['translation']['pool'])
-
-        cmd += build_cgnat_log_command(p)
-
-        if name not in commands.keys():
-            commands[name] = {}
-        commands[name][tree] = (key, cmd)
-        dbg.pprint("POLICY - KEY: {}".format(key))
-        dbg.pprint("         CMD: {}".format(cmd))
-
-
-def build_cgnat_sess_timeout_command(cfg):
-
-    state_to_cmd = {
-        'established': 'estab',
-        'partially-open': 'opening',
-        'partially-closed': 'closing'
-    }
-
-    cmd = "session-timeouts "
-
-    for prot in cfg:
-        for state in cfg[prot]:
-            if state not in state_to_cmd:
-                err("Unexpected state of {} for {}".format(state, prot))
-                continue
-            cmd += "{}-{}={} ".format(
-                prot, state_to_cmd[state], cfg[prot][state])
-
-    return cmd
-
-
-def build_cgnat_interface_config(commands, cfg, tree):
-    for ifname in cfg:
-        key = "{} interface {}".format(BASE_ADDRESS_PATH, ifname)
-        dbg.pprint("ifname: {}".format(ifname))
-        if ifname not in commands.keys():
-            commands[ifname] = {}
-
-        if 'policy' in cfg[ifname]:
-            for policy in cfg[ifname]['policy']:
-                pkey = "{} {}".format(key, policy)
-                cmd = "intf={} name={}".format(ifname, policy)
-                if policy not in commands[ifname].keys():
-                    commands[ifname][policy] = {}
-                commands[ifname][policy][tree] = (pkey, cmd)
-                dbg.pprint("INTERFACE - KEY: {}".format(pkey))
-                dbg.pprint("            CMD: {}".format(cmd))
-
-
-def build_cgnat_config(commands, cfg, tree):
-
-    if 'policy' in cfg:
-        if 'policy' not in commands.keys():
-            commands['policy'] = {}
-        build_cgnat_policy_config(commands['policy'], cfg['policy'], tree)
-
-    if 'disable-hairpinning' in cfg:
-        key = "{} disable-hairpinning".format(BASE_ADDRESS_PATH)
-        if 'disable-hairpinning' not in commands.keys():
-            commands['disable-hairpinning'] = {}
-        commands['disable-hairpinning'][tree] = key
-
-    if 'max-sessions' in cfg:
-        key = "{} max-sessions".format(BASE_ADDRESS_PATH)
-        if 'max-sessions' not in commands.keys():
-            commands['max-sessions'] = {}
-        commands['max-sessions'][tree] = (key, cfg['max-sessions'])
-
-    if 'max-dest-per-session' in cfg:
-        key = "{} max-dest-per-session".format(BASE_ADDRESS_PATH)
-        if 'max-dest-per-session' not in commands.keys():
-            commands['max-dest-per-session'] = {}
-        commands['max-dest-per-session'][tree] = (
-            key, cfg['max-dest-per-session'])
-
-    if 'session-timeout' in cfg:
-        key = "{} session-timeout".format(BASE_ADDRESS_PATH)
-        if 'session-timeout' not in commands.keys():
-            commands['session-timeout'] = {}
-        cmd = build_cgnat_sess_timeout_command(cfg['session-timeout'])
-        commands['session-timeout'][tree] = (key, cmd)
-        dbg.pprint("SESS-TIMEOUT KEY: {}".format(key))
-        dbg.pprint("             CMD: {}".format(cmd))
-
-    if 'interface' in cfg:
-        if 'interface' not in commands.keys():
-            commands['interface'] = {}
-        build_cgnat_interface_config(commands['interface'], cfg['interface'],
-                                     tree)
+    if 'events' in commands:
+        send_cgnat_events_config(commands['events'])
 
 
 def program_cgnat_config():
-    global FORCE
+
+    """ Build and send the top-level 'cgnat' config """
+
+    global FORCE, client
     dbg.pprint("program_cgnat_config()")
 
     commands = {}
 
     try:
-        client = configd.Client()
-    except Exception as exc:
-        err("Cannot establish client session: '{}'".format(str(exc).strip()))
-        return 1
-
-    try:
-        status = client.node_get_status(CONFIG_CANDIDATE, BASE_ADDRESS_PATH)
+        status = client.node_get_status(CONFIG_CANDIDATE, BASE_CGNAT_PATH)
 
         if status == client.UNCHANGED and not FORCE:
             dbg.pprint("unchanged: {} so no work to do".
-                       format(BASE_ADDRESS_PATH))
+                       format(BASE_CGNAT_PATH))
             return 0
 
         try:
-            cand_cfg = (client.tree_get_dict(BASE_ADDRESS_PATH,
-                                             CONFIG_CANDIDATE, 'internal')
+            cand_cfg = (client.tree_get_dict(BASE_CGNAT_PATH,
+                                             CONFIG_CANDIDATE,
+                                             'internal')
                         ['cgnat'])
             dbg.pprint("BUILD CANDIDATE")
             build_cgnat_config(commands, cand_cfg, 'cand')
         except configd.Exception:
-            dbg.pprint("failed getting candidtate tree for {}".
-                       format(BASE_ADDRESS_PATH))
+            dbg.pprint("failed getting candidate tree for {}".
+                       format(BASE_CGNAT_PATH))
 
     except configd.Exception:
         dbg.pprint("there is no configuration under {}".format(
-                   BASE_ADDRESS_PATH))
+                   BASE_CGNAT_PATH))
 
     try:
-        running_cfg = client.tree_get_dict(BASE_ADDRESS_PATH, CONFIG_RUNNING,
-                                           'internal')['cgnat']
+        running_cfg = (client.tree_get_dict(BASE_CGNAT_PATH,
+                                            CONFIG_RUNNING,
+                                            'internal')
+                       ['cgnat'])
         dbg.pprint("BUILD RUNNING")
         build_cgnat_config(commands, running_cfg, 'running')
     except configd.Exception:
         dbg.pprint("failed getting running tree for {}".format(
-                   BASE_ADDRESS_PATH))
+                   BASE_CGNAT_PATH))
 
-    # send commands to the dataplane using cstore which will change
+    # Send commands to the dataplane using cstore, which will change
     # the running configuration into the candidate configuration
     send_cgnat_config(commands)
     return 0
 
 
+def write_fluentbit_wrapper_config():
+
+    """ Write the fluentbit wrapper file
+        which pulls together the system, input, and output files.
+    """
+
+    # TODO: this could be a static file
+
+    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
+    f = open("{}/td-agent-bit.cfg".format(CFG_DIR), "w")
+    f.write("@INCLUDE cgnat*.conf\n")
+    f.close()
+
+
+def write_fluentbit_output_config(events_cfg, commands):
+
+    """ Write the fluentbit output file """
+
+    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
+    f = open("{}/cgnat-output.conf".format(CFG_DIR), "w")
+
+    # Track whether any OUTPUT sections were written to the file
+    wrote_output = False
+
+    # Don't write any output if there are no events configured
+    if events_cfg:
+
+        # Iterate through "system export kafka cluster N"
+        for cluster in commands.keys():
+
+            f.write("[OUTPUT]\n")
+            f.write("    Name                  kafka\n")
+            f.write("    Format                raw\n")
+            f.write("    Topic_Key             topic\n")
+            f.write("    Message_Key           key\n")
+            f.write("    Message_Key_Is_Name   true\n")
+
+            # Brokers comes from commands['ipv4-address'] and ['ipv6-address']
+            # Either list may be "None" if empty.
+            ipv4_addrs = commands[cluster]['cand'].get('ipv4-address')
+            ipv6_addrs = commands[cluster]['cand'].get('ipv6-address')
+            if ipv4_addrs or ipv6_addrs:
+                v4_str = ' '.join(ipv4_addrs or {})
+                v6_str = ' '.join(ipv6_addrs or {})
+                f.write("    Brokers               {} {}\n".
+                        format(v4_str, v6_str))
+
+            f.write("    Routing_Instance      {}\n".
+                    format(commands[cluster]['cand']
+                           ['routing-instance']))
+
+            # Build a list of topics
+            # for the configured events ('session', 'subscriber', ...)
+            # which are using this cluster.
+            events = set()
+            for event in events_cfg:
+                if cluster in \
+                        events_cfg[event]['using']['kafka']['cluster']:
+                    events.add(events_cfg[event]['using']['kafka']
+                                         ['with']['topic'])
+            f.write("    Topics                {}\n".format(",".join(events)))
+
+            f.write("    Match                 *\n")
+            f.write("    Retry_Limit           false\n")
+
+            wrote_output = True
+
+    f.close()
+
+    return wrote_output
+
+
+def send_system_export_config(commands):
+
+    """ Send config for 'system_export' """
+
+    dbg.pprint("send_system_export_config()")
+
+    if 'export' in commands:
+
+        # Get the "cgant export event" config
+        # so we can extract the names of the configured events.
+
+        events_cfg = None
+
+        try:
+            events_cfg = (client.tree_get_dict(BASE_CGNAT_PATH,
+                                               CONFIG_CANDIDATE,
+                                               'internal')
+                          ['cgnat'])
+            if 'export' in events_cfg and 'event' in events_cfg['export']:
+                events_cfg = events_cfg['export']['event']
+            else:
+                events_cfg = None
+
+        except configd.Exception:
+            # There are no events configured, and that's OK.
+            dbg.pprint("failed getting candidate tree for {}".
+                       format(BASE_CGNAT_PATH))
+
+        # Ensure that the fluentbit config wrapper and service file exist
+        write_fluentbit_wrapper_config()
+        send_cgnat_fluentbit_service_config()
+
+        # Write the "output" config file.
+        # The return value tells us whether any output sections were written,
+        # which tells us whether to stop or to restart fluentbit.
+        r = write_fluentbit_output_config(events_cfg, commands['export'])
+        restart_fluentbit(r)
+
+
+def program_system_export_config(FORCE):
+
+    """ Build and send top-level 'system export' config """
+
+    global client
+
+    commands = {}
+
+    try:
+        status = client.node_get_status(CONFIG_CANDIDATE,
+                                        BASE_SYSTEM_CGNAT_PATH)
+
+        if status == client.UNCHANGED and not FORCE:
+            dbg.pprint("unchanged: {} so no work to do".
+                       format(BASE_SYSTEM_CGNAT_PATH))
+            return 0
+
+        try:
+            cand_cfg = (client.tree_get_dict(BASE_SYSTEM_CGNAT_PATH,
+                                             CONFIG_CANDIDATE,
+                                             'internal')
+                        ['export'])
+            dbg.pprint("BUILD CANDIDATE")
+            build_export_config(commands, cand_cfg, 'cand')
+        except configd.Exception:
+            dbg.pprint("failed getting candidate tree for {}".
+                       format(BASE_SYSTEM_CGNAT_PATH))
+
+    except configd.Exception:
+        dbg.pprint("there is no configuration under {}".format(
+                   BASE_SYSTEM_CGNAT_PATH))
+
+    try:
+        running_cfg = (client.tree_get_dict(BASE_SYSTEM_CGNAT_PATH,
+                                            CONFIG_RUNNING,
+                                            'internal')
+                       ['export'])
+        dbg.pprint("BUILD RUNNING")
+        build_export_config(commands, running_cfg, 'running')
+    except configd.Exception:
+        dbg.pprint("failed getting running tree for {}".format(
+                   BASE_SYSTEM_CGNAT_PATH))
+
+    # Send commands to the dataplane using cstore, which will change
+    # the running configuration into the candidate configuration
+    send_system_export_config(commands)
+    return 0
+
+
 if __name__ == "__main__":
     process_options()
-    ret = program_cgnat_config()
+
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        err("Cannot establish client session: '{}'".format(str(exc).strip()))
+        exit(1)
+
+    if DO_CGNAT:
+        ret = program_cgnat_config()
+    elif DO_EXPORT:
+        ret = program_system_export_config(FORCE)
+    else:
+        ret = -1
     exit(ret)

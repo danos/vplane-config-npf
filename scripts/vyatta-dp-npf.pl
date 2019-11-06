@@ -386,11 +386,10 @@ sub cmd_update {
 
             #iterate over group
             my $rules = "npf-cfg add $rule_group_class:$group $r ";
-            my $kernel_table;
+            my $pbr_table;
 
             # pbr "accept" action needs a table id
             if ( $variant eq "route" ) {
-                my $pbr_table;
                 my $action =
                   $config->returnValue("$config_prefix $group rule $r action");
                 if ( defined($action) && $action eq "accept" ) {
@@ -410,24 +409,15 @@ sub cmd_update {
                     system(
     "/opt/vyatta/sbin/vrf-manager --add-table $vrf $pbr_table > /dev/null 2>&1"
                     );
-                    $kernel_table =
-                      `/opt/vyatta/sbin/getvrftable --pbr-table $vrf $pbr_table`;
-                } else {
-
-                    # If VRF isn't available then getvrftable isn't
-                    # available, but we can rely on the identity mapping
-                    # for the default VRF
-                    $kernel_table = $pbr_table
-                      if defined($pbr_table);
                 }
             }
 
             if ( $variant eq "app-firewall" ) {
                 $rules .= build_app_rule( "$config_prefix $group rule $r",
-                    $kernel_table );
+                    $pbr_table );
             } else {
                 $rules .=
-                  build_rule( "$config_prefix $group rule $r", $kernel_table );
+                  build_rule( "$config_prefix $group rule $r", $pbr_table );
                 $check_for_warnings = 1
                   if (index($rules, " stateful=y ") != -1);
             }

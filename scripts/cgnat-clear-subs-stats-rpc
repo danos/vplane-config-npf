@@ -1,0 +1,80 @@
+#!/usr/bin/python3
+
+#
+# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+""" This is run to clear the statistics of selected CGNAT subscribers """
+
+
+import os
+import sys
+import getopt
+import vplaned
+import json
+from vyatta.npf.npf_debug import NpfDebug
+
+
+PROGNAME = os.path.basename(__file__)
+DATAPLANE_CMD = 'cgn-op clear subscriber'
+
+# class used for printing debugs
+dbg = NpfDebug()
+
+
+def err(msg):
+    print(msg, file=sys.stderr)
+
+
+def process_options():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "d", ['debug'])
+
+    except getopt.GetoptError as r:
+        err(r)
+        err("usage: {} [-d|--debug] ".format(sys.argv[0]))
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ('-d', '--debug'):
+            dbg.enable()
+
+
+param_mappings = {
+    'subscriber-ip-address-prefix': 'subs-addr',
+}
+
+
+def clear_cgnat_subs():
+    try:
+        rpc_input = json.load(sys.stdin)
+    except ValueError as exc:
+        err("Failed to parse input JSON: {}".format(exc))
+        return 1
+
+    args = DATAPLANE_CMD
+
+    for param, value in rpc_input.items():
+        dp_param = param_mappings.get(param)
+        if dp_param is None:
+            err("{}: unknown rpc input option: {}".format(PROGNAME, param))
+            return 2
+
+        args += " {} {} {}".format(dp_param, value, "statistics")
+
+    dbg.pprint("dp command: {}".format(args))
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(args)
+
+    return 0
+
+
+if __name__ == "__main__":
+    process_options()
+    ret = clear_cgnat_subs()
+    exit(ret)

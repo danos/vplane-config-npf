@@ -17,6 +17,9 @@ module vyatta-op-service-nat-cgnat-v1 {
     import vyatta-op-npf-types-v1 {
         prefix op-npf-types;
     }
+    import vyatta-op-update-v1 {
+        prefix update;
+    }
 
     organization "AT&T Inc.";
     contact
@@ -28,36 +31,54 @@ module vyatta-op-service-nat-cgnat-v1 {
     description
         "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
 
-        Redistribution and use in source and binary forms, with or without
-        modification, are permitted provided that the following conditions
-        are met:
+        Redistribution and use in source and binary forms,
+        with or without modification, are permitted provided
+        that the following conditions are met:
 
-        1. Redistributions of source code must retain the above copyright
-           notice, this list of conditions and the following disclaimer.
-        2. Redistributions in binary form must reproduce the above
-           copyright notice, this list of conditions and the following
-           disclaimer in the documentation and/or other materials provided
-           with the distribution.
-        3. Neither the name of the copyright holder nor the names of its
-           contributors may be used to endorse or promote products derived
-           from this software without specific prior written permission.
+        1. Redistributions of source code must retain the
+           above copyright notice, this list of conditions and
+           the following disclaimer.
+        2. Redistributions in binary form must reproduce
+           the above copyright notice, this list of conditions
+           and the following disclaimer in the documentation
+           and/or other materials provided with the distribution.
+        3. Neither the name of the copyright holder nor the
+           names of its contributors may be used to endorse or
+           promote products derived from this software without
+           specific prior written permission.
 
-        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-        'AS IS' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-        LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-        FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-        COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-        INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-        BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-        LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-        LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-        ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-        POSSIBILITY OF SUCH DAMAGE.
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+        AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+        WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+        WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+        PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+        THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+        ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+        OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+        TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+        OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+        HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+        IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+        NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+        USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+        OF SUCH DAMAGE.
 
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT operation mode commands";
+
+    revision 2019-10-23 {
+        description "Add destination params to filter. " +
+                    "Add range to session count. " +
+                    "Added clear errors." +
+                    "Added update commands.";
+    }
+
+    revision 2019-09-03 {
+        description "Added clear session statistics. " +
+                    "Added clear subscriber statistics. " +
+                    "Added clear policy statistics.";
+    }
 
     revision 2019-07-19 {
         description "Initial revision.";
@@ -96,6 +117,18 @@ module vyatta-op-service-nat-cgnat-v1 {
 
         opd:option public-port {
             opd:help "Match public port";
+            type inet:port-number {
+                opd:pattern-help "<port>";
+            }
+        }
+
+        opd:option destination-address {
+            opd:help "Match destination IPv4 address with optional mask";
+            type op-ipv4-addr-opt-mask;
+        }
+
+        opd:option destination-port {
+            opd:help "Match destination port";
             type inet:port-number {
                 opd:pattern-help "<port>";
             }
@@ -216,22 +249,24 @@ module vyatta-op-service-nat-cgnat-v1 {
                 uses session-filter;
 
                 opd:command exclude-inner {
-                    opd:help "Exclude inner per-destination sessions.";
+                    opd:help "Exclude inner per-destination sessions";
                 }
                 opd:command detail {
-                    opd:help "Show detailed session information.";
+                    opd:help "Show detailed session information";
                 }
                 opd:option count {
-                    opd:help "The requested number of entries to return.";
+                    opd:help "The requested number of entries to return";
                     description "The requested number of entries to return. If " +
                                 "not provided then all entries will be returned. " +
                                 "Note that more entries than requested may be " +
                                 "returned due to providing all related " +
                                 "destination entries.";
-                    type uint64;
+                    type uint32 {
+                        range 1..100000;
+                    }
                 }
                 opd:command unordered {
-                    opd:help "Return sessions unordered.";
+                    opd:help "Return sessions unordered";
                     description "By default, the show session command will fetch " +
                              "and display the sessions for each subscriber in " +
                              "order of subscriber address and subscriber port. " +
@@ -255,12 +290,89 @@ module vyatta-op-service-nat-cgnat-v1 {
             opd:help "Clear CGNAT information";
 
             opd:command session {
-                opd:help "Delete matching CGNAT sessions";
+                opd:help "Delete or clear statistics for matching CGNAT sessions";
                 opd:repeatable true;
                 opd:inherit "session filters for clearing" {
                     opd:on-enter "vyatta-dp-cgnat-sess-op-yang clear ${@: 4}";
                 }
                 uses session-filter;
+                opd:option statistics {
+                    opd:help "Clear CGNAT session statistics";
+                }
+            }
+            opd:command policy {
+                opd:help "Clear CGNAT policy information";
+                opd:argument policyname {
+                    opd:help "Clear CGNAT policy information for specified " +
+                             "policy";
+                    type op-npf-types:op-group-name {
+                       opd:pattern-help "<policy-name>";
+                    }
+                    opd:allowed "allowed-nodes service nat cgnat policy";
+
+                    opd:command statistics {
+                        opd:help "Clear CGNAT policy statistics for " +
+                                 "specified policy";
+                        opd:on-enter "vyatta-dp-cgnat-op --clear policy " +
+                                     "--stats --name ${@: -2}";
+                    }
+                }
+            }
+            opd:command subscriber {
+                opd:help "Clear CGNAT subscriber information";
+
+                opd:argument subscriber-prefix {
+                    opd:help "Clear CGNAT subscriber information for " +
+                             "matching subscribers";
+                    type op-ipv4-addr-opt-mask;
+
+                    opd:command statistics {
+                        opd:help "Clear CGNAT subscriber statistics for " +
+                                 "specified subscriber";
+                        opd:on-enter "vyatta-dp-cgnat-subs-op --clear " +
+                                     "--stats --subs-addr ${@: -2}";
+                    }
+                }
+            }
+            opd:command errors {
+                opd:help "Clear CGNAT error counters";
+                opd:on-enter "vyatta-dp-cgnat-op --clear errors";
+            }
+        }
+    }
+
+    opd:augment /update:update {
+        opd:command cgnat {
+            opd:help "Update CGNAT information";
+
+            opd:command session {
+                opd:help "Update statistics for matching CGNAT sessions";
+                opd:repeatable true;
+                opd:inherit "session filters for clearing" {
+                    opd:on-enter "vyatta-dp-cgnat-sess-op-yang update ${@: 4}";
+                }
+                uses session-filter;
+                opd:option statistics {
+                    opd:help "Update CGNAT session statistics";
+                }
+            }
+            opd:command subscriber {
+                opd:help "Update CGNAT subscriber information";
+
+                opd:argument subscriber-prefix {
+                    opd:help "Update CGNAT subscriber information for " +
+                             "matching subscribers";
+                    type op-ipv4-addr-opt-mask;
+                    opd:command statistics {
+                        opd:help "Update CGNAT subscriber statistics";
+                        opd:on-enter "vyatta-dp-cgnat-subs-op --update " +
+                                     "--stats --subs-addr ${@: -2}";
+                    }
+                }
+                opd:command statistics {
+                    opd:help "Update CGNAT subscriber statistics";
+                    opd:on-enter "vyatta-dp-cgnat-subs-op --update --stats";
+                }
             }
         }
     }

@@ -136,6 +136,12 @@ def build_nat_pool_config(commands, cfg, tree):
                         dba['max-blocks-per-subscriber'])
 
         log_pba = 'no'
+        # New CLI, "service nat pool NNNN select event port-block-allocation"
+        if 'select' in p:
+            if 'event' in p['select']:
+                if 'port-block-allocation' in p['select']['event']:
+                    log_pba = 'yes'
+        # Old CLI, "service nat pool NNNN log block-allocation"
         if 'log' in p:
             if 'block-allocation' in p['log']:
                 log_pba = 'yes'

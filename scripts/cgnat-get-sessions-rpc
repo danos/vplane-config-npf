@@ -93,6 +93,8 @@ def sess_rpc(entry, list):
                 rpc_entry['rtt-internal'] = dentry['rtt_int']
             if 'rtt_ext' in dentry:
                 rpc_entry['rtt-external'] = dentry['rtt_ext']
+            if 'hist' in dentry:
+                rpc_entry['state-history'] = dentry['hist']
             get_other_sess_info(dentry, rpc_entry)
 
             list.append(rpc_entry)
@@ -100,6 +102,10 @@ def sess_rpc(entry, list):
     else:
         rpc_entry = {}
         get_base_sess_info(entry, rpc_entry, len(list))
+        if entry['init_dst_port']:
+            rpc_entry['destination-port'] = entry['init_dst_port']
+        else:
+            rpc_entry['destination-port'] = 0
         rpc_entry['sub-session-id'] = 0
         get_other_sess_info(entry, rpc_entry)
 
@@ -113,6 +119,8 @@ param_mappings = {
     'interface': 'intf',
     'public-ip-address-prefix': 'pub-addr',
     'public-port': 'pub-port',
+    'destination-ip-address-prefix': 'dst-addr',
+    'destination-port': 'dst-port',
     'session-id': 'id1',
     'sub-session-id': 'id2',
     'pool-name': 'pool',

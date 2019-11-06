@@ -1,0 +1,252 @@
+module vyatta-system-alg-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-system-alg:1";
+	prefix vyatta-system-alg-v1;
+
+	import vyatta-system-v1 {
+		prefix system;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 25202
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2018-2019, AT&T Intellectual Property.
+		 All rights reserved.
+		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms,
+		 with or without modification, are permitted provided
+		 that the following conditions are met:
+
+		 1. Redistributions of source code must retain the
+		    above copyright notice, this list of conditions and
+		    the following disclaimer.
+		 2. Redistributions in binary form must reproduce
+		    the above copyright notice, this list of conditions
+		    and the following disclaimer in the documentation
+		    and/or other materials provided with the distribution.
+		 3. Neither the name of the copyright holder nor the
+		    names of its contributors may be used to endorse or
+		    promote products derived from this software without
+		    specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+		 AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+		 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+		 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+		 PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+		 THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+		 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+		 OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+		 TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+		 OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+		 HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+		 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+		 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+		 OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta ALG configuration";
+
+	revision 2019-06-10 {
+		description "Obsolete disabling RSH ALG.";
+	}
+	revision 2018-09-12 {
+		description "Updated description.";
+	}
+	revision 2018-03-27 {
+		description "Obsolete disabling ICMP ALG.";
+	}
+	revision 2017-02-24 {
+		description "Rework YANG nodeset != comparison.";
+	}
+	revision 2016-08-05 {
+		description "Add descriptions to many nodes.";
+	}
+	revision 2016-04-04 {
+		description "Added alg-grouping";
+	}
+	revision 2015-12-16 {
+		description "Add rsh ALG control.";
+	}
+	revision 2015-10-22 {
+		description "Initial revision.";
+	}
+	grouping alg-grouping {
+		container alg {
+			presence "configure ALGs";
+			description "ALG control options.";
+			configd:help "Connection tracking modules settings";
+			container icmp {
+				presence "obsolete";
+				leaf disable {
+					type empty;
+				}
+				status obsolete;
+			}
+			container pptp {
+				presence "configure PPTP ALG";
+				description "PPTP ALG control options.";
+				configd:help "PPTP connection tracking settings";
+				configd:end "vyatta-dp-npf-alg.pl --module=pptp --vrfid=$VAR(../../../../routing-instance/@)";
+				leaf disable {
+					type empty;
+					description "Disable PPTP connection tracking";
+					configd:help "Disable PPTP connection tracking";
+				}
+			}
+			container tftp {
+				presence "configure TFTP ALG";
+				description "TFTP ALG control options.";
+				configd:help "TFTP connection tracking settings";
+				configd:end "vyatta-dp-npf-alg.pl --module=tftp --vrfid=$VAR(../../../../routing-instance/@)";
+				leaf disable {
+					type empty;
+					description "Disable TFTP connection tracking";
+					configd:help "Disable TFTP connection tracking";
+				}
+				leaf-list port {
+					max-elements 32;
+					description "TFTP control port";
+					configd:help "TFTP control port";
+					type uint16 {
+						range 1..65535;
+					}
+					must "(not(current() = ../../ftp/port))" {
+						error-message "TFTP ports cannot contain FTP ports.";
+					}
+					must "((../../ftp/disable or count(../../ftp/port) > 0) or not(current() = 21))" {
+						error-message "TFTP cannot set port 21 unless FTP has port(s) set or is disabled.";
+					}
+					must "(not(current() = ../../sip/port))" {
+						error-message "TFTP ports cannot contain SIP ports.";
+					}
+					must "((../../sip/disable or count(../../sip/port) > 0) or not(current() = 5060))" {
+						error-message "TFTP cannot set port 5060 unless SIP has port(s) set or is disabled.";
+					}
+					must "(../../rpc/disable or not(current() = 111))" {
+						error-message "TFTP cannot set port 111 unless RPC ALG is disabled";
+					}
+					must "(../../rsh/disable or not(current() = 514))" {
+						error-message "TFTP cannot set port 514 unless RSH ALG is disabled";
+					}
+				}
+			}
+			container ftp {
+				presence "configure FTP ALG";
+				description "FTP ALG control options.";
+				configd:help "FTP connection tracking settings";
+				configd:end "vyatta-dp-npf-alg.pl --module=ftp --vrfid=$VAR(../../../../routing-instance/@)";
+				leaf disable {
+					type empty;
+					description "Disable FTP connection tracking";
+					configd:help "Disable FTP connection tracking";
+				}
+				leaf-list port {
+					max-elements 32;
+					description "FTP control port";
+					configd:help "FTP control port";
+					type uint16 {
+						range 1..65535;
+					}
+					must "(not(current() = ../../tftp/port))" {
+						error-message "FTP ports cannot contain TFTP ports.";
+					}
+					must "((../../tftp/disable or count(../../tftp/port) > 0) or not(current() = 69))" {
+						error-message "FTP cannot set port 69 unless TFTP has port(s) set or is disabled.";
+					}
+					must "(not(current() = ../../sip/port))" {
+						error-message "FTP ports cannot contain SIP ports.";
+					}
+					must "((../../sip/disable or count(../../sip/port) > 0) or not(current() = 5060))" {
+						error-message "FTP cannot set port 5060 unless SIP has port(s) set or is disabled.";
+					}
+					must "(../../rpc/disable or not(current() = 111))" {
+						error-message "FTP cannot set port 111 unless RPC ALG is disabled";
+					}
+					must "(../../rsh/disable or not(current() = 514))" {
+						error-message "FTP cannot set port 514 unless RSH ALG is disabled";
+					}
+				}
+			}
+			container sip {
+				presence "configure SIP ALG";
+				description "SIP ALG control options.";
+				configd:help "SIP connection tracking settings";
+				configd:end "vyatta-dp-npf-alg.pl --module=sip --vrfid=$VAR(../../../../routing-instance/@)";
+				leaf disable {
+					type empty;
+					description "Disable SIP connection tracking";
+					configd:help "Disable SIP connection tracking";
+				}
+				leaf-list port {
+					max-elements 32;
+					description "SIP control port";
+					configd:help "SIP control port";
+					type uint16 {
+						range 1..65535;
+					}
+					must "(not(current() = ../../tftp/port))" {
+						error-message "SIP ports cannot contain TFTP ports.";
+					}
+					must "((../../tftp/disable or count(../../tftp/port) > 0) or not(current() = 69))" {
+						error-message "SIP cannot set port 69 unless TFTP has port(s) set or is disabled.";
+					}
+					must "(not(current() = ../../ftp/port))" {
+						error-message "SIP ports cannot contain FTP ports.";
+					}
+					must "((../../ftp/disable or count(../../ftp/port) > 0) or not(current() = 21))" {
+						error-message "SIP cannot set port 21 unless FTP has port(s) set or is disabled.";
+					}
+					must "(../../rpc/disable or not(current() = 111))" {
+						error-message "SIP cannot set port 111 unless RPC ALG is disabled";
+					}
+					must "(../../rsh/disable or not(current() = 514))" {
+						error-message "SIP cannot set port 514 unless RSH ALG is disabled";
+					}
+				}
+			}
+			container rpc {
+				presence "configure RPC ALG";
+				description "RPC ALG control options.";
+				configd:help "RPC connection tracking settings";
+				configd:end "vyatta-dp-npf-alg.pl --module=rpc --vrfid=$VAR(../../../../routing-instance/@)";
+				leaf disable {
+					type empty;
+					description "Disable RPC connection tracking";
+					configd:help "Disable RPC connection tracking";
+				}
+				leaf-list program {
+					type uint32;
+					max-elements 32;
+					description "Configure allowed RPC programs";
+					configd:help "Configure allowed RPC programs";
+				}
+
+			}
+			container rsh {
+				status obsolete;
+				description "RSH ALG control options.";
+				configd:help "RSH connection tracking settings";
+				leaf disable {
+					type empty;
+					description "Disable RSH connection tracking";
+					configd:help "Disable RSH connection tracking";
+				}
+			}
+		}
+	}
+	augment /system:system {
+		uses alg-grouping;
+	}
+}
