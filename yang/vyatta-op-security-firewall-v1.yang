@@ -66,6 +66,11 @@ module vyatta-op-security-firewall-v1 {
 
 		 YANG module for firewall-related operation mode commands.";
 
+	revision 2019-11-13 {
+		description "Don't request zones when showing firewalls as
+			     they are not supported.";
+	}
+
 	revision 2019-02-08 {
 		description "Make 'show firewall' suggest 'lo' as interface.";
 	}
@@ -92,18 +97,18 @@ module vyatta-op-security-firewall-v1 {
 
 		opd:command firewall {
 			opd:help "Show dataplane firewall information";
-			opd:on-enter "vyatta-dp-npf-show-rules all: fw-in fw-out local bridge zone";
+			opd:on-enter "vyatta-dp-npf-show-rules all: fw-in fw-out local bridge";
 
 			opd:command detail {
 				opd:help "Show dataplane firewall detail information";
-				opd:on-enter "vyatta-dp-npf-show-rules --detail all: fw-in fw-out local bridge zone";
+				opd:on-enter "vyatta-dp-npf-show-rules --detail all: fw-in fw-out local bridge";
 			}
 
 			opd:argument name {
 				opd:help "Show dataplane firewall information";
 				type op-npf-types:op-ifname;
 				opd:allowed "vyatta-interfaces.pl --show all";
-				opd:on-enter "vyatta-dp-npf-show-rules interface:$3 fw-in fw-out local bridge zone";
+				opd:on-enter "vyatta-dp-npf-show-rules interface:$3 fw-in fw-out local bridge";
 			}
 		}
 
