@@ -1,3 +1,9 @@
+vplane-config-npf (1.12.16.2) unstable; urgency=medium
+
+  * Don't request zones when showing firewalls (zones are not supported)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 14 Nov 2019 14:14:53 +0000
+
 vplane-config-npf (1.12.16.1) unstable; urgency=medium
 
   * DANOS Import
