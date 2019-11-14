@@ -309,7 +309,7 @@ module vyatta-npf-v1 {
 			// Note that this check used for custom timeout
 			// does not check the number version of protocols
 			// 'icmp' and 'ipv6-icmp' (1 and 58) for backward
-			// compatability - in future should merge with
+			// compatibility - in future should merge with
 			// rules-ip-address below and also check these.
 
 			// IPv6 addresses may also contain dots, so need to
