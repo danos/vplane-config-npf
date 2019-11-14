@@ -76,7 +76,7 @@ def send_nat_pool_config(commands):
 
         if rc is None:
             if cc is not None:
-                # this is new configuratiom
+                # this is new configuration
                 set_rules_in_nat_pool(cc[0], "add {} {}".format(poolname,
                                                                 cc[1]))
         else:

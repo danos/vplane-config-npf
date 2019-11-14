@@ -970,7 +970,7 @@ def main():
     try:
         commit_action = os.environ["COMMIT_ACTION"]
     except:
-        print("Unspecified commmit action\n")
+        print("Unspecified commit action\n")
         return 1
 
     if args.group:

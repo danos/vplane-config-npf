@@ -612,7 +612,7 @@ def nat64_show_trans_brief_headline(in_key, in_se, out_key, out_se):
 # nat64_show_trans_brief
 #
 # Whilst this is not a tabular output, we do make some attempt to line up the
-# dest addresses using a 'src_col' width paramater.
+# dest addresses using a 'src_col' width parameter.
 #
 def nat64_show_trans_brief(is_ingress, id, se, src_col):
     if not se:
@@ -678,7 +678,7 @@ def nat64_show_trans(in_key, in_se, out_key, out_se, src_col, detail):
 #             e.g. "12"
 #
 # Whilst this is not a tabular output, we do make some attempt to line up the
-# dest addresses using a 'src_col' width paramater.  This will expand, as
+# dest addresses using a 'src_col' width parameter.  This will expand, as
 # required.
 #
 def nat64_show_trans_all(keys, sess_dict, detail):
