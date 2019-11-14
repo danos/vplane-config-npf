@@ -71,6 +71,10 @@ module vyatta-op-security-firewall-v1 {
 
 		 YANG module for firewall-related operation mode commands.";
 
+	revision 2019-11-14 {
+		description "Correct spellings of 'specified'";
+	}
+
 	revision 2019-02-08 {
 		description "Make 'show firewall' suggest 'lo' as interface.";
 	}
@@ -244,13 +248,13 @@ module vyatta-op-security-firewall-v1 {
 			opd:help "Monitor firewall";
 
 			opd:option name {
-				opd:help "Monitor the specifed firewall";
+				opd:help "Monitor the specified firewall";
 				type op-npf-types:op-ruleset-name;
 				opd:allowed "allowed-nodes security firewall name";
 				opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local) rule $4:[0-9]+ "';
 
 				opd:option rule {
-					opd:help "Monitor a rule in the specifed firewall";
+					opd:help "Monitor a rule in the specified firewall";
 					type op-npf-types:op-rule-number;
 					opd:allowed "allowed-nodes security firewall name ${COMP_WORDS[3]} rule";
 					opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local) rule $4:$6 "';
