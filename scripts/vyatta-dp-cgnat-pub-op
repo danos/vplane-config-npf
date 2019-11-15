@@ -69,9 +69,124 @@ def cgn_get_public_list(prefix):
 
 
 #
+# Show one public address, with bitmap details.
+#
+# Each line holds a bitmap for 64 ports.  So if a port-block size is 128 then
+# there will be two lines per protocol per port-block.
+#
+# This function format and outputs the latter five columns (blk_str, pr_str
+# and bm_str):
+#
+# <--------------- pfx_str ----------------><--- blk_str ---><--pr_str--><---- bm_str ----->
+#
+# Public Address  Port Range #Prts Blks Used  Blk  Port range Proto Ports            Bitmaps
+#      10.10.4.1  1024-65535 64512    3/1008    0   1024-1087   tcp     0 0x0000000000000000
+#                                                               udp    64 0xffffffffffffffff
+#                                                             other     0 0x0000000000000000
+#                                               1   1088-1151   tcp     0 0x0000000000000000
+#                                                               udp    64 0xffffffffffffffff
+#                                                             other     0 0x0000000000000000
+#                                               2   1152-1215   tcp     0 0x0000000000000000
+#                                                               udp     2 0x0000000000000003
+#                                                             other     0 0x0000000000000000
+#
+def cgn_op_show_pub_block_detail(pub, pfx_len):
+
+    # Get port-block array
+    blocks = pub.get('blocks')
+
+    pfx_indent = 0
+    first_blk = True
+
+    for block in blocks:
+        port_range = "%u-%u" % (block.get('port_start'), block.get('port_end'))
+        blk_str = " %4s %11s" % (block.get('block'), port_range)
+
+        print("%*s%s" % (pfx_indent, "", blk_str), end='')
+        pfx_indent = 0
+
+        # Protocol list
+        protocols = block.get('protocols')
+
+        first_pr = True
+        blk_indent = 0
+
+        for proto in protocols:
+            pr_str = " %5s %5u" % (proto.get('protocol'),
+                                   proto.get('ports_used'))
+
+            print("%*s%*s%s" % (pfx_indent, "", blk_indent, "", pr_str), end='')
+
+            pfx_indent = 0
+            blk_indent = 0
+
+            # Bitmap list
+            bms = proto.get('bitmaps')
+
+            first_bm = True
+            pr_indent = 0
+
+            # Second and later bitmaps are on a line (at the end) by themselves
+            for bm in bms:
+
+                print("%*s%*s%*s 0x%016x" % (pfx_indent, "", blk_indent, "",
+                                             pr_indent, "", bm))
+
+                if first_bm:
+                    pr_indent = len(pr_str)
+                    blk_indent = len(blk_str)
+                    pfx_indent = pfx_len
+                    first_bm = False
+
+            if first_pr:
+                first_pr = False
+
+        # For subsequent lines we indent by the prefix string length
+        if first_blk:
+            blk_indent = 0
+            first_blk = False
+
+    return
+
+
+#
+# Show one public address, without bitmap details (default).  Each port-block
+# is displayed on a new line.
+#
+# <--------------- pfx_str ----------------><--- blk_str ---><--- pr_str ---->
+#
+# Public Address  Port Range #Prts Blks Used  Blk  Port range   TCP  UDP Other
+#      10.10.4.1  1024-65535 64512    3/1008    0   1024-1087     0   64     0
+#                                               1   1088-1151     0   64     0
+#
+def cgn_op_show_pub_block_brief(pub, pfx_len):
+    # Get port-block array
+    blocks = pub.get('blocks')
+
+    pfx_indent = 0
+
+    for block in blocks:
+        port_range = "%u-%u" % (block.get('port_start'), block.get('port_end'))
+        blk_str = " %4s %11s" % (block.get('block'), port_range)
+
+        print("%*s%s" % (pfx_indent, "", blk_str), end='')
+        pfx_indent = pfx_len
+
+        # Protocol list
+        protocols = block.get('protocols')
+
+        for proto in protocols:
+            print(" %5u" % (proto.get('ports_used')), end='')
+
+        print()
+
+    return
+
+
+#
 # cgn_op_show_pub_one
 #
-def cgn_op_show_pub_one(pub):
+def cgn_op_show_pub_one(pub, detail):
     """Show one CGN public address"""
 
     addr = pub.get('address')
@@ -84,48 +199,25 @@ def cgn_op_show_pub_one(pub):
 
     blks_used = "%u/%u" % (len(blocks), pub.get('nblocks'))
 
-    pfx = "%15s %11s %5s %9s" % (addr, port_range, nports, blks_used)
+    pfx_str = "%15s %11s %5s %9s" % (addr, port_range, nports, blks_used)
 
     # Remember the length of pfx before blocks and port ranges are added.
     # This is used for lines where pfx is empty.
-    pfx_len = len(pfx)
+    pfx_len = len(pfx_str)
 
-    for block in blocks:
-        port_range = "%u-%u" % (block.get('port_start'), block.get('port_end'))
-        nports = block.get('port_end') - block.get('port_start') + 1
+    print("%s" % (pfx_str), end='')
 
-        pfx = "%43s %4s %11s" % (pfx, block.get('block'), port_range)
-
-        # Protocol list
-        protocols = block.get('protocols')
-
-        for proto in protocols:
-            ports_used = "%5u" % (proto.get('ports_used'))
-            bms = proto.get('bitmaps')
-            name = proto.get('protocol')
-
-            if not bms:
-                continue
-
-            # Second and later bitmaps are on a line (at the end) by themselves
-            for bm in bms:
-                print("%s %5s %5s 0x%016x" % (pfx, name, ports_used, bm))
-                # pfx is a blank string after first bm
-                pfx = ' ' * (pfx_len + 12)
-                name = ' ' * 10
-                ports_used = ' ' * 5
-
-            # First bm in subsequent protocols is a partially blank line
-            pfx = ' ' * (pfx_len + 17)
-
-        # First bm in subsequent blocks is a partially blank line
-        pfx = ' ' * (pfx_len)
+    if detail:
+        cgn_op_show_pub_block_detail(pub, pfx_len)
+        return
+    else:
+        cgn_op_show_pub_block_brief(pub, pfx_len)
 
 
 #
 # cgn_op_show_pub_addr
 #
-def cgn_op_show_pub_addr(addr):
+def cgn_op_show_pub_addr(addr, detail):
     """
     Show one CGN pub addr
     addr may be a prefix/length or host.  If it is a host, then up to 3 apm
@@ -138,7 +230,8 @@ def cgn_op_show_pub_addr(addr):
     if addr:
         cmd = "%s address %s" % (cmd, addr)
 
-    cmd = "%s detail" % (cmd)
+    if detail:
+        cmd = "%s detail" % (cmd)
 
     with vplaned.Controller() as controller:
         for dp in controller.get_dataplanes():
@@ -153,27 +246,32 @@ def cgn_op_show_pub_addr(addr):
                     pub_list.extend(new)
 
     for pub in pub_list:
-        cgn_op_show_pub_one(pub)
+        cgn_op_show_pub_one(pub, detail)
 
 
 #
 # cgn_op_show_public
 #
-def cgn_op_show_public(pa_opt):
+def cgn_op_show_public(pa_opt, detail):
     """Show CGN public"""
 
     # Get list of sorted public addresses
     addr_list = cgn_get_public_list(pa_opt)
 
-    print("%15s %11s %5s %9s "
-          "%4s %11s %5s %5s %18s" % ("Public Address",
-                                     "Port Range",
-                                     "#Prts", "Blks Used",
-                                     "Blk", "Port range", "Proto",
-                                     "Ports", "Bitmaps"))
+    banner = "%15s %11s %5s %9s %4s %11s" % ("Public Address",
+                                             "Port Range",
+                                             "#Prts", "Blks Used",
+                                             "Blk", "Port range")
+
+    if detail:
+        banner += " %5s %5s %18s" % ("Proto", "Ports", "Bitmaps")
+    else:
+        banner += " %5s %5s %5s" % ("TCP", "UDP", "Other")
+
+    print(banner)
 
     for addr in addr_list:
-        cgn_op_show_pub_addr(addr)
+        cgn_op_show_pub_addr(addr, detail)
 
 
 #
@@ -194,6 +292,7 @@ def cgn_op_main():
 
     s_opt = False
     pa_opt = None
+    d_opt = False
 
     #
     # Parse options
@@ -201,7 +300,7 @@ def cgn_op_main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
-                                   ['show', 'pub-addr='])
+                                   ['show', 'detail', 'pub-addr='])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -212,12 +311,15 @@ def cgn_op_main():
         if opt in '--show':
             s_opt = True
 
+        if opt in '--detail':
+            d_opt = True
+
         if opt in '--pub-addr':
             pa_opt = arg
 
     # show ...
     if s_opt:
-        cgn_op_show_public(pa_opt)
+        cgn_op_show_public(pa_opt, d_opt)
 
 
 #

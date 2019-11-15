@@ -476,30 +476,30 @@ def cgn_sess_show_one_detail(outer, inner):
     exprd = "%s/%s" % (outer_exprd, inner_exprd)
 
     print("Session ID: %s, State: %s, Expired: %s" % (sid, state, exprd))
-    print("  Interface:       %20s" % (outer.get('intf')))
-    print("  Policy name:     %20s" % (outer.get('policy')))
-    print("  NAT pool:        %20s" % (outer.get('pool')))
-    print("  Timeout:         %20u (max %u)" % (cur_timeout, max_timeout))
-    print("  Duration:        %20s (%s)" % (time, units))
-    print("  Start time:      %20s" % (start_time))
-    print("  Ref count:       %20u" % (outer.get('refcnt')))
+    print("  Interface:         %20s" % (outer.get('intf')))
+    print("  Policy name:       %20s" % (outer.get('policy')))
+    print("  NAT pool:          %20s" % (outer.get('pool')))
+    print("  Timeout:           %20u (max %u)" % (cur_timeout, max_timeout))
+    print("  Duration:          %20s (%s)" % (time, units))
+    print("  Start time:        %20s" % (start_time))
     if proto == "tcp" and inner:
         print("  External RTT: %u,   Internal RTT: %u" %
               (inner.get('rtt_ext'), inner.get('rtt_int')))
-    print("  Mapping: %s/%s | %s/%s" % (outer.get('subs_addr'),
-                                        outer.get('subs_port'),
-                                        outer.get('pub_addr'),
-                                        outer.get('pub_port')))
-
-    print("  Out:     %s/%s --> %s, Proto: %s" %
+    if outer.get('init_dst_port'):
+        print("  Initial dest port: %20u" % (outer.get('init_dst_port')))
+    print("  Mapping:   %s/%s | %s/%s" % (outer.get('subs_addr'),
+                                          outer.get('subs_port'),
+                                          outer.get('pub_addr'),
+                                          outer.get('pub_port')))
+    print("  Out:       %s/%s --> %s, Proto: %s" %
           (outer.get('subs_addr'), outer.get('subs_port'),
            dst_info, proto))
-    print("    Pkts: %u, Bytes: %u" % (pkts_out, bytes_out))
+    print("    packets: %u, bytes: %u" % (pkts_out, bytes_out))
 
-    print("  In:      %s --> %s/%s, Proto: %s" %
+    print("  In:        %s --> %s/%s, Proto: %s" %
           (dst_info, outer.get('pub_addr'), outer.get('pub_port'),
            proto))
-    print("    Pkts: %u, Bytes: %u" % (pkts_in, bytes_in))
+    print("    packets: %u, bytes: %u" % (pkts_in, bytes_in))
 
     print()
 

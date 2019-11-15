@@ -67,11 +67,12 @@ module vyatta-op-service-nat-cgnat-v1 {
 
         YANG module for CGNAT operation mode commands";
 
-    revision 2019-10-23 {
+    revision 2019-11-15 {
         description "Add destination params to filter. " +
                     "Add range to session count. " +
                     "Added clear errors." +
-                    "Added update commands.";
+                    "Added update commands. " +
+                    "Added detail option to show public.";
     }
 
     revision 2019-09-03 {
@@ -211,19 +212,16 @@ module vyatta-op-service-nat-cgnat-v1 {
                     type op-ipv4-addr-opt-mask;
                     opd:on-enter "vyatta-dp-cgnat-subs-op --show " +
                                  "--subs-addr ${@: -1}";
-                }
 
+                    opd:command detail {
+                        opd:help "Show detailed CGNAT subscriber information";
+                        opd:on-enter "vyatta-dp-cgnat-subs-op --show --detail " +
+                                     "--subs-addr ${@: -2}";
+                    }
+                }
                 opd:command detail {
                     opd:help "Show detailed CGNAT subscriber information";
                     opd:on-enter "vyatta-dp-cgnat-subs-op --show --detail";
-
-                    opd:argument subscriber-prefix {
-                        opd:help "Show detailed CGNAT subscriber info for " +
-                                 "matching subscribers";
-                        type op-ipv4-addr-opt-mask;
-                        opd:on-enter "vyatta-dp-cgnat-subs-op --show " +
-                                     "--detail --subs-addr ${@: -1}";
-                    }
                 }
             }
 
@@ -237,6 +235,16 @@ module vyatta-op-service-nat-cgnat-v1 {
                     type op-ipv4-addr-opt-mask;
                     opd:on-enter "vyatta-dp-cgnat-pub-op --show " +
                                  "--pub-addr ${@: -1}";
+
+                    opd:command detail {
+                        opd:help "Show detailed CGNAT public address information";
+                        opd:on-enter "vyatta-dp-cgnat-pub-op --show --detail " +
+                                     "--pub-addr ${@: -2}";
+                    }
+                }
+                opd:command detail {
+                    opd:help "Show detailed CGNAT public address information";
+                    opd:on-enter "vyatta-dp-cgnat-pub-op --show --detail";
                 }
             }
 
@@ -332,6 +340,10 @@ module vyatta-op-service-nat-cgnat-v1 {
                         opd:on-enter "vyatta-dp-cgnat-subs-op --clear " +
                                      "--stats --subs-addr ${@: -2}";
                     }
+                }
+                opd:command statistics {
+                    opd:help "Clear CGNAT subscriber statistics";
+                    opd:on-enter "vyatta-dp-cgnat-subs-op --clear --stats";
                 }
             }
             opd:command errors {

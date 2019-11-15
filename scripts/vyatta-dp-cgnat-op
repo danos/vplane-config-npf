@@ -74,24 +74,42 @@ def cgn_op_show_summary():
                 print("    %-30s %18u" % ("Max",
                                           summary.get('subs_table_max')))
 
-                print("  %-32s %18u" % ("Out, packets",
-                                        summary.get('pkts_out')))
-                print("  %-32s %18u" % ("     bytes",
-                                        summary.get('bytes_out')))
-                print("  %-32s %18u" % ("In,  packets",
-                                        summary.get('pkts_in')))
-                print("  %-32s %18u" % ("     bytes",
-                                        summary.get('bytes_in')))
+                # Out
+                print("  %-32s" % ("Out:"))
+                print("    %-30s %18u" % ("Translated packets",
+                                          summary.get('pkts_out')))
+                print("    %-30s %18u" % ("           bytes",
+                                          summary.get('bytes_out')))
+                print("    %-30s %18u" % ("Did not match CGNAT policy",
+                                          summary.get('nopolicy')))
+                if summary.get('bypass'):
+                    print("    %-30s %18u" % ("ALG packets",
+                                              summary.get('bypass')))
+                print("    %-30s %18u" % ("Untranslatable packets",
+                                          summary.get('etrans')))
+                print("    %-30s %18u" % ("Hairpinned packets",
+                                          summary.get('pkts_hairpinned')))
 
-                print("  %-32s %18u" % ("Hairpinned packets",
-                                        summary.get('pkts_hairpinned')))
+                # In
+                print("  %-32s" % ("In:"))
+                print("    %-30s %18u" % ("Translated packets",
+                                          summary.get('pkts_in')))
+                print("    %-30s %18u" % ("           bytes",
+                                          summary.get('bytes_in')))
+                print("    %-30s %18u" % ("Did not match CGNAT session",
+                                          summary.get('nosess')))
+                if 'nopool' in summary:
+                    print("    %-30s %18u" % ("Did not match CGNAT pool",
+                                              summary.get('nopool')))
 
-                print("  %-32s %18u" % ("Did not match CGNAT policy",
-                                        summary.get('nopolicy')))
-                print("  %-32s %18u" % ("Did not match CGNAT session",
-                                        summary.get('nosess')))
-                print("  %-32s %18u" % ("Untranslatable packets",
-                                        summary.get('etrans')))
+                # PCP
+                if 'pcp_ok' in summary:
+                    print("  %-32s %18u" % ("PCP sessions created",
+                                            summary.get('pcp_ok')))
+                if 'pcp_err' in summary:
+                    print("  %-32s %18u" % ("PCP errors",
+                                            summary.get('pcp_err')))
+
                 print("  %-32s %18u" % ("Memory allocation failures",
                                         summary.get('enomem')))
                 print("  %-32s %18u" % ("Resource limitation failures",
@@ -100,9 +118,6 @@ def cgn_op_show_summary():
                                         summary.get('ethread')))
                 print("  %-32s %18u" % ("Packet buffer errors",
                                         summary.get('embuf')))
-                if summary.get('bypass'):
-                    print("  %-32s %18u" % ("ALG packets",
-                                            summary.get('bypass')))
                 print()
 
 
@@ -110,15 +125,14 @@ def cgn_op_show_summary():
 # Get error counts
 #
 def cgn_op_get_errors():
-    """Get cgnat error counts.  Returns 4 lists"""
+    """Get cgnat error counts.  Returns 2 dictionaries"""
 
-    # Sum of counts from all dataplanes
-    in_sum = []
-    out_sum = []
-
-    # Description and name strings
-    desc = []
-    name = []
+    #
+    # Create two new dictionaries, keyed by name, e.g. 'PCY_ENOENT'.  Each
+    # entry contains a sub-dictionary of 'count' and 'desc'.
+    #
+    in_d = {}
+    out_d = {}
 
     with vplaned.Controller() as controller:
         for dp in controller.get_dataplanes():
@@ -132,26 +146,34 @@ def cgn_op_get_errors():
                 out_errors = errors.get('out')
 
                 for i in range(0, len(in_errors)):
-                    if in_errors[i].get('errno') != out_errors[i].get('errno'):
-                        # should never happen
-                        return [], [], [], []
+                    key = in_errors[i].get('name')
+                    count = in_errors[i].get('count')
+                    desc = in_errors[i].get('desc')
 
-                    in_count = in_errors[i].get('count')
-                    out_count = out_errors[i].get('count')
-
-                    if len(in_sum) < i+1:
-                        # First dataplane
-                        in_sum.append(in_count)
-                        out_sum.append(out_count)
-                        desc.append(in_errors[i].get('desc'))
-                        name.append(in_errors[i].get('name'))
+                    if key in in_d:
+                        in_d[key][count] += count
                     else:
-                        # subsequent dataplanes
-                        in_sum[i] += in_count
-                        out_sum[i] += out_count
+                        in_d[key] = {'count': count, 'desc': desc}
 
-    # Returns 4 lists
-    return in_sum, out_sum, desc, name
+                for i in range(0, len(out_errors)):
+                    key = out_errors[i].get('name')
+                    count = out_errors[i].get('count')
+                    desc = out_errors[i].get('desc')
+
+                    if key in out_d:
+                        out_d[key][count] += count
+                    else:
+                        out_d[key] = {'count': count, 'desc': desc}
+
+    # Returns 2 dictionaries
+    return in_d, out_d
+
+
+#
+# Print one line in error/global count output
+#
+def cgn_op_show_error_one(key, fmt, in_d, out_d):
+    print(fmt % (in_d[key]['desc'], in_d[key]['count'], out_d[key]['count']))
 
 
 #
@@ -160,33 +182,55 @@ def cgn_op_get_errors():
 def cgn_op_show_errors():
     """Show CGN errors"""
 
-    in_sum, out_sum, desc, name = cgn_op_get_errors()
+    in_d, out_d = cgn_op_get_errors()
+    fmt = "    %-54s %12u %12u"
 
     print("%-58s %12s %12s" % ("CGNAT Global Counts", "In", "Out"))
 
-    for i in range(0, len(in_sum)):
-        #
-        # Match on error name in order to determine section starts
-        #
-        if name[i] == "PCY_ENOENT":
-            print("  Unable to translate packet:")
+    print("  Unable to translate packet:")
+    cgn_op_show_error_one('PCY_ENOENT', fmt, in_d, out_d)
+    cgn_op_show_error_one('SESS_ENOENT', fmt, in_d, out_d)
+    cgn_op_show_error_one('POOL_ENOENT', fmt, in_d, out_d)
+    cgn_op_show_error_one('PCY_BYPASS', fmt, in_d, out_d)
+    cgn_op_show_error_one('BUF_PROTO', fmt, in_d, out_d)
+    cgn_op_show_error_one('BUF_ICMP', fmt, in_d, out_d)
 
-        if name[i] == "MBU_ENOSPC":
-            print("  Resource limitations:")
+    print("  Resource limitations:")
+    cgn_op_show_error_one('MBU_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('BLK_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('POOL_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('SRC_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('APM_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('S1_ENOSPC', fmt, in_d, out_d)
+    cgn_op_show_error_one('S2_ENOSPC', fmt, in_d, out_d)
 
-        if name[i] == "S1_ENOMEM":
-            print("  Memory allocation failures:")
+    print("  Memory allocation failures:")
+    cgn_op_show_error_one('S1_ENOMEM', fmt, in_d, out_d)
+    cgn_op_show_error_one('S2_ENOMEM', fmt, in_d, out_d)
+    cgn_op_show_error_one('PB_ENOMEM', fmt, in_d, out_d)
+    cgn_op_show_error_one('APM_ENOMEM', fmt, in_d, out_d)
+    cgn_op_show_error_one('SRC_ENOMEM', fmt, in_d, out_d)
 
-        if name[i] == "S1_EEXIST":
-            print("  Thread contention errors:")
+    print("  Thread contention errors:")
+    cgn_op_show_error_one('S1_EEXIST', fmt, in_d, out_d)
+    cgn_op_show_error_one('S2_EEXIST', fmt, in_d, out_d)
+    cgn_op_show_error_one('APM_ENOENT', fmt, in_d, out_d)
+    cgn_op_show_error_one('SRC_ENOENT', fmt, in_d, out_d)
 
-        if name[i] == "BUF_ENOL3":
-            print("  Packet buffer errors:")
+    print("  Packet buffer errors:")
+    cgn_op_show_error_one('BUF_ENOL3', fmt, in_d, out_d)
+    cgn_op_show_error_one('BUF_ENOL4', fmt, in_d, out_d)
+    cgn_op_show_error_one('BUF_ENOMEM', fmt, in_d, out_d)
+    cgn_op_show_error_one('BUF_ENOSPC', fmt, in_d, out_d)
 
-        if name[i] == "ERR_UNKWN":
-            print("  Other:")
+    print("  PCP errors:")
+    cgn_op_show_error_one('PCP_EINVAL', fmt, in_d, out_d)
+    cgn_op_show_error_one('PCP_ENOSPC', fmt, in_d, out_d)
 
-        print("    %-54s %12u %12u" % (desc[i], in_sum[i], out_sum[i]))
+    print("  Other:")
+    cgn_op_show_error_one('S2_ENOENT', fmt, in_d, out_d)
+    cgn_op_show_error_one('ICMP_ECHOREQ', fmt, in_d, out_d)
+    cgn_op_show_error_one('ERR_UNKWN', fmt, in_d, out_d)
 
     print()
 
@@ -208,7 +252,6 @@ def cgn_op_show_policy_one(pol):
     print("  %-32s %18s" % ("Interface", pol.get('interface')))
     print("  %-32s %18s" % ("Priority", pol.get('priority')))
     print("  %-32s %18s" % ("Pool", pol.get('pool')))
-    print("  %-32s %18s" % ("Ref count", pol.get('refcnt')))
     print("  %-32s %18s" % ("Log all sessions",
                             yes_or_no(pol.get('log_sess_all'))))
 

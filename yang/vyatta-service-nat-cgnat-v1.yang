@@ -82,12 +82,14 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2019-10-31 {
+    revision 2019-11-15 {
         description "Add CGNAT off-box logging commands. " +
                     "Rework CGNAT CLI. " +
                     "Add destination params to filter. " +
                     "Add global alg-bypass config. " +
-                    "Add clear-errors-rpc.";
+                    "Add clear-errors-rpc. " +
+                    "Add packets-not-cgnat, pcp-ok, pcp-fail to summary. " +
+                    "Add PCP errors to error stats." ;
     }
 
     revision 2019-09-23 {
@@ -254,6 +256,12 @@ module vyatta-service-nat-cgnat-v1 {
             enum "alg-packet" {
                 description "The packet is an ALG packet configured " +
                             "to bypass CGNAT";
+            }
+            enum "pcp-invalid-cmd" {
+                description "Invalid or unknown PCP parameters";
+            }
+            enum "pcp-mapping-unavailable" {
+                description "Unable to reserve PCP mapping";
             }
         }
     }
@@ -879,6 +887,18 @@ module vyatta-service-nat-cgnat-v1 {
                     }
                     leaf packets-hairpinned {
                         description "Number of packets hairpinned by CGNAT.";
+                        type uint64;
+                    }
+                    leaf packets-not-cgnat {
+                        description "Received packets not translated by CGNAT.";
+                        type uint64;
+                    }
+                    leaf pcp-ok {
+                        description "Successful PCP requests.";
+                        type uint64;
+                    }
+                    leaf pcp-fail {
+                        description "Unsuccessful PCP requests.";
                         type uint64;
                     }
                 }
