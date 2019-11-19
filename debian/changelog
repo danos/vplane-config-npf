@@ -1,3 +1,12 @@
+vplane-config-npf (4.0.2) unstable; urgency=medium
+
+  * Change AT&T ZIP code to 7502 and add country USA
+  * Fix typo: compatability ==> compatibility
+  * Correct typos: specifed ==> specified
+  * Correct typos in scripts
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 19 Nov 2019 11:58:28 +0000
+
 vplane-config-npf (4.0.1) unstable; urgency=medium
 
   * DANOS Import master
