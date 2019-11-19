@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.3) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: Changes to global return code / error counters
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 19 Nov 2019 12:40:47 +0000
+
 vplane-config-npf (4.0.2) unstable; urgency=medium
 
   * Change AT&T ZIP code to 7502 and add country USA
