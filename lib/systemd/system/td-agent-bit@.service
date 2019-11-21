@@ -1,0 +1,8 @@
+[Unit]
+Description=Instantiate td-agent-bit in a VRF
+
+[Install]
+WantedBy=
+
+[Service]
+ExecStart=/usr/sbin/chvrf %i /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/cgnat.conf

@@ -24,8 +24,8 @@ FORCE = False
 DO_CGNAT = False
 DO_EXPORT = False
 CFG_DIR = "/etc/td-agent-bit"
-FLUENTBIT_STOP_CMD = "systemctl stop td-agent-bit.service"
-FLUENTBIT_START_CMD = "systemctl restart td-agent-bit.service"
+FLUENTBIT_STOP_CMD = "systemctl stop td-agent-bit@{}.service"
+FLUENTBIT_START_CMD = "systemctl restart td-agent-bit@{}.service"
 
 CONFIG_CANDIDATE = configd.Client.CANDIDATE
 CONFIG_RUNNING = configd.Client.RUNNING
@@ -776,9 +776,33 @@ def restart_fluentbit(r):
     """ Start or stop fluentbit as required """
 
     if r:
-        call(FLUENTBIT_START_CMD.split())
+        # First stop any existing FB instances
+        restart_fluentbit(False)
+
+        # Try to start fluentbit
+        try:
+            cfg = (client.tree_get_dict("system export kafka",
+                                     CONFIG_CANDIDATE, 'internal')
+                                     ['kafka']['cluster'])
+            for cluster in cfg.keys():
+                vrf = cfg[cluster]['bootstrap']['routing-instance']
+                call(FLUENTBIT_START_CMD.format(vrf).split())
+        except:
+            # "system export kafka" isn't configured.
+            pass
+
     else:
-        call(FLUENTBIT_STOP_CMD.split())
+        # Try to stop fluentbit
+        try:
+            cfg = (client.tree_get_dict("system export kafka",
+                                     CONFIG_RUNNING, 'internal')
+                                     ['kafka']['cluster'])
+            for cluster in cfg.keys():
+                vrf = cfg[cluster]['bootstrap']['routing-instance']
+                call(FLUENTBIT_STOP_CMD.format(vrf).split())
+        except:
+            # "system export kafka" isn't configured.
+            pass
 
 
 def send_cgnat_events_config(commands):
@@ -793,9 +817,6 @@ def send_cgnat_events_config(commands):
         send_cgnat_fluentbit_service_config()
 
         send_cgnat_fluentbit_input_config(commands['protobuf'])
-
-        # Now update the fluentbit OUTPUT file
-        program_system_export_config(True)
 
         # If "system export ..." config has NOT changed
         # then we need to restart fluentbit here,
@@ -907,8 +928,8 @@ def write_fluentbit_wrapper_config():
     # TODO: this could be a static file
 
     os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
-    f = open("{}/td-agent-bit.cfg".format(CFG_DIR), "w")
-    f.write("@INCLUDE cgnat*.conf\n")
+    f = open("{}/cgnat.conf".format(CFG_DIR), "w")
+    f.write("@INCLUDE cgnat-*.conf\n")
     f.close()
 
 
@@ -937,13 +958,13 @@ def write_fluentbit_output_config(events_cfg, commands):
 
             # Brokers comes from commands['ipv4-address'] and ['ipv6-address']
             # Either list may be "None" if empty.
-            ipv4_addrs = commands[cluster]['cand'].get('ipv4-address')
-            ipv6_addrs = commands[cluster]['cand'].get('ipv6-address')
+            ipv4_addrs = commands[cluster]['cand'].get('ipv4-address') or set()
+            ipv6_addrs = commands[cluster]['cand'].get('ipv6-address') or set()
+
             if ipv4_addrs or ipv6_addrs:
-                v4_str = ' '.join(ipv4_addrs or {})
-                v6_str = ' '.join(ipv6_addrs or {})
-                f.write("    Brokers               {} {}\n".
-                        format(v4_str, v6_str))
+                ipv4_addrs.update(ipv6_addrs)
+                f.write("    Brokers               {}\n".
+                        format("[" + '],['.join(ipv4_addrs) + "]"))
 
             f.write("    Routing_Instance      {}\n".
                     format(commands[cluster]['cand']
