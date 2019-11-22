@@ -1,0 +1,6 @@
+[Unit]
+Description=td-agent-bit reload
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl try-reload-or-restart td-agent-bit@*.service

@@ -3,8 +3,14 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ --with=yang --with python3
+	dh $@ --with=yang --with python3 --with systemd
 
 override_dh_auto_configure:
 	debian/autogen.sh
 	./configure --prefix=/opt/vyatta
+
+override_dh_systemd_enable:
+	dh_systemd_enable td-agent-bit-reload.path
+
+override_dh_systemd_start:
+	dh_systemd_start td-agent-bit-reload.path

@@ -13,3 +13,5 @@ opt/vyatta/sbin/cgnat-clear-errors-rpc
 
 etc/systemd/system/td-agent-bit.service.d/10-disable
 lib/systemd/system/td-agent-bit@.service
+lib/systemd/system/td-agent-bit-reload.path lib/systemd/system
+lib/systemd/system/td-agent-bit-reload.service lib/systemd/system

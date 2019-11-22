@@ -1,0 +1,9 @@
+[Unit]
+Description=td-agent-bit reload on hostname change
+Before=td-agent-bit@.service
+
+[Path]
+PathChanged=/etc/hostname
+
+[Install]
+WantedBy=multi-user.target
