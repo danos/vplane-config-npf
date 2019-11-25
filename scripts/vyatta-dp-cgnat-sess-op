@@ -419,6 +419,7 @@ def cgn_sess_show_outer_brief(outer, show_hdr):
     if dst_list:
         for dst in dst_list:
             cgn_sess_show_one(outer, dst, show_hdr)
+            show_hdr = False
     else:
         cgn_sess_show_one(outer, None, show_hdr)
 
