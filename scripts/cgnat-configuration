@@ -625,7 +625,7 @@ def send_cgnat_fluentbit_service_config():
     f.write("    HTTP_Port         2020\n")
     f.write("    Grace             0\n")
 
-    f.write("    storage.path      /var/log/vyatta/fluentbit-storage\n")
+    f.write("    storage.path      /opt/vyatta/tmp/td-agent-bit/storage\n")
     f.write("    storage.sync      full\n")
     f.write("    storage.checksum  on\n")
 
