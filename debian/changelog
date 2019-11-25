@@ -1,3 +1,13 @@
+vplane-config-npf (4.0.4) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: Only display the session output header once
+
+  [ Paul Aitken ]
+  * move td-agent-bit storage to /opt/vyatta
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 25 Nov 2019 14:46:03 +0000
+
 vplane-config-npf (4.0.3) unstable; urgency=medium
 
   [ Ian Wilson ]
