@@ -1,3 +1,9 @@
+vplane-config-npf (4.0.6) unstable; urgency=medium
+
+  * Add dh-systemd build dependency
+
+ -- Paul Aitken <paul.aitken@att.com>  Tue, 26 Nov 2019 10:27:18 +0000
+
 vplane-config-npf (4.0.5) unstable; urgency=medium
 
   * CGNAT: td-agent-bit VRF support
