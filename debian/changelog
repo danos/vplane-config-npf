@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.5) unstable; urgency=medium
+
+  * CGNAT: td-agent-bit VRF support
+  * CGNAT: td-agent-bit reload service
+
+ -- Paul Aitken <paul.aitken@att.com>  Tue, 26 Nov 2019 09:54:35 +0000
+
 vplane-config-npf (4.0.4) unstable; urgency=medium
 
   [ Ian Wilson ]
