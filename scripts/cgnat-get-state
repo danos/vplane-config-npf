@@ -53,6 +53,7 @@ def policy_netconf(entry):
     state_entry['packets-in'] = entry['in_pkts']
     state_entry['bytes-out'] = entry['out_bytes']
     state_entry['bytes-in'] = entry['in_bytes']
+    state_entry['unknown-source'] = entry['unk_pkts_in']
     state_entry['active-subscribers'] = entry['source_count']
 
     # Get the subscriber with the highest max session rate
@@ -109,6 +110,7 @@ def summary_netconf(entry):
     state_entry['packets-in'] = entry['pkts_in']
     state_entry['bytes-out'] = entry['bytes_out']
     state_entry['bytes-in'] = entry['bytes_in']
+    state_entry['unknown-source'] = entry['unk_pkts_in']
     state_entry['packets-hairpinned'] = entry['pkts_hairpinned']
     state_entry['packets-not-cgnat'] = entry['nopool']
     state_entry['pcp-ok'] = entry['pcp_ok']

@@ -275,6 +275,7 @@ def cgn_subs_show_detail(subs):
     print("  %-32s %18u" % ("     bytes", subs.get('out_bytes')))
     print("  %-32s %18u" % ("In,  packets", subs.get('in_pkts')))
     print("  %-32s %18u" % ("     bytes", subs.get('in_bytes')))
+    print("  %-32s %18u" % ("     unknown source", subs.get('unk_pkts_in')))
 
     print("  %-32s %18u" % ("Port blocks", subs.get('block_count')))
 

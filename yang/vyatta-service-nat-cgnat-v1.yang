@@ -82,7 +82,7 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2019-11-26 {
+    revision 2019-11-27 {
         description "Add CGNAT off-box logging commands. " +
                     "Rework CGNAT CLI. " +
                     "Add destination params to filter. " +
@@ -90,7 +90,8 @@ module vyatta-service-nat-cgnat-v1 {
                     "Add clear-errors-rpc. " +
                     "Add packets-not-cgnat, pcp-ok, pcp-fail to summary. " +
                     "Add PCP errors to error stats. " +
-                    "Add configd:priority to system export.";
+                    "Add configd:priority to system export. " +
+                    "Add op-mode counters for unknown source pkts.";
     }
 
     revision 2019-09-23 {
@@ -612,6 +613,12 @@ module vyatta-service-nat-cgnat-v1 {
                                     "CGNAT interface by all sessions.";
                         type uint64;
                     }
+                    leaf unknown-source {
+                        description "Number of packets received into the " +
+                                    "CGNAT interface and translated, but " +
+                                    "from an unknown source address or port.";
+                        type uint64;
+                    }
                     leaf active-subscribers {
                         description "Number of active CGNAT subscribers " +
                                     "using this policy.";
@@ -884,6 +891,12 @@ module vyatta-service-nat-cgnat-v1 {
                     leaf bytes-in {
                         description "Number of bytes received into the " +
                                     "CGNAT interface by all sessions.";
+                        type uint64;
+                    }
+                    leaf unknown-source {
+                        description "Number of packets received into the " +
+                                    "CGNAT interface and translated, but " +
+                                    "from an unknown source address or port.";
                         type uint64;
                     }
                     leaf packets-hairpinned {
@@ -1316,6 +1329,12 @@ module vyatta-service-nat-cgnat-v1 {
                                 "CGNAT interface by this subscriber.";
                     type uint64;
                 }
+                leaf unknown-source {
+                    description "Number of packets received into the " +
+                                "CGNAT interface and translated, but " +
+                                "from an unknown source address or port.";
+                    type uint64;
+                }
                 leaf assigned-ports {
                     description "The number of ports currently assigned " +
                                 "to this subscriber.";
@@ -1655,6 +1674,12 @@ module vyatta-service-nat-cgnat-v1 {
                 leaf bytes-in {
                     description "Number of bytes received into the " +
                                 "CGNAT interface by all sessions.";
+                    type uint64;
+                }
+                leaf unknown-source {
+                    description "Number of packets received into the " +
+                                "CGNAT interface and translated, but " +
+                                "from an unknown source address or port.";
                     type uint64;
                 }
                 leaf expired {

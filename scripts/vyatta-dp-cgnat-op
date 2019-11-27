@@ -96,6 +96,8 @@ def cgn_op_show_summary():
                                           summary.get('pkts_in')))
                 print("    %-30s %18u" % ("           bytes",
                                           summary.get('bytes_in')))
+                print("    %-30s %18u" % ("Unknown source address or port",
+                                          summary.get('unk_pkts_in')))
                 print("    %-30s %18u" % ("Did not match CGNAT session",
                                           summary.get('nosess')))
                 if 'nopool' in summary:
@@ -228,7 +230,6 @@ def cgn_op_show_errors():
     cgn_op_show_error_one('PCP_ENOSPC', fmt, in_d, out_d)
 
     print("  Other:")
-    cgn_op_show_error_one('S2_ENOENT', fmt, in_d, out_d)
     cgn_op_show_error_one('ICMP_ECHOREQ', fmt, in_d, out_d)
     cgn_op_show_error_one('ERR_UNKWN', fmt, in_d, out_d)
 
@@ -280,6 +281,7 @@ def cgn_op_show_policy_one(pol):
     print("  %-32s %18u" % ("     bytes", pol.get('out_bytes')))
     print("  %-32s %18u" % ("In,  packets", pol.get('in_pkts')))
     print("  %-32s %18u" % ("     bytes", pol.get('in_bytes')))
+    print("  %-32s %18u" % ("     unknown source", pol.get('unk_pkts_in')))
 
     print("  %s" % ("Max Session Rates:"))
     print("    %-16s %-8s  %-8s" % ("Subscriber", "Max Rate", "Time"))

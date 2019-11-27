@@ -70,10 +70,11 @@ def sub_rpc(entry):
     rpc_entry['session-rate-max-time'] = entry['sess_rate_max_tm']
     rpc_entry['session-rate-1m-max'] = entry['sess_rate_1m_max']
     rpc_entry['session-rate-1m-max-time'] = entry['sess_rate_1m_max_tm']
-    rpc_entry['packets-in'] = entry['in_pkts']
+    rpc_entry['packets-out'] = entry['out_pkts']
     rpc_entry['packets-in'] = entry['in_pkts']
     rpc_entry['bytes-out'] = entry['out_bytes']
     rpc_entry['bytes-in'] = entry['in_bytes']
+    rpc_entry['unknown-source'] = entry['unk_pkts_in']
     rpc_entry['assigned-ports'] = entry['port_count']
     rpc_entry['protocols'] = rpc_prot_list
 

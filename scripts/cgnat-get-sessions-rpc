@@ -78,6 +78,8 @@ def get_other_sess_info(xentry, rpc_entry):
     rpc_entry['packets-in'] = xentry['in_pkts']
     rpc_entry['bytes-out'] = xentry['out_bytes']
     rpc_entry['bytes-in'] = xentry['in_bytes']
+    if 'unk_pkts_in' in xentry:
+        rpc_entry['unknown-source'] = xentry['unk_pkts_in']
     rpc_entry['expired'] = xentry['exprd']
 
 
