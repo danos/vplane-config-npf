@@ -674,7 +674,7 @@ def send_cgnat_fluentbit_input_config(commands):
 
     # Define High Water Mark
     zmq_hwm_critical = 100000      # ie very large but not infinite
-    zmq_hwm_noncritical = 10000    # ie large but finite
+    zmq_hwm_noncritical = 100000   # ie very large but not infinite
 
     # First, tell the dataplane to stop existing kafka exports.
 
