@@ -23,7 +23,13 @@ from vyatta.npf.npf_store import store_cfg
 FORCE = False
 DO_CGNAT = False
 DO_EXPORT = False
+
 CFG_DIR = "/etc/td-agent-bit"
+CFG_WRAPPER = "cgnat.conf"
+CFG_SERVICE = "cgnat-service.conf"
+CFG_INPUT = "cgnat-input.conf"
+CFG_OUTPUT = "cgnat-output.conf"
+
 FLUENTBIT_STOP_CMD = "systemctl stop td-agent-bit@{}.service"
 FLUENTBIT_START_CMD = "systemctl restart td-agent-bit@{}.service"
 
@@ -49,6 +55,29 @@ def set_cgnat_config(key, cmd):
 def delete_cgnat_config(key, cmd):
     fcmd = "cgn-cfg {}".format(cmd)
     store_cfg(key, fcmd, "DELETE", dbg)
+
+
+def create_file(filename):
+    """ Open the specified CGNAT config file for writing,
+        creating the config dir if required.
+
+        Return the file handle.
+    """
+
+    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
+    return open("{}/{}".format(CFG_DIR, filename), "w")
+
+
+def remove_file(filename):
+    """ Silently remove the specified CGNAT config file.
+        We don't care if there are errors,
+        eg the file doesn't exist.
+    """
+
+    try:
+        os.remove("{}/{}".format(CFG_DIR, filename))
+    except:
+        pass
 
 
 def process_options():
@@ -602,36 +631,41 @@ def send_cgnat_resource_constraint_config(commands):
                                format(cc[0], cc[1]))
 
 
-def send_cgnat_fluentbit_service_config():
+def send_cgnat_fluentbit_service_config(create):
 
-    """ Write the fluentbit service file """
+    """ Write the fluentbit service file
+
+        "create" indicates whether to create (True) or remove (False) the file.
+    """
 
     # TODO: this could be a static file
 
-    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
-    f = open("{}/cgnat-service.conf".format(CFG_DIR), "w")
+    if create:
+        f = create_file(CFG_SERVICE)
 
-    f.write("[SERVICE]\n")
-    f.write("    Flush             1\n")
-    f.write("    Daemon            Off\n")
+        f.write("[SERVICE]\n")
+        f.write("    Flush             1\n")
+        f.write("    Daemon            Off\n")
 
-    if dbg.is_enabled():
-        f.write("    Log_Level         debug\n")
+        if dbg.is_enabled():
+            f.write("    Log_Level         debug\n")
+        else:
+            f.write("    Log_Level         info\n")
+
+        f.write("    HTTP_Server       On\n")
+        f.write("    HTTP_Listen       127.0.0.1\n")
+        f.write("    HTTP_Port         2020\n")
+        f.write("    Grace             0\n")
+
+        f.write("    storage.path      /opt/vyatta/tmp/td-agent-bit/storage\n")
+        f.write("    storage.sync      full\n")
+        f.write("    storage.checksum  on\n")
+
+        f.write("\n")
+
+        f.close()
     else:
-        f.write("    Log_Level         info\n")
-
-    f.write("    HTTP_Server       On\n")
-    f.write("    HTTP_Listen       127.0.0.1\n")
-    f.write("    HTTP_Port         2020\n")
-    f.write("    Grace             0\n")
-
-    f.write("    storage.path      /opt/vyatta/tmp/td-agent-bit/storage\n")
-    f.write("    storage.sync      full\n")
-    f.write("    storage.checksum  on\n")
-
-    f.write("\n")
-
-    f.close()
+        remove_file(CFG_SERVICE)
 
 
 def send_cgnat_fluentbit_input_config(commands):
@@ -641,9 +675,6 @@ def send_cgnat_fluentbit_input_config(commands):
     # Define High Water Mark
     zmq_hwm_critical = 100000      # ie very large but not infinite
     zmq_hwm_noncritical = 10000    # ie large but finite
-
-    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
-    f = open("{}/cgnat-input.conf".format(CFG_DIR), "w")
 
     # First, tell the dataplane to stop existing kafka exports.
 
@@ -656,6 +687,10 @@ def send_cgnat_fluentbit_input_config(commands):
                                     .format(event))
 
     # Now rewrite the input config file
+
+    f = create_file(CFG_INPUT)
+
+    wrote_output = False
 
     for event in commands:    # 'session', 'subscriber', ...
 
@@ -720,8 +755,12 @@ def send_cgnat_fluentbit_input_config(commands):
             f.write("    Field_delimiter _\n")
 
         f.write("\n")
+        wrote_output = True
 
     f.close()
+
+    if not wrote_output:
+        remove_file(CFG_INPUT)
 
     # Finally, tell the dataplane to re-enable existing kafka exports.
 
@@ -782,8 +821,8 @@ def restart_fluentbit(r):
         # Try to start fluentbit
         try:
             cfg = (client.tree_get_dict("system export kafka",
-                                     CONFIG_CANDIDATE, 'internal')
-                                     ['kafka']['cluster'])
+                                        CONFIG_CANDIDATE, 'internal')
+                   ['kafka']['cluster'])
             for cluster in cfg.keys():
                 vrf = cfg[cluster]['bootstrap']['routing-instance']
                 call(FLUENTBIT_START_CMD.format(vrf).split())
@@ -795,8 +834,8 @@ def restart_fluentbit(r):
         # Try to stop fluentbit
         try:
             cfg = (client.tree_get_dict("system export kafka",
-                                     CONFIG_RUNNING, 'internal')
-                                     ['kafka']['cluster'])
+                                        CONFIG_RUNNING, 'internal')
+                   ['kafka']['cluster'])
             for cluster in cfg.keys():
                 vrf = cfg[cluster]['bootstrap']['routing-instance']
                 call(FLUENTBIT_STOP_CMD.format(vrf).split())
@@ -812,24 +851,7 @@ def send_cgnat_events_config(commands):
     global client
 
     if 'protobuf' in commands:
-        # Ensure that the fluentbit config wrapper and service file exist
-        write_fluentbit_wrapper_config()
-        send_cgnat_fluentbit_service_config()
-
         send_cgnat_fluentbit_input_config(commands['protobuf'])
-
-        # If "system export ..." config has NOT changed
-        # then we need to restart fluentbit here,
-        # in order for it to pick up the config file changes.
-        #
-        # However if the config has changed
-        # then we leave the fluentbit restart
-        # to the "system export ..." parser
-        # to avoid restarting fluentbit twice.
-        if client.node_get_status(CONFIG_CANDIDATE,
-                                  BASE_SYSTEM_CGNAT_PATH) \
-           == client.UNCHANGED:
-            restart_fluentbit(True)
 
     # Finally, tell the dataplane which events to export
     send_cgnat_events_cfg_dataplane(commands)
@@ -919,32 +941,37 @@ def program_cgnat_config():
     return 0
 
 
-def write_fluentbit_wrapper_config():
+def write_fluentbit_wrapper_config(create):
 
     """ Write the fluentbit wrapper file
         which pulls together the system, input, and output files.
+
+        "create" indicates whether to create (True) or remove (False) the file.
     """
 
     # TODO: this could be a static file
 
-    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
-    f = open("{}/cgnat.conf".format(CFG_DIR), "w")
-    f.write("@INCLUDE cgnat-*.conf\n")
-    f.close()
+    if create:
+        f = create_file(CFG_WRAPPER)
+        f.write("@INCLUDE cgnat-*.conf\n")
+        f.close()
+    else:
+        remove_file(CFG_WRAPPER)
 
 
 def write_fluentbit_output_config(events_cfg, commands):
 
-    """ Write the fluentbit output file """
+    """ Write the fluentbit output file
 
-    os.makedirs(CFG_DIR, mode=0o755, exist_ok=True)
-    f = open("{}/cgnat-output.conf".format(CFG_DIR), "w")
+        If there are no events configured then delete the file.
+    """
 
     # Track whether any OUTPUT sections were written to the file
     wrote_output = False
 
     # Don't write any output if there are no events configured
     if events_cfg:
+        f = create_file(CFG_OUTPUT)
 
         # Iterate through "system export kafka cluster N"
         for cluster in commands.keys():
@@ -986,7 +1013,10 @@ def write_fluentbit_output_config(events_cfg, commands):
 
             wrote_output = True
 
-    f.close()
+        f.close()
+
+    else:
+        remove_file(CFG_OUTPUT)
 
     return wrote_output
 
@@ -1014,20 +1044,27 @@ def send_system_export_config(commands):
             else:
                 events_cfg = None
 
+            # Ensure that the fluentbit config wrapper and service file exist
+            write_fluentbit_wrapper_config(True)
+            send_cgnat_fluentbit_service_config(True)
+
+            # Write the "output" config file.
+            # The return value tells us whether any output sections
+            # were written,
+            # which tells us whether to stop or to restart fluentbit.
+            r = write_fluentbit_output_config(events_cfg, commands['export'])
+            restart_fluentbit(r)
+
         except configd.Exception:
             # There are no events configured, and that's OK.
             dbg.pprint("failed getting candidate tree for {}".
                        format(BASE_CGNAT_PATH))
 
-        # Ensure that the fluentbit config wrapper and service file exist
-        write_fluentbit_wrapper_config()
-        send_cgnat_fluentbit_service_config()
-
-        # Write the "output" config file.
-        # The return value tells us whether any output sections were written,
-        # which tells us whether to stop or to restart fluentbit.
-        r = write_fluentbit_output_config(events_cfg, commands['export'])
-        restart_fluentbit(r)
+            # Delete all the fluentbit cgnat files and stop fluentbit.
+            write_fluentbit_wrapper_config(False)
+            send_cgnat_fluentbit_service_config(False)
+            write_fluentbit_output_config(None, None)
+            restart_fluentbit(False)
 
 
 def program_system_export_config(FORCE):
@@ -1088,10 +1125,28 @@ if __name__ == "__main__":
         err("Cannot establish client session: '{}'".format(str(exc).strip()))
         exit(1)
 
-    if DO_CGNAT:
-        ret = program_cgnat_config()
-    elif DO_EXPORT:
-        ret = program_system_export_config(FORCE)
-    else:
-        ret = -1
-    exit(ret)
+    FORCE = True
+
+    # This script is called from both the "service nat cgnat"
+    # and "system export" config trees.
+    #
+    # We need to do some work if either tree is modified,
+    # but not duplicate the work and do things twice.
+    #
+    # If we're called for the "service nat cgnat" tree (DO_CGNAT)
+    # and the "system export ..." config is unchanged,
+    # then we won't be called again,
+    # so we need to do the work here.
+    #
+    # However if the "system export ..." config has changed then we defer,
+    # because we'll be called again momentarily for the "system export" tree.
+    #
+    # If we're called for the "system export" tree (DO_EXPORT),
+    # then we always do the necessary work.
+
+    if (DO_EXPORT or
+        (DO_CGNAT and client.node_get_status(CONFIG_CANDIDATE,
+                                             BASE_SYSTEM_CGNAT_PATH)
+         == client.UNCHANGED)):
+        program_cgnat_config()
+        program_system_export_config(FORCE)
