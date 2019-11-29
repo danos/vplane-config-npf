@@ -25,7 +25,6 @@ CONFIG_CANDIDATE = configd.Client.CANDIDATE
 CONFIG_RUNNING = configd.Client.RUNNING
 
 ADDR_CMD  = "address-group"
-DSCP_CMD  = "dscp-group"
 ICMP_CMD  = "icmp-group"
 ICMP6_CMD = "icmpv6-group"
 PORT_CMD  = "port-group"
@@ -33,7 +32,6 @@ PROTO_CMD = "protocol-group"
 
 RG_BASE = "resources group"
 BASE_ADDR_PATH  = RG_BASE + " " + ADDR_CMD
-BASE_DSCP_PATH  = RG_BASE + " " + DSCP_CMD
 BASE_ICMP_PATH  = RG_BASE + " " + ICMP_CMD
 BASE_ICMP6_PATH = RG_BASE + " " + ICMP6_CMD
 BASE_PORT_PATH  = RG_BASE + " " + PORT_CMD
@@ -248,121 +246,6 @@ def program_address_groups():
         except KeyError:
             # no 'address-range' in candidate config
             pass
-
-
-# ===== DSCP =====
-
-"""
-DSCP name-to-id conversion table
-"""
-dscpTable = {
-    'default': 0,
-    'cs0':     0,
-    'cs1':     8,
-    'cs2':     16,
-    'cs3':     24,
-    'cs4':     32,
-    'cs5':     40,
-    'cs6':     48,
-    'cs7':     56,
-    'af11':    10,
-    'af12':    12,
-    'af13':    14,
-    'af21':    18,
-    'af22':    20,
-    'af23':    22,
-    'af31':    26,
-    'af32':    28,
-    'af33':    30,
-    'af41':    34,
-    'af42':    36,
-    'af43':    38,
-    'ef':      46,
-    'va':      44,
-}
-
-
-def create_dscp_group(group, group_cfg):
-    """
-    Create the named DSCP group
-
-    @group:     the name of the group to be created
-    @group_cfg: the items to be added to the group
-    """
-
-    dbg.pprint("Creating dscp group {}".format(group))
-    store_cfg("{} {} dscp".format(BASE_DSCP_PATH, group),
-              "npf-cfg add dscp-group:{} 0 {}".format(group, group_cfg),
-              "SET", dbg)
-
-
-def delete_dscp_group(group):
-    """
-    Delete the named DSCP group
-
-    @group: the name of the DSCP group to be deleted
-    """
-
-    dbg.pprint("Deleting dscp group {}".format(group))
-    store_cfg("{} {}".format(BASE_DSCP_PATH, group),
-              "npf-cfg delete dscp-group:{}".format(group),
-              "DELETE", dbg)
-
-
-def program_dscp_groups():
-    """
-    Create and delete DSCP groups.
-
-    We process two kinds of configuration:
-      * dscp <name>
-      * dscp <value>
-
-    Names are converted to values prior to being passed down.
-    """
-
-    dbg.pprint("program_dscp_groups()")
-
-    (cand_cfg, running_cfg) = get_configs(DSCP_CMD)
-
-    rg_changed = False
-
-    if cand_cfg == {} and running_cfg == {}:
-        dbg.pprint("unchanged so no work to do")
-        return rg_changed
-
-    # Look for deleted groups
-    for group in sorted(running_cfg):
-        dbg.pprint("Processing old group {}". format(group))
-
-        if group not in cand_cfg:
-            dbg.pprint("No new group {}". format(group))
-            # Whole group removed
-            delete_dscp_group(group)
-            continue
-
-        # Compare running and candidate configs
-        dbg.pprint("Compare old and new group {}". format(group))
-        if running_cfg[group]['dscp'] != cand_cfg[group]['dscp']:
-            dbg.pprint("changed group {}". format(group))
-            group_cfg = ";".join("{}".format(dscpTable.get(c, c))
-                for c in sorted(cand_cfg[group]['dscp'],
-                                key=lambda x: dscpTable.get(x, x)))
-            delete_dscp_group(group)
-            create_dscp_group(group, group_cfg)
-            rg_changed = True
-
-    # Look for added configuration
-    for group in sorted(cand_cfg):
-        dbg.pprint("Processing new group {}". format(group))
-
-        if group not in running_cfg:
-            dbg.pprint("New group {}". format(group))
-            group_cfg = ";".join("{}".format(dscpTable.get(c, c))
-                for c in sorted(cand_cfg[group]['dscp'],
-                                key=lambda x: dscpTable.get(x, x)))
-            create_dscp_group(group, group_cfg)
-
-    return rg_changed
 
 
 # ===== ICMP and ICMPv6 =====
@@ -770,21 +653,12 @@ def program_resource_groups_main():
         running_cfg = {}
 
     program_address_groups()
-    rg_changed = program_dscp_groups()
     program_icmp_groups(ICMPv4)
     program_icmp_groups(ICMPv6)
     program_port_groups()
     program_protocol_groups()
 
     dataplane_commit(dbg)
-
-    if rg_changed:
-        try:
-            status = client.node_get_status(CONFIG_CANDIDATE, "policy qos name")
-            if status == client.UNCHANGED:
-                store_cfg("qos commit", "qos commit", "SET", dbg)
-        except:
-            dbg.pprint("No qos policy configured")
 
     send_npf_snmp_traps([RG_BASE], dbg)
     return 0

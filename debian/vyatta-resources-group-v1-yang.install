@@ -1,4 +1,6 @@
 usr/share/configd/yang/vyatta-resources-group-v1.yang
+usr/share/configd/yang/vyatta-resources-group-misc-v1.yang
+usr/share/configd/yang/vyatta-resources-dscp-group-v1.yang
 
 opt/vyatta/sbin/end-resource-groups
 opt/vyatta/sbin/syntax-check-port-group-name

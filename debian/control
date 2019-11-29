@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
 Build-Depends: debhelper (>= 9), autotools-dev, autoconf, automake,
  cpio, libfile-copy-recursive-perl, libset-scalar-perl, dh-yang,
- dh-python, python3, dh-systemd
+ dh-python, python3, dh-systemd, python3-pytest
 X-Python3-Version: >= 3.5
 Standards-Version: 3.9.6
 
@@ -43,6 +43,12 @@ Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
  libvyatta-file-perl, libvyatta-cfg1, vyatta-cfg, python3:any, python3-netaddr
 Description: vyatta resource groups yang and scripts
  YANG module and scripts for Vyatta resource group configuration
+
+Package: vyatta-resources-group-lib
+Architecture: all
+Depends: python3, ${misc:Depends}
+Description: vyatta resources group python libraries
+ Python libraries used by QoS VCI for dscp-groups
 
 Package: vyatta-security-firewall-v1-yang
 Architecture: all
