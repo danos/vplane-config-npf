@@ -384,6 +384,14 @@ def build_cgnat_config(commands, cfg, tree):
             build_cgnat_events_config(commands['events']['protobuf'],
                                       cfg['export']['event'],
                                       tree, "protobuf")
+    if 'cpu-affinity' in cfg:
+        if 'event' in cfg['cpu-affinity']:
+            if 'session' in cfg['cpu-affinity']['event']:
+                if 'session-cpu-core' not in commands.keys():
+                    commands['session-cpu-core'] = {}
+                key = "{} cpu-affinity event session".format(BASE_CGNAT_PATH)
+                commands['session-cpu-core'][tree] = (
+                    key, cfg['cpu-affinity']['event']['session'])
 
 
 def build_export_kafka_cluster_config(commands, cfg):
@@ -857,6 +865,31 @@ def send_cgnat_events_config(commands):
     send_cgnat_events_cfg_dataplane(commands)
 
 
+def send_cgnat_session_cpu_core_config(commands):
+
+    """ Send config for 'cgnat cpu-affinity event session' """
+
+    rc = commands.get('running')
+    cc = commands.get('cand')
+
+    if rc is None:
+        if cc is not None:
+            # this is new configuration
+            set_cgnat_config(cc[0], "events core {}".format(cc[1]))
+    else:
+        if cc is None:
+            # configuration is being deleted
+            delete_cgnat_config(rc[0], "events core")
+        else:
+            # configuration is being updated
+            if cc[1] != rc[1]:
+                # only send if changed
+                set_cgnat_config(cc[0], "events core {}".format(cc[1]))
+            else:
+                dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".format(
+                    cc[0], cc[1]))
+
+
 def send_cgnat_config(commands):
 
     """ Send config for top-level 'cgnat' """
@@ -890,6 +923,9 @@ def send_cgnat_config(commands):
 
     if 'events' in commands:
         send_cgnat_events_config(commands['events'])
+
+    if 'session-cpu-core' in commands:
+        send_cgnat_session_cpu_core_config(commands['session-cpu-core'])
 
 
 def program_cgnat_config():

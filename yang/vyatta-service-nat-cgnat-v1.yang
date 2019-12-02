@@ -82,7 +82,7 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2019-11-27 {
+    revision 2019-12-03 {
         description "Add CGNAT off-box logging commands. " +
                     "Rework CGNAT CLI. " +
                     "Add destination params to filter. " +
@@ -91,7 +91,8 @@ module vyatta-service-nat-cgnat-v1 {
                     "Add packets-not-cgnat, pcp-ok, pcp-fail to summary. " +
                     "Add PCP errors to error stats. " +
                     "Add configd:priority to system export. " +
-                    "Add op-mode counters for unknown source pkts.";
+                    "Add op-mode counters for unknown source pkts. " +
+                    "Add core configuration for CGNAT session logging.";
     }
 
     revision 2019-09-23 {
@@ -989,6 +990,20 @@ module vyatta-service-nat-cgnat-v1 {
                         description  "Export resource constraint events";
                         configd:help "Export resource constraint events";
                         uses cgnat-log-type;
+                    }
+                }
+            }
+            container cpu-affinity {
+                description  "Assign a dedicated core to CGNAT";
+                configd:help "Assign a dedicated core to CGNAT";
+                container event {
+                    description  "Process events on the core";
+                    configd:help "Process events on the core";
+
+                    leaf session {
+                        description  "Number of core to process session events on";
+                        configd:help "Number of core to process session events on";
+                        type uint16;
                     }
                 }
             }
