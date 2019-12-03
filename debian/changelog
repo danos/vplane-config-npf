@@ -1,3 +1,24 @@
+vplane-config-npf (4.0.8) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * Rework cgnat-configuration (Fixes: VRVDR-49274)
+  * Fluent-bit: disable vanilla td-agent-bit
+
+  [ Gavin Shearer ]
+  * Increase HWM for ZMQ channel for non-critical Kafka logs
+
+  [ Paul Aitken ]
+  * Revert "Fluent-bit: disable vanilla td-agent-bit"
+  * Fluent-bit: override td-agent-bit
+
+  [ Ian Wilson ]
+  * cgnat: Add count for unknown pkts on session, subscriber, and policy
+
+  [ Duncan Eastoe ]
+  * No td-agent-bit.service -> /dev/null link in src
+
+ -- Paul Aitken <paul.aitken@att.com>  Tue, 03 Dec 2019 16:38:45 +0000
+
 vplane-config-npf (4.0.7) unstable; urgency=medium
 
   * Update CGNAT yang revision statement
