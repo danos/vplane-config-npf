@@ -1145,8 +1145,12 @@ if __name__ == "__main__":
     # then we always do the necessary work.
 
     if (DO_EXPORT or
-        (DO_CGNAT and client.node_get_status(CONFIG_CANDIDATE,
-                                             BASE_SYSTEM_CGNAT_PATH)
-         == client.UNCHANGED)):
+        (DO_CGNAT and
+            ((not client.node_exists(client.CANDIDATE,
+                                     BASE_SYSTEM_CGNAT_PATH)) or
+             (client.node_get_status(CONFIG_CANDIDATE,
+                                     BASE_SYSTEM_CGNAT_PATH)
+              == client.UNCHANGED)))):
+
         program_cgnat_config()
         program_system_export_config(FORCE)
