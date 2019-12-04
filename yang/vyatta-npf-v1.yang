@@ -76,9 +76,6 @@ module vyatta-npf-v1 {
 		 YANG module for groups used by firewall-related Vyatta
 		 YANG files";
 
-	revision 2019-10-08 {
-		description "Added configuration-updated notification.";
-	}
 	revision 2018-11-27 {
 		description "Clarify help text.";
 	}
@@ -634,25 +631,6 @@ module vyatta-npf-v1 {
 				type string;
 			}
 			uses rule-state;
-		}
-	}
-
-	notification configuration-updated {
-		description "Notifies that the running NPF configuration has been updated";
-		container dscp-groups {
-			description "dscp-group resource group updates";
-			leaf-list created {
-				description "List of new dscp-groups created";
-				type fw-types:group-name;
-			}
-			leaf-list modified {
-				description "List of dscp-groups modified";
-				type fw-types:group-name;
-			}
-			leaf-list deleted {
-				description "List of dscp-groups deleted";
-				type fw-types:group-name;
-			}
 		}
 	}
 }

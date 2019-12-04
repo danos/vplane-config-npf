@@ -13,8 +13,6 @@ import getopt
 import socket
 import re
 
-import vci
-
 from vyatta import configd
 from vyatta.npf.npf_debug import NpfDebug
 from vyatta.npf.npf_store import store_cfg, dataplane_commit
@@ -321,17 +319,16 @@ def program_dscp_groups():
 
     Names are converted to values prior to being passed down.
     """
-    created = []
-    modified = []
-    deleted = []
 
     dbg.pprint("program_dscp_groups()")
 
     (cand_cfg, running_cfg) = get_configs(DSCP_CMD)
 
+    rg_changed = False
+
     if cand_cfg == {} and running_cfg == {}:
         dbg.pprint("unchanged so no work to do")
-        return (created, modified, deleted)
+        return rg_changed
 
     # Look for deleted groups
     for group in sorted(running_cfg):
@@ -341,7 +338,6 @@ def program_dscp_groups():
             dbg.pprint("No new group {}". format(group))
             # Whole group removed
             delete_dscp_group(group)
-            deleted.append(group)
             continue
 
         # Compare running and candidate configs
@@ -353,7 +349,7 @@ def program_dscp_groups():
                                 key=lambda x: dscpTable.get(x, x)))
             delete_dscp_group(group)
             create_dscp_group(group, group_cfg)
-            modified.append(group)
+            rg_changed = True
 
     # Look for added configuration
     for group in sorted(cand_cfg):
@@ -365,9 +361,8 @@ def program_dscp_groups():
                 for c in sorted(cand_cfg[group]['dscp'],
                                 key=lambda x: dscpTable.get(x, x)))
             create_dscp_group(group, group_cfg)
-            created.append(group)
 
-    return (created, modified, deleted)
+    return rg_changed
 
 
 # ===== ICMP and ICMPv6 =====
@@ -775,7 +770,7 @@ def program_resource_groups_main():
         running_cfg = {}
 
     program_address_groups()
-    (created, modified, deleted) = program_dscp_groups()
+    rg_changed = program_dscp_groups()
     program_icmp_groups(ICMPv4)
     program_icmp_groups(ICMPv6)
     program_port_groups()
@@ -783,20 +778,13 @@ def program_resource_groups_main():
 
     dataplane_commit(dbg)
 
-    # Tell any listening VCI components that the NPF dscp-groups config has
-    # changed
-    dscp_groups = {}
-    if created:
-        dscp_groups['created'] = created
-    if modified:
-        dscp_groups['modified'] = modified
-    if deleted:
-        dscp_groups['deleted'] = deleted
-
-    if dscp_groups:
-        cl = vci.Client()
-        cl.emit("vyatta-npf-v1", "configuration-updated",
-                {"dscp-groups":dscp_groups})
+    if rg_changed:
+        try:
+            status = client.node_get_status(CONFIG_CANDIDATE, "policy qos name")
+            if status == client.UNCHANGED:
+                store_cfg("qos commit", "qos commit", "SET", dbg)
+        except:
+            dbg.pprint("No qos policy configured")
 
     send_npf_snmp_traps([RG_BASE], dbg)
     return 0
