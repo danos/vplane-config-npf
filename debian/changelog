@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.9) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * CGNAT: if export CLI doesn't exist
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 04 Dec 2019 16:16:46 +0000
+
 vplane-config-npf (4.0.8) unstable; urgency=medium
 
   [ Paul Aitken ]
