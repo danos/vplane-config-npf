@@ -503,7 +503,10 @@ def cgn_sess_show_one_detail(outer, inner):
           (dst_info, outer.get('pub_addr'), outer.get('pub_port'),
            proto))
     print("    packets: %u, bytes: %u" % (pkts_in, bytes_in))
-    print("    unknown source: %u" % (unk_pkts_in))
+
+    # Unknown source count only applies to 3-tuple session
+    if not inner:
+        print("    unknown source: %u" % (unk_pkts_in))
 
     print()
 
