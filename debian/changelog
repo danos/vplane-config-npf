@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.1) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * Add CGNAT per-port session timeouts for TCP and UDP Established sessions
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 06 Dec 2019 11:18:07 +0000
+
 vplane-config-npf (4.1.0) unstable; urgency=medium
 
   [ Alan Dewar ]
