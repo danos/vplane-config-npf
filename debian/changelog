@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.12) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: The unknown src count only applies to 3-tuple sessions, subscriber etc.
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 06 Dec 2019 12:01:05 +0000
+
 vplane-config-npf (4.0.11) unstable; urgency=medium
 
   * cgnat: add YANG and processing for setting CGNAT logging core
