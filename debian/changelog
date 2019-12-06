@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.0) unstable; urgency=medium
+
+  [ Alan Dewar ]
+  * QoS VCI: Move dscp-groups into yang submodule (Fixes: VRVDR-48985)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 06 Dec 2019 11:14:54 +0000
+
 vplane-config-npf (4.0.11) unstable; urgency=medium
 
   * cgnat: add YANG and processing for setting CGNAT logging core
