@@ -1,10 +1,21 @@
-module vyatta-resources-group-v1 {
-	namespace "urn:vyatta.com:mgmt:vyatta-resources-group:1";
-	prefix vyatta-resources-group-v1;
+submodule vyatta-resources-protocol-group-v1 {
+	belongs-to vyatta-resources-group-v1 {
+		prefix res-group;
+	}
+
+	import vyatta-resources-v1 {
+		prefix resources;
+	}
+
+	import configd-v1 {
+		prefix configd;
+	}
+
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
 
 	include vyatta-resources-group-misc-v1;
-	include vyatta-resources-dscp-group-v1;
-	include vyatta-resources-protocol-group-v1;
 
 	organization "AT&T Inc.";
 	contact
@@ -14,9 +25,7 @@ module vyatta-resources-group-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
-		 All rights reserved.
-		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
+		"Copyright (c) 2019, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -53,51 +62,37 @@ module vyatta-resources-group-v1 {
 
 		 SPDX-License-Identifier: BSD-3-Clause
 
-		 YANG module for Vyatta resource groups";
+		 The YANG submodule package for Vyatta resource groups";
 
 	revision 2019-12-09 {
-		description "Moved protocol-group list out into submodule
-			     to reinstate original orderering.";
+		description "Initial revision: moved protocol-group list
+			     into submodule";
 	}
-	revision 2019-11-29 {
-		description "Moved resources group elements out into
-			     two submodules for QoS VCI.";
-	}
-	revision 2019-06-26 {
-		description "Update resource group commit handling
-			     to improve performance even more.";
-	}
-	revision 2019-02-08 {
-		description "Update resource group validation and commit
-			     handling to improve performance.";
-	}
-	revision 2018-09-12 {
-		description "Updated description and copyright.";
-	}
-	revision 2017-09-07 {
-		description "Rename end-icmp-group to end-resource-group.
-			     Replace end-port-group by end-resource-group.
-			     Add support for DSCP and protocol resource
-			     groups. Add support for address group range.";
-	}
-	revision 2017-06-23 {
-		description "Let group addresses use mask 32 for IPv4 and
-			     mask 128 for IPv6";
-	}
-	revision 2016-10-25 {
-		description "Add warning validate script for address-groups named masquerade";
-	}
-	revision 2016-08-09 {
-		description "Add descriptions to many nodes.
-			     Move scripts from under tmplscripts.";
-	}
-	revision 2016-08-03 {
-		description "Increase address-group max-elements from 32 to 1024";
-	}
-	revision 2016-03-28 {
-		description "Remove use of bash in action scripts";
-	}
-	revision 2015-10-13 {
-		description "Initial revision.";
+
+	augment /resources:resources/group {
+		list protocol-group {
+			description "Group of IP L4 protocols";
+			configd:help "Group of IP L4 protocols";
+			key "group-name";
+			leaf group-name {
+				type fw-types:group-name;
+				description "Group name for IP L4 protocols";
+				configd:help "Group name for IP L4 protocols";
+			}
+			leaf description {
+				type string;
+				description "Protocol group description";
+				configd:help "Protocol group description";
+			}
+			leaf-list protocol {
+				type string {
+					configd:syntax "syntax-check-protocols";
+				}
+				description "IP L4 protocol to match";
+				configd:help "IP L4 protocol to match";
+				configd:allowed "allowed-protocols";
+				min-elements 1;
+			}
+		}
 	}
 }

@@ -66,9 +66,13 @@ submodule vyatta-resources-group-misc-v1 {
 
 		 YANG submodule for Vyatta resource groups";
 
+	revision 2015-12-09 {
+		description "Moved protocol-group list out to separate " +
+		        "submodule.";
+	}
 	revision 2015-11-25 {
 		description "Initial revision " +
-			"Relocate definitions from vyatta-resources-group-v1" +
+			"Relocate definitions from vyatta-resources-group-v1 " +
 			"when refactoring to sub-modules.";
 	}
 
@@ -255,30 +259,6 @@ submodule vyatta-resources-group-misc-v1 {
 							}
 						}
 					}
-				}
-			}
-			list protocol-group {
-				description "Group of IP L4 protocols";
-				configd:help "Group of IP L4 protocols";
-				key "group-name";
-				leaf group-name {
-					type fw-types:group-name;
-					description "Group name for IP L4 protocols";
-					configd:help "Group name for IP L4 protocols";
-				}
-				leaf description {
-					type string;
-					description "Protocol group description";
-					configd:help "Protocol group description";
-				}
-				leaf-list protocol {
-					type string {
-						configd:syntax "syntax-check-protocols";
-					}
-					description "IP L4 protocol to match";
-					configd:help "IP L4 protocol to match";
-					configd:allowed "allowed-protocols";
-					min-elements 1;
 				}
 			}
 		}
