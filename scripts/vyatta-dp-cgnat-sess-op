@@ -382,7 +382,7 @@ def cgn_sess_show_one(outer, inner, show_hdr):
         sid = "%u.0" % (outer.get('id'))
         etime = outer.get('cur_to')
         pkts_out = outer.get('out_pkts')
-        pkts_in = outer.get('in_pkts') + outer.get('unk_pkts_in')
+        pkts_in = outer.get('in_pkts')
 
     col1 = col1_width(len(sid))
 
