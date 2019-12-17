@@ -384,6 +384,9 @@ def cgn_sess_show_one(outer, inner, show_hdr):
         pkts_out = outer.get('out_pkts')
         pkts_in = outer.get('in_pkts')
 
+    if etime is None:
+        etime = "-"
+
     col1 = col1_width(len(sid))
 
     # Do not display header until col1 width has been determined
