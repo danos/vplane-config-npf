@@ -1,3 +1,11 @@
+vplane-config-npf (4.0.13) unstable; urgency=medium
+
+  * Updated due to in-pkts count now including unknown-sources
+  * cgnat: do not display timeouts value if not in JSON for session detail
+  * cgnat: display timeout as "-" if not in JSON when showing session
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 18 Dec 2019 10:51:25 +0000
+
 vplane-config-npf (4.0.12) unstable; urgency=medium
 
   [ Ian Wilson ]
