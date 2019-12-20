@@ -44,12 +44,6 @@ Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
 Description: vyatta resource groups yang and scripts
  YANG module and scripts for Vyatta resource group configuration
 
-Package: vyatta-resources-group-lib
-Architecture: all
-Depends: python3, ${misc:Depends}
-Description: vyatta resources group python libraries
- Python libraries used by QoS VCI for dscp-groups
-
 Package: vyatta-security-firewall-v1-yang
 Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
