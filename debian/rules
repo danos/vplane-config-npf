@@ -3,7 +3,7 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ --with=yang --with python3 --with systemd
+	dh $@ --with=yang --with python3 --with systemd --with vci
 
 override_dh_auto_configure:
 	debian/autogen.sh

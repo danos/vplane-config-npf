@@ -3,7 +3,7 @@ Section: contrib/net
 Priority: extra
 Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
 Build-Depends: debhelper (>= 9), autotools-dev, autoconf, automake,
- cpio, libfile-copy-recursive-perl, libset-scalar-perl, dh-yang,
+ cpio, libfile-copy-recursive-perl, libset-scalar-perl, dh-yang, dh-vci,
  dh-python, python3, dh-systemd, python3-pytest
 X-Python3-Version: >= 3.5
 Standards-Version: 3.9.6
@@ -271,3 +271,11 @@ Replaces: vyatta-op-security-firewall-v1-yang (<< 1.10.5),
  vyatta-security-firewall-v1-yang (<< 1.10.5)
 Description: Vyatta Zone-Based Firewall feature flag
  The feature flag for the Zone-Based Firewall feature
+
+Package: vyatta-res-grp-vci
+Architecture: any
+Priority: extra
+Depends: ephemerad, python3, python3-vci, python3-systemd, ${misc:Depends},
+         vyatta-resources-group-v1-yang (>= 4.1.0), ${python3:Depends}
+Description: Resources Group ephemeral VCI component
+ The ephemeral VCI component for Resources Group

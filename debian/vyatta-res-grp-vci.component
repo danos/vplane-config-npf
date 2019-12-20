@@ -1,0 +1,10 @@
+[Vyatta Component]
+Name=net.vyatta.vci.ephemeral.res-grp
+Description=Ephemeral version of the resources group VCI component 
+Ephemeral=true
+ConfigFile=/etc/vyatta/res-grp.json
+
+[Model net.vyatta.vci.ephemeral.res-grp.v1]
+Modules=vyatta-resources-dscp-group-v1
+
+ModelSets=vyatta-v1

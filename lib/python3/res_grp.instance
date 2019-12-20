@@ -1,0 +1,10 @@
+[Component]
+Name=net.vyatta.vci.ephemeral.res-grp
+Start=/lib/res_grp_vci.py --action=start
+Stop=/lib/res_grp_vci.py --action=stop
+
+[Model net.vyatta.vci.ephemeral.res-grp.v1]
+Config/Check=/lib/res_grp_vci.py --action=validate
+Config/Set=/lib/res_grp_vci.py --action=commit
+Config/Get=/lib/res_grp_vci.py --action=get-config
+State/Get=/lib/res_grp_vci.py --action=get-state

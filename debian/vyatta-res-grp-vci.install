@@ -1,0 +1,5 @@
+lib/python3/res_grp_vci.py usr/lib
+lib/python3/res_grp_config.py usr/lib/python3/dist-packages/vyatta/res_grp
+lib/python3/res_grp_dscp_group.py usr/lib/python3/dist-packages/vyatta/res_grp
+lib/python3/res_grp_provisioner.py usr/lib/python3/dist-packages/vyatta/res_grp
+lib/python3/res_grp.instance lib/vci/ephemera/instances
