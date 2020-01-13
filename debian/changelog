@@ -1,3 +1,22 @@
+vplane-config-npf (4.1.2) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: The unknown src count only applies to 3-tuple sessions, subscriber etc.
+
+  [ Alan Dewar ]
+  * Reinstate original order of Yang nodes (Fixes: VRVDR-49362)
+
+  [ Gavin Shearer ]
+  * Updated due to in-pkts count now including unknown-sources
+  * cgnat: do display timeouts value if not in JSON for session detail
+  * cgnat: display timeout as "-" if not in JSON when showing session
+
+  [ Alan Dewar ]
+  * Delete the vyatta-resources-group-lib package
+  * Create the resources-group ephemeral VCI component (Fixes: VRVDR-49474)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 13 Jan 2020 15:42:35 +0000
+
 vplane-config-npf (4.1.1) unstable; urgency=medium
 
   [ Ian Wilson ]
