@@ -133,7 +133,7 @@ def nat64_group_rule_status(client, node, group):
     if 'ruleset-name' not in group:
         return(changed, added, deleted)
 
-    path = "service nat %s group %s" % (node, group.get('ruleset-name'))
+    path = "service nat %s group %s rule" % (node, group.get('ruleset-name'))
 
     if client.node_exists(client.RUNNING, path):
         cfg_run = client.tree_get_full_dict(path, client.RUNNING, "json")
@@ -144,7 +144,7 @@ def nat64_group_rule_status(client, node, group):
     if cfg_run:
         for rule in cfg_run.get('rule'):
             rlnum = rule.get('rule-number')
-            rl_path = "%s rule %s" % (path, rlnum)
+            rl_path = "%s %s" % (path, rlnum)
             status = client.node_get_status(client.CANDIDATE, rl_path)
             if status == client.DELETED:
                 deleted.append(rule)
@@ -152,7 +152,7 @@ def nat64_group_rule_status(client, node, group):
     if cfg_cand:
         for rule in cfg_cand.get('rule'):
             rlnum = rule.get('rule-number')
-            rl_path = "%s rule %s" % (path, rlnum)
+            rl_path = "%s %s" % (path, rlnum)
             status = client.node_get_status(client.CANDIDATE, rl_path)
             if status == client.ADDED:
                 added.append(rule)
