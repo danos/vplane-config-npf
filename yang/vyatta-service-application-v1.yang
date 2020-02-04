@@ -14,12 +14,6 @@ module vyatta-service-application-v1 {
 	import vyatta-npf-v1 {
 		prefix npf;
 	}
-	import vyatta-dpi-application-names-v1 {
-		prefix app-names;
-	}
-	import vyatta-dpi-application-types-v1 {
-		prefix app-types;
-	}
 
 	organization "AT&T Inc.";
 	contact
@@ -29,7 +23,7 @@ module vyatta-service-application-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019 AT&T Intellectual Property
+		"Copyright (c) 2017-2020 AT&T Intellectual Property
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -68,14 +62,29 @@ module vyatta-service-application-v1 {
 
 		 YANG module for user-defined applications";
 
+	revision 2020-05-12 {
+		description "Simplified appname to string.
+		             Added apptype.
+		             Changed application/rule/then/type to apptype.";
+	}
+
 	revision 2018-01-15 {
 		description "Initial revision of version 1.";
 	}
 
 	typedef appname {
 		type union {
-			type app-names:application-names;
-			type string;
+			type string {
+				length 1..max;
+			}
+		}
+	}
+
+	typedef apptype {
+		type union {
+			type string {
+				length 1..max;
+			}
 		}
 	}
 
@@ -113,7 +122,7 @@ module vyatta-service-application-v1 {
 						configd:help "Specify application type";
 						key type-value;
 						leaf type-value {
-							type app-types:application-types;
+							type apptype;
 						}
 					}
 					leaf protocol {
