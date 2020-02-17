@@ -35,7 +35,7 @@ module vyatta-op-service-nat64-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2019, AT&T Intellectual Property.
+		"Copyright (c) 2019-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -73,6 +73,12 @@ module vyatta-op-service-nat64-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for NAT64 and NAT46 operation mode commands.";
+
+	revision 2020-02-18 {
+		description "Removed unnecessary CLI parameter by changing
+			     'delete session table <nat64/nat46>' from
+			     untyped opd:option to opd:command.";
+	}
 
 	revision 2019-03-01 {
 		description "Initial revision.";
@@ -143,11 +149,11 @@ module vyatta-op-service-nat64-v1 {
 	}
 
 	opd:augment /delete:delete/op-system-session:session/op-system-session:table {
-		opd:option nat64  {
+		opd:command nat64  {
 			opd:help "Delete all nat64 session entries";
 			opd:on-enter "vyatta-dp-npf-nat64-op -c translations -t nat64";
 		}
-		opd:option nat46  {
+		opd:command nat46  {
 			opd:help "Delete all nat46 session entries";
 			opd:on-enter "vyatta-dp-npf-nat64-op -c translations -t nat46";
 		}
