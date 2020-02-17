@@ -29,7 +29,7 @@ module vyatta-op-service-nat-cgnat-v1 {
          Web: www.att.com";
 
     description
-        "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
+        "Copyright (c) 2019-2020, AT&T Intellectual Property.  All rights reserved.
 
         Redistribution and use in source and binary forms,
         with or without modification, are permitted provided
@@ -66,6 +66,12 @@ module vyatta-op-service-nat-cgnat-v1 {
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT operation mode commands";
+
+    revision 2020-02-18 {
+        description "Removed unnecessary CLI parameter by changing
+                     '<update/clear> cgnat session statistics' from
+                     untyped opd:option to opd:command.";
+    }
 
     revision 2019-11-15 {
         description "Add destination params to filter. " +
@@ -304,7 +310,7 @@ module vyatta-op-service-nat-cgnat-v1 {
                     opd:on-enter "vyatta-dp-cgnat-sess-op-yang clear ${@: 4}";
                 }
                 uses session-filter;
-                opd:option statistics {
+                opd:command statistics {
                     opd:help "Clear CGNAT session statistics";
                 }
             }
@@ -364,7 +370,7 @@ module vyatta-op-service-nat-cgnat-v1 {
                     opd:on-enter "vyatta-dp-cgnat-sess-op-yang update ${@: 4}";
                 }
                 uses session-filter;
-                opd:option statistics {
+                opd:command statistics {
                     opd:help "Update CGNAT session statistics";
                 }
             }
