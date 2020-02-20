@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+# Copyright (c) 2019-2020 AT&T Intellectual Property. All Rights Reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
@@ -115,6 +115,12 @@ def summary_netconf(entry):
     state_entry['packets-not-cgnat'] = entry['nopool']
     state_entry['pcp-ok'] = entry['pcp_ok']
     state_entry['pcp-fail'] = entry['pcp_err']
+    if 'sess_ht_created' in entry:
+        state_entry['sess-ht-created'] = entry['sess_ht_created']
+        state_entry['sess-ht-destroyed'] = entry['sess_ht_destroyed']
+    else:
+        state_entry['sess-ht-created'] = 0
+        state_entry['sess-ht-destroyed'] = 0
 
     dbg.pprint("summary netconf entry: {}".format(state_entry))
     return state_entry

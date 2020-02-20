@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019-2020, AT&T Intellectual Property. All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
@@ -104,6 +104,14 @@ def cgn_op_show_summary():
                     print("    %-30s %18u" % ("Did not match CGNAT pool",
                                               summary.get('nopool')))
 
+                # Dest addr/port hash tables
+                if 'sess_ht_created' in summary:
+                    print("  %-32s" % ("Session hash tables:"))
+                    print("    %-30s %18u" % ("Created",
+                                              summary.get('sess_ht_created')))
+                    print("    %-30s %18u" % ("Destroyed",
+                                              summary.get('sess_ht_destroyed')))
+
                 # PCP
                 if 'pcp_ok' in summary:
                     print("  %-32s %18u" % ("PCP sessions created",
@@ -112,6 +120,7 @@ def cgn_op_show_summary():
                     print("  %-32s %18u" % ("PCP errors",
                                             summary.get('pcp_err')))
 
+                # Other
                 print("  %-32s %18u" % ("Memory allocation failures",
                                         summary.get('enomem')))
                 print("  %-32s %18u" % ("Resource limitation failures",
