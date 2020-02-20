@@ -44,7 +44,7 @@ module vyatta-service-nat-cgnat-v1 {
          Web: www.att.com";
 
     description
-        "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
+        "Copyright (c) 2019-2020, AT&T Intellectual Property.  All rights reserved.
 
         Redistribution and use in source and binary forms,
         with or without modification, are permitted provided
@@ -81,6 +81,10 @@ module vyatta-service-nat-cgnat-v1 {
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT configuration";
+
+    revision 2020-02-20 {
+        description "Add sess-ht-created and sess-ht-destroyed to summary.";
+    }
 
     revision 2019-12-05 {
         description "Add CGNAT off-box logging commands. " +
@@ -953,6 +957,16 @@ module vyatta-service-nat-cgnat-v1 {
                     }
                     leaf pcp-fail {
                         description "Unsuccessful PCP requests.";
+                        type uint64;
+                    }
+                    leaf sess-ht-created {
+                        description "Number of destination address/port hash " +
+                                    "tables created.";
+                        type uint64;
+                    }
+                    leaf sess-ht-destroyed {
+                        description "Number of destination address/port hash " +
+                                    "tables destroyed.";
                         type uint64;
                     }
                 }
