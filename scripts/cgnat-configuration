@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2019 AT&T Intellectual Property. All Rights Reserved.
+# Copyright (c) 2019-2020 AT&T Intellectual Property. All Rights Reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
@@ -208,8 +208,24 @@ def cgnat_port_str(number_or_string):
 #
 # Build the per-state session timeouts command
 #
-# The state based session timeouts are stored as one long string for TCP and
-# UDP.   Per-port timeout config is stored outwith this function.
+# The state based session timeouts (without ports) is stored as one long string,
+# which configures the values for all protocols and states, for example:
+#
+# cgn-cfg session-timeouts other-estab 100 other-opening 70 tcp-estab 8000
+#         tcp-closing 300 tcp-opening 240 udp-estab 300 udp-opening 30
+
+# However, the per-port timeout config is stored as a string for each
+# protocol and port, for example:
+#
+# cgn-cfg session-timeouts tcp-estab port 2001 timeout 60
+#
+# The command array used to hold the lines to store needs to
+# index on protocol and port, as there can be multiple entries.
+#
+# The two types of commands are built up under different keys ('global'
+# and 'per-port') so they can be processed separately in the
+# send_cgnat_sess_timeout_config() function for storing in the cstore (which
+# results in the commands going to the dataplane).
 #
 def build_cgnat_sess_timeout_command(commands, cfg, tree):
 
@@ -223,50 +239,47 @@ def build_cgnat_sess_timeout_command(commands, cfg, tree):
 
     key = "{} session-timeout".format(BASE_CGNAT_PATH)
     cmd = "session-timeouts "
-    port_dict = {}
 
-    #
-    # Per-state session timeout.  If not configured, then the default values
-    # are stored and sent to the dataplane.
-    #
     for prot in cfg:
-        # Remove the per-port config
-        if 'port' in cfg[prot]:
-            port_dict[prot] = cfg[prot]['port']
-            del cfg[prot]['port']
+        for param2 in cfg[prot]:
+            if param2 == 'port':
+                # process as per-port configuration
+                base_cmd = "session-timeouts {}-estab".format(prot)
+                for port in cfg[prot][param2]:
+                    timeout = cfg[prot][param2][port]['established']
 
-        for state in cfg[prot]:
-            if state not in state_to_cmd:
-                err("Unexpected state of {} for {}".format(state, prot))
-                continue
-            cmd += "{}-{} {} ".format(
-                prot, state_to_cmd[state], cfg[prot][state])
+                    port_num = cgnat_port_str(port)
+                    if not port_num:
+                        continue
 
-    commands[tree] = (key, cmd)
+                    pkey = "{} {} port {}".format(key, prot, port_num)
+                    pcmd = "{} port {} timeout {}".format(base_cmd, port_num,
+                                                          timeout)
+
+                    if 'per-port' not in commands.keys():
+                        commands['per-port'] = {}
+                    if prot not in commands['per-port'].keys():
+                        commands['per-port'][prot] = {}
+                    if port not in commands['per-port'][prot].keys():
+                        commands['per-port'][prot][port_num] = {}
+                    commands['per-port'][prot][port_num][tree] = (pkey, pcmd)
+                    dbg.pprint("PORT-SESS-TIMEOUT KEY: {}".format(pkey))
+                    dbg.pprint("                  CMD: {}".format(pcmd))
+
+            else:
+                # If param2 is not 'port, then it is a state, so process to
+                # create a single line for the variables protocols and states
+                if param2 not in state_to_cmd:
+                    err("Unexpected state of {} for {}".format(param2, prot))
+                    continue
+                cmd += "{}-{} {} ".format(
+                    prot, state_to_cmd[param2], cfg[prot][param2])
+
+    if 'global' not in commands.keys():
+            commands['global'] = {}
+    commands['global'][tree] = (key, cmd)
     dbg.pprint("SESS-TIMEOUT KEY: {}".format(key))
     dbg.pprint("             CMD: {}".format(cmd))
-
-    #
-    # Per-port session timeout.  Values are stored only if configured.
-    #
-    for prot in ['tcp', 'udp']:
-        if prot not in port_dict:
-            continue
-        base_cmd = "session-timeouts {}-estab".format(prot)
-        for port in port_dict[prot]:
-            to = port_dict[prot][port]['established']
-
-            port = cgnat_port_str(port)
-            if not port:
-                continue
-
-            key = "{} session-timeout {} port {}".format(BASE_CGNAT_PATH,
-                                                         prot, port)
-            cmd = "{} port {} timeout {}".format(base_cmd, port, to)
-
-            commands[tree] = (key, cmd)
-            dbg.pprint("PORT-SESS-TIMEOUT KEY: {}".format(key))
-            dbg.pprint("                  CMD: {}".format(cmd))
 
 
 def build_cgnat_interface_config(commands, cfg, tree):
@@ -612,8 +625,11 @@ def send_cgnat_sess_timeout_config(commands):
 
     """ Send config for 'cgnat session-timeout' """
 
-    rc = commands.get('running')
-    cc = commands.get('cand')
+    # First handle the protocol and state config, which is stored as
+    # a single line under the 'global' entry.
+
+    rc = commands.get('global', {}).get('running')
+    cc = commands.get('global', {}).get('cand')
 
     if rc is None:
         if cc is not None:
@@ -634,6 +650,38 @@ def send_cgnat_sess_timeout_config(commands):
             else:
                 dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".format(
                     cc[0], cc[1]))
+
+    # Next handle the per-port settings, which has entries per-protocol
+    # and per-port and is under the 'per-port' entry.
+
+    pcommands = commands.get('per-port', {})
+
+    for prot in pcommands:
+        for port in pcommands[prot]:
+
+            rc = pcommands[prot][port].get('running')
+            cc = pcommands[prot][port].get('cand')
+
+            if rc is None:
+                if cc is not None:
+                    # this is new configuration
+                    set_cgnat_config(cc[0], cc[1])
+            else:
+                if cc is None:
+                    # configuration is being deleted, so put back to the default
+                    # - this is done by setting the timeout to 0
+
+                    # remove last word (i.e. old timeout) and add timeout 0
+                    cmd = rc[1].rsplit(' ', 1)[0] + ' 0'
+                    delete_cgnat_config(rc[0], cmd)
+                else:
+                    # configuration is being updated
+                    if cc[1] != rc[1]:
+                        # only send if changed
+                        set_cgnat_config(cc[0], cc[1])
+                    else:
+                        dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
+                                   format(cc[0], cc[1]))
 
 
 def send_cgnat_interface_config(commands):
