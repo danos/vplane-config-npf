@@ -140,9 +140,9 @@ module vyatta-service-nat-cgnat-v1 {
         }
     }
 
-	typedef timeout-port {
-		type types:port;
-	}
+    typedef timeout-port {
+        type types:port;
+    }
 
     typedef pool-protocol {
         type enumeration {
