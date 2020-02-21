@@ -44,7 +44,8 @@ module vyatta-service-nat-cgnat-v1 {
          Web: www.att.com";
 
     description
-        "Copyright (c) 2019-2020, AT&T Intellectual Property.  All rights reserved.
+        "Copyright (c) 2019-2020, AT&T Intellectual Property.
+        All rights reserved.
 
         Redistribution and use in source and binary forms,
         with or without modification, are permitted provided
@@ -82,6 +83,10 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
+    revision 2020-02-21 {
+        description "Add per-port TCP and UDP timeouts.";
+    }
+
     revision 2020-02-20 {
         description "Add sess-ht-created and sess-ht-destroyed to summary.";
     }
@@ -96,8 +101,7 @@ module vyatta-service-nat-cgnat-v1 {
                     "Add PCP errors to error stats. " +
                     "Add configd:priority to system export. " +
                     "Add op-mode counters for unknown source pkts. " +
-                    "Add core configuration for CGNAT session logging. " +
-                    "Add per-port TCP and UDP timeouts.";
+                    "Add core configuration for CGNAT session logging. ";
     }
 
     revision 2019-09-23 {
