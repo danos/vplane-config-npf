@@ -1,5 +1,4 @@
 usr/share/configd/yang/vyatta-ippf-v1.yang
-lib/vyatta-platform/yang/vyatta-ippf-deviations-siad-v1.yang
 opt/vyatta/sbin/end-ippf-ruleset
 opt/vyatta/sbin/vyatta-ippf-rpc
 opt/vyatta/sbin/validate-ippf

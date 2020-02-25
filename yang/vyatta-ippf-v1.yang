@@ -23,7 +23,7 @@ module vyatta-ippf-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2019-2020, AT&T Intellectual Property.
+		"Copyright (c) 2019, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -61,10 +61,6 @@ module vyatta-ippf-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for Vyatta IP Packet Filter";
-
-	revision 2020-02-20 {
-		description "Added 'ipv6-frag' matching option in 'protocol base'.";
-	}
 
 	revision 2019-06-20 {
 		description "Initial revision.";
@@ -187,10 +183,6 @@ module vyatta-ippf-v1 {
 				enum "esp" {
 					description  "Match IPSEC ESP packets (protocol 50)";
 					configd:help "Match IPSEC ESP packets (protocol 50)";
-				}
-				enum "ipv6-frag" {
-					description  "Match IPv6 fragment packets (protocol 44)";
-					configd:help "Match IPv6 fragment packets (protocol 44)";
 				}
 			}
 		}
