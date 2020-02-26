@@ -63,6 +63,12 @@ EOF
             }
         }
 
+        stage('Install dependencies') {
+            steps {
+                sh 'pip3 install flake8'
+            }
+        }
+
         // Workspace specific chroot location used instead of /var/tmp
         // Allows parallel builds between jobs, but not between stages in a single job
         // TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
@@ -115,6 +121,17 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
                 }
             }
         }
+
+        stage('Flake8') {
+            steps {
+                dir('vplane-config-npf') {
+                    sh '''
+pyfiles=`find . -exec file {} \\; | grep -i python | cut -d: -f1 | cut -c3- | xargs`
+python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
+'''
+                }
+            }
+        }
     } // stages
 
     post {
@@ -124,8 +141,11 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
             //sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
             //deleteDir()
 
-            recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+            recordIssues tool: perlCritic(pattern: 'vplane-config-npf/perlcritic.txt'),
                 qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+
+            recordIssues tool: flake8(pattern: 'vplane-config-npf/flake8.out'),
+                qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true]]
 
             // Do any clean up for DRAM?
         }
