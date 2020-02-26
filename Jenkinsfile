@@ -24,89 +24,122 @@ pipeline {
     agent any
 
     environment {
-	OBS_TARGET_PROJECT = 'Vyatta:Master'
-	OBS_TARGET_REPO = 'standard'
-	OBS_TARGET_ARCH = 'x86_64'
-	// # Replace : with _ in project name, as osc-buildpkg does
-	OSC_BUILD_ROOT = "${WORKSPACE}" + '/build-root/' + "${env.OBS_TARGET_PROJECT.replace(':','_')}" + '-' + "${env.OBS_TARGET_REPO}" + '-' + "${OBS_TARGET_ARCH}"
-	DH_VERBOSE = 1
-	DH_QUIET = 0
-	DEB_BUILD_OPTIONS ='verbose'
+        OBS_TARGET_PROJECT = 'Vyatta:Master'
+        OBS_TARGET_REPO = 'standard'
+        OBS_TARGET_ARCH = 'x86_64'
+        // # Replace : with _ in project name, as osc-buildpkg does
+        OSC_BUILD_ROOT = "${WORKSPACE}" + '/build-root/' + "${env.OBS_TARGET_PROJECT.replace(':','_')}" + '-' + "${env.OBS_TARGET_REPO}" + '-' + "${OBS_TARGET_ARCH}"
+        DH_VERBOSE = 1
+        DH_QUIET = 0
+        DEB_BUILD_OPTIONS ='verbose'
     }
 
     options {
-	timeout(time: 180, unit: 'MINUTES') // Hopefully maximum even when Valgrind is included!
-	checkoutToSubdirectory("vplane-config-npf")
-	quietPeriod(90) // Wait 90 seconds in case there are more SCM pushes/PR merges coming
+        timeout(time: 180, unit: 'MINUTES') // Hopefully maximum even when Valgrind is included!
+        checkoutToSubdirectory("vplane-config-npf")
+        quietPeriod(30) // Wait in case there are more SCM pushes/PR merges coming
+        ansiColor('xterm')
+        timestamps()
     }
 
     stages {
 
-	// A work around, until this feature is implemented: https://issues.jenkins-ci.org/browse/JENKINS-47503
-	stage('Cancel older builds') { steps { script {
-	    cancelPreviousBuilds()
+        // A work around, until this feature is implemented: https://issues.jenkins-ci.org/browse/JENKINS-47503
+        stage('Cancel older builds') { steps { script {
+            cancelPreviousBuilds()
         }}}
 
-	stage('OSC config') {
-	    steps {
-		sh 'printenv'
-		// Build scripts with tasks to perform in the chroot
-		sh """
+        stage('OSC config') {
+            steps {
+                sh 'printenv'
+                // Build scripts with tasks to perform in the chroot
+                sh """
 cat <<EOF > osc-buildpackage_buildscript_default
 export BUILD_ID=\"${BUILD_ID}\"
 export JENKINS_NODE_COOKIE=\"${JENKINS_NODE_COOKIE}\"
 dpkg-buildpackage -jauto -us -uc -b
 EOF
 """
-	    }
-	}
+            }
+        }
 
-	// Workspace specific chroot location used instead of /var/tmp
-	// Allows parallel builds between jobs, but not between stages in a single job
-	// TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
-	// TODO: probably by allowing it to accept a .conf file from a location other than pkg_srcdir
+        // Workspace specific chroot location used instead of /var/tmp
+        // Allows parallel builds between jobs, but not between stages in a single job
+        // TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
+        // TODO: probably by allowing it to accept a .conf file from a location other than pkg_srcdir
 
-	stage('OSC Build') {
-	    steps {
-		dir('vplane-config-npf') {
-		    sh """
+        stage('OSC Build') {
+            steps {
+                dir('vplane-config-npf') {
+                    sh """
 cat <<EOF > .osc-buildpackage.conf
 OSC_BUILDPACKAGE_TMP=\"${WORKSPACE}\"
 OSC_BUILDPACKAGE_BUILDSCRIPT=\"${WORKSPACE}/osc-buildpackage_buildscript_default\"
 EOF
 """
-		    sh "osc-buildpkg -v -g -T -P ${env.OBS_TARGET_PROJECT} ${env.OBS_TARGET_REPO} -- --trust-all-projects --build-uid='caller'"
-		}
-	    }
-	}
+                    sh "osc-buildpkg -v -g -T -P ${env.OBS_TARGET_PROJECT} ${env.OBS_TARGET_REPO} -- --trust-all-projects --build-uid='caller'"
+                }
+            }
+        }
 
-	stage('Code Stats') {
-	    when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
-	    steps {
-		sh 'sloccount --duplicates --wide --details vplane-config-npf > sloccount.sc'
-		sloccountPublish pattern: '**/sloccount.sc'
-	    }
-	}
+        stage('Code Stats') {
+            when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
+            steps {
+                sh 'sloccount --duplicates --wide --details vplane-config-npf > sloccount.sc'
+                sloccountPublish pattern: '**/sloccount.sc'
+            }
+        }
 
+/* We can't do a simple
+ *    sh "dram --username jenkins -d yang"
+ * because the base yang dir contains a VNF module
+ * and there are platform modules in another dir.
+ */
+        stage('DRAM') {
+            steps {
+                dir('vplane-config-npf') {
+                    sh '''
+yang=`echo yang/*.yang | sed 's@yang/vyatta-policy-pbr-bridge-v1.yang @@' | sed 's/ /,/g'`
+platform=`echo platform/*.platform | sed 's/ /,/g'`
+platyang=`echo platform/*.yang | sed 's/ /,/g'`
+dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-policy-pbr-bridge-v1.yang
+'''
+                }
+            }
+        }
+
+        stage('Perlcritic') {
+            steps {
+                dir('vplane-config-npf') {
+                    sh script: "perlcritic --quiet --severity 5 . 2>&1 | tee perlcritic.txt", returnStatus: true
+                }
+            }
+        }
     } // stages
 
     post {
         always {
-	    sh 'rm -f *.deb'
-	    sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
-	    deleteDir()
+            sh 'rm -f *.deb' // top-level dir
+            // Re-enable these once the osc wipe is fixed.
+            //sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
+            //deleteDir()
+
+            recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+                qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+
+            // Do any clean up for DRAM?
         }
         success {
             echo 'Winning'
         }
         failure {
             echo 'Argh... something went wrong'
-	    emailext (
-		subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-		body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
-			 <p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
-		recipientProviders: [culprits()]
-	    )
+            emailext (
+                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+                body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+                         <p>Check console output at "<a href="${env.BUILD_URL}">${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>"</p>""",
+                recipientProviders: [culprits()]
+            )
         }
     }
 }
