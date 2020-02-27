@@ -26,7 +26,7 @@ module vyatta-op-service-nat-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -64,6 +64,10 @@ module vyatta-op-service-nat-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for NAT-related operation mode commands.";
+
+	revision 2020-02-27 {
+		description "Extend options for clearing NPTv6 statistics.";
+	}
 
 	revision 2018-06-25 {
 		description "Extend options for clearing statistics.";
@@ -174,6 +178,22 @@ module vyatta-op-service-nat-v1 {
 						opd:allowed "allowed-nodes service nat destination rule";
 						opd:on-enter 'vyatta-dp-npf-clear dnat44 interface $5 rule $7';
 					}
+				}
+			}
+
+			opd:command nptv6 {
+				opd:help "Clear NPTv6 statistics";
+				opd:on-enter 'vyatta-dp-npf-clear natnpt';
+
+
+				opd:command source {
+					opd:help "Clear source NPTV6 statistics";
+					opd:on-enter 'vyatta-dp-npf-clear snatnpt';
+				}
+
+				opd:command destination {
+					opd:help "Clear destination NPTV6 statistics";
+					opd:on-enter 'vyatta-dp-npf-clear dnatnpt';
 				}
 			}
 		}

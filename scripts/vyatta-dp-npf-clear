@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-# Copyright (c) 2018-2019, AT&T Intellectual Property.  All rights reserved.
+# Copyright (c) 2018-2020, AT&T Intellectual Property.  All rights reserved.
 # Copyright (c) 2016, Brocade Communications Systems, Inc.
 # All rights reserved.
 #
@@ -19,33 +19,42 @@ if ( $#ARGV < 0 ) {
 }
 
 my %base_type_supports = (
-    'fw'     => [ 'interface', 'dir', 'name', 'rule' ],
-    'bridge' => [],
-    'zone'   => [ 'from',      'to',  'name', 'rule' ],
-    'nat'    => [],
-    'dnat44' => [ 'interface', 'rule' ],
-    'snat44' => [ 'interface', 'rule' ],
-    'pbr'    => [ 'interface', 'name', 'rule' ],
+    'fw'      => [ 'interface', 'dir', 'name', 'rule' ],
+    'bridge'  => [],
+    'zone'    => [ 'from', 'to', 'name', 'rule' ],
+    'nat'     => [],
+    'dnat44'  => [ 'interface', 'rule' ],
+    'snat44'  => [ 'interface', 'rule' ],
+    'natnpt'  => [ 'nptv6-in', 'nptv6-out' ],
+    'dnatnpt' => [],
+    'snatnpt' => [],
+    'pbr'     => [ 'interface', 'name', 'rule' ],
 );
 
 my %base_type_to_rs = (
-    'fw'     => [ 'fw-in', 'fw-out', 'bridge', 'local' ],
-    'bridge' => ['bridge'],
-    'zone'   => ['zone'],
-    'nat'    => [ 'snat', 'dnat', 'nat64' ],
-    'dnat44' => ['dnat'],
-    'snat44' => ['snat'],
-    'pbr'    => ['pbr'],
+    'fw'      => [ 'fw-in', 'fw-out', 'bridge', 'local' ],
+    'bridge'  => [ 'bridge' ],
+    'zone'    => [ 'zone' ],
+    'nat'     => [ 'snat', 'dnat', 'nat64' ],
+    'dnat44'  => [ 'dnat' ],
+    'snat44'  => [ 'snat' ],
+    'natnpt'  => [ 'nptv6-in', 'nptv6-out' ],
+    'dnatnpt' => [ 'nptv6-out' ],
+    'snatnpt' => [ 'nptv6-in' ],
+    'pbr'     => [ 'pbr' ],
 );
 
 my %base_type_to_cli_prefix = (
-    'fw'     => 'firewall',
-    'bridge' => 'firewall bridge',
-    'zone'   => 'zone-policy',
-    'nat'    => 'nat',
-    'dnat44' => 'nat destination',
-    'snat44' => 'nat source',
-    'pbr'    => 'policy',
+    'fw'      => 'firewall',
+    'bridge'  => 'firewall bridge',
+    'zone'    => 'zone-policy',
+    'nat'     => 'nat',
+    'dnat44'  => 'nat destination',
+    'snat44'  => 'nat source',
+    'natnpt'  => 'nat nptv6',
+    'dnatnpt' => 'nat nptv6 destination',
+    'snatnpt' => 'nat nptv6 source',
+    'pbr'     => 'policy',
 );
 
 my %dir_to_rs = (
@@ -56,11 +65,14 @@ my %dir_to_rs = (
 );
 
 my %base_type_to_group_class = (
-    'fw'     => 'fw',
-    'zone'   => 'fw',
-    'dnat44' => 'dnat',
-    'snat44' => 'snat',
-    'pbr'    => 'pbr',
+    'fw'      => 'fw',
+    'zone'    => 'fw',
+    'dnat44'  => 'dnat',
+    'snat44'  => 'snat',
+    'natnpt'  => [ 'nptv6-in', 'nptv6-out' ],
+    'dnatnpt' => 'nptv6-out',
+    'snatnpt' => 'nptv6-in',
+    'pbr'     => 'pbr',
 );
 
 sub validate_selector {
