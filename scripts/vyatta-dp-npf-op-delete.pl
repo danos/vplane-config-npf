@@ -37,7 +37,64 @@ my %g_yang_to_dataplane_dict = (
                               "dp_name" => "dport",
                               "cmd_help" => "[destination-port <dst-port>]",
                           },
+    "protocol"         => {
+                              "order" => "5",
+                              "dp_name" => "proto",
+                              "cmd_help" => "[protocol <protocol>]",
+                              "convert_value_fn" => \&convert_protocol_from_string_to_int,
+                          },
 );
+
+sub isdigit {
+    my $input_str = $_[0];
+    if ($input_str =~ /^[0-9]{1,}$/) {
+        return 1;
+    }
+
+    return;
+}
+
+my %protocol_to_num = (
+    "udp" => 17,
+    "tcp" => 6,
+    "icmp" => 1,
+    "ipv6-icmp" => 58,
+);
+
+sub convert_protocol_str_to_number {
+   my $protocol_str = $_[0];
+   my $protocol_num;
+
+   if (defined($protocol_to_num{$protocol_str})) {
+       $protocol_num = $protocol_to_num{$protocol_str};
+   } else {
+       $protocol_num = getprotobyname($protocol_str);
+       if (!defined ($protocol_num)) {
+           print("Invalid command: protocol string '$protocol_str' is not recognized\n");
+           exit 0;
+       }
+   }
+
+   return $protocol_num;
+}
+
+sub convert_protocol_from_string_to_int {
+   my $input_val = $_[0];
+   my $output_val;
+
+   if (isdigit($input_val)) {
+       if ($input_val >= 0 and $input_val <= 255 ) {
+           $output_val = $input_val;
+       } else {
+           print("Invalid command: protocol shall be in range 0-255\n");
+           exit 0;
+       }
+   } else {
+       $output_val = convert_protocol_str_to_number($input_val);
+   }
+
+   return $output_val;
+}
 
 sub usage {
     print "Usage: $0 --id=index\n";
@@ -114,10 +171,15 @@ sub convert_yang_to_dataplane {
         keys %g_yang_to_dataplane_dict) {
         my $dp_param_name;
         my $dp_param_value;
-
         if (exists($yang_flt_dict{$yang_param})) {
             my $yang_value = $yang_flt_dict{$yang_param};
-            $dp_param_value = $yang_value;
+
+            if (defined($g_yang_to_dataplane_dict{$yang_param}{"convert_value_fn"})) {
+                $dp_param_value =
+                    $g_yang_to_dataplane_dict{$yang_param}{"convert_value_fn"}->($yang_value);
+            } else {
+                $dp_param_value = $yang_value;
+            }
         } else {
             $dp_param_value = "any";
         }

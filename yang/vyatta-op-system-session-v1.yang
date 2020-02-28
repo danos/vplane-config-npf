@@ -66,9 +66,10 @@ module vyatta-op-system-session-v1 {
 
 		 YANG module for session-related operation mode commands.";
 
-	revision 2020-02-01 {
+	revision 2020-03-04 {
 		description "ip:[port] filter format in delete session table command
-				changed to source-ip source-port destination-ip destination-port";
+				changed to source-ip source-port destination-ip destination-port
+				add protocol filter to delete session table command";
 	}
 
 	revision 2019-05-23 {
@@ -294,6 +295,12 @@ module vyatta-op-system-session-v1 {
 			type op-ipv4-ipv6-addr-opt {
 				opd:help "destination address";
 			}
+		}
+
+		opd:option protocol {
+			opd:help "Match protocol";
+			type string;
+			opd:allowed "allowed-protocols";
 		}
 
 		opd:option source-port {
