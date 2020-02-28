@@ -15,6 +15,7 @@ import os
 import sys
 import getopt
 
+from collections import defaultdict
 from subprocess import call
 from vyatta import configd
 from vyatta.npf.npf_debug import NpfDebug
@@ -41,6 +42,11 @@ BASE_SYSTEM_CGNAT_PATH = "system export"
 
 # class used for printing debugs
 dbg = NpfDebug()
+
+
+# Used for easy assignment of nested dictionaries
+def nested_dict():
+    return defaultdict(nested_dict)
 
 
 def err(msg):
@@ -180,8 +186,6 @@ def build_cgnat_policy_config(commands, cfg, tree):
 
         cmd += build_cgnat_event_command(p)
 
-        if name not in commands.keys():
-            commands[name] = {}
         commands[name][tree] = (key, cmd)
         dbg.pprint("POLICY - KEY: {}".format(key))
         dbg.pprint("         CMD: {}".format(cmd))
@@ -256,12 +260,6 @@ def build_cgnat_sess_timeout_command(commands, cfg, tree):
                     pcmd = "{} port {} timeout {}".format(base_cmd, port_num,
                                                           timeout)
 
-                    if 'per-port' not in commands.keys():
-                        commands['per-port'] = {}
-                    if prot not in commands['per-port'].keys():
-                        commands['per-port'][prot] = {}
-                    if port not in commands['per-port'][prot].keys():
-                        commands['per-port'][prot][port_num] = {}
                     commands['per-port'][prot][port_num][tree] = (pkey, pcmd)
                     dbg.pprint("PORT-SESS-TIMEOUT KEY: {}".format(pkey))
                     dbg.pprint("                  CMD: {}".format(pcmd))
@@ -275,8 +273,6 @@ def build_cgnat_sess_timeout_command(commands, cfg, tree):
                 cmd += "{}-{} {} ".format(
                     prot, state_to_cmd[param2], cfg[prot][param2])
 
-    if 'global' not in commands.keys():
-            commands['global'] = {}
     commands['global'][tree] = (key, cmd)
     dbg.pprint("SESS-TIMEOUT KEY: {}".format(key))
     dbg.pprint("             CMD: {}".format(cmd))
@@ -289,15 +285,11 @@ def build_cgnat_interface_config(commands, cfg, tree):
     for ifname in cfg:
         key = "{} interface {}".format(BASE_CGNAT_PATH, ifname)
         dbg.pprint("ifname: {}".format(ifname))
-        if ifname not in commands.keys():
-            commands[ifname] = {}
 
         if 'policy' in cfg[ifname]:
             for policy in cfg[ifname]['policy']:
                 pkey = "{} {}".format(key, policy)
                 cmd = "intf={} name={}".format(ifname, policy)
-                if policy not in commands[ifname].keys():
-                    commands[ifname][policy] = {}
                 commands[ifname][policy][tree] = (pkey, cmd)
                 dbg.pprint("INTERFACE - KEY: {}".format(pkey))
                 dbg.pprint("            CMD: {}".format(cmd))
@@ -317,9 +309,6 @@ def build_cgnat_warning_config(commands, cfg, tree):
             if 'interval' in p:
                 cmd += " interval {}".format(p['interval'])
 
-        if name not in commands.keys():
-            commands[name] = {}
-
         commands[name][tree] = (key, cmd)
         dbg.pprint("POLICY - KEY: {}".format(key))
         dbg.pprint("         CMD: {}".format(cmd))
@@ -335,10 +324,6 @@ def build_cgnat_events_config(commands, cfg, tree, kind):
         key = "{} events {} {}".format(BASE_CGNAT_PATH, kind, event)
         dbg.pprint("event: {}".format(event))
         cmd = "{} enable".format(event)
-        if event not in commands.keys():
-            commands[event] = {}
-        if 'enable' not in commands[event].keys():
-            commands[event]['enable'] = {}
         commands[event]['enable'][tree] = (key, cmd)
 
         dbg.pprint("EVENTS - KEY: {}".format(key))
@@ -348,16 +333,10 @@ def build_cgnat_events_config(commands, cfg, tree, kind):
         if 'using' in cfg[event]:
             if 'kafka' in cfg[event]['using']:
                 if 'cluster' in cfg[event]['using']['kafka']:
-                    if 'cluster' not in commands[event].keys():
-                        commands[event]['cluster'] = {}
                     commands[event]['cluster'][tree] = \
                         cfg[event]['using']['kafka']['cluster']
 
                 if 'with' in cfg[event]['using']['kafka']:
-                    if 'with' not in commands[event].keys():
-                        commands[event]['with'] = {}
-                    if tree not in commands[event]['with'].keys():
-                        commands[event]['with'][tree] = {}
                     commands[event]['with'][tree]['topic'] = \
                         cfg[event]['using']['kafka']['with'] \
                         .get('topic')
@@ -380,44 +359,30 @@ def build_cgnat_config(commands, cfg, tree):
     """ Process keywords under the top-level 'cgnat' """
 
     if 'policy' in cfg:
-        if 'policy' not in commands.keys():
-            commands['policy'] = {}
         build_cgnat_policy_config(commands['policy'], cfg['policy'], tree)
 
     if 'disable-hairpinning' in cfg:
         key = "{} disable-hairpinning".format(BASE_CGNAT_PATH)
-        if 'disable-hairpinning' not in commands.keys():
-            commands['disable-hairpinning'] = {}
         commands['disable-hairpinning'][tree] = key
 
     if 'snat-alg-bypass' in cfg:
         key = "{} snat-alg-bypass".format(BASE_CGNAT_PATH)
-        if 'snat-alg-bypass' not in commands.keys():
-            commands['snat-alg-bypass'] = {}
         commands['snat-alg-bypass'][tree] = key
 
     if 'max-sessions' in cfg:
         key = "{} max-sessions".format(BASE_CGNAT_PATH)
-        if 'max-sessions' not in commands.keys():
-            commands['max-sessions'] = {}
         commands['max-sessions'][tree] = (key, cfg['max-sessions'])
 
     if 'max-dest-per-session' in cfg:
         key = "{} max-dest-per-session".format(BASE_CGNAT_PATH)
-        if 'max-dest-per-session' not in commands.keys():
-            commands['max-dest-per-session'] = {}
         commands['max-dest-per-session'][tree] = (
             key, cfg['max-dest-per-session'])
 
     if 'session-timeout' in cfg:
-        if 'session-timeout' not in commands.keys():
-            commands['session-timeout'] = {}
         build_cgnat_sess_timeout_command(commands['session-timeout'],
                                          cfg['session-timeout'], tree)
 
     if 'interface' in cfg:
-        if 'interface' not in commands.keys():
-            commands['interface'] = {}
         build_cgnat_interface_config(commands['interface'], cfg['interface'],
                                      tree)
 
@@ -426,8 +391,6 @@ def build_cgnat_config(commands, cfg, tree):
             if 'event' in cfg['select']['warning']:
                 if 'resource-constraint' in cfg['select']['warning']['event']:
                     key = "{} resource-constraint".format(BASE_CGNAT_PATH)
-                    if 'resource-constraint' not in commands.keys():
-                        commands['resource-constraint'] = {}
                     cmd = build_cgnat_warning_config(
                         commands['resource-constraint'],
                         cfg['select']['warning']['event']
@@ -437,27 +400,17 @@ def build_cgnat_config(commands, cfg, tree):
 
     if 'log' in cfg:
         if 'event' in cfg['log']:
-            if 'events' not in commands.keys():
-                commands['events'] = {}
-            if 'rte_log' not in commands['events'].keys():
-                commands['events']['rte_log'] = {}
             build_cgnat_events_config(commands['events']['rte_log'],
                                       cfg['log']['event'],
                                       tree, "rte_log")
     if 'export' in cfg:
         if 'event' in cfg['export']:
-            if 'events' not in commands.keys():
-                commands['events'] = {}
-            if 'protobuf' not in commands['events'].keys():
-                commands['events']['protobuf'] = {}
             build_cgnat_events_config(commands['events']['protobuf'],
                                       cfg['export']['event'],
                                       tree, "protobuf")
     if 'cpu-affinity' in cfg:
         if 'event' in cfg['cpu-affinity']:
             if 'session' in cfg['cpu-affinity']['event']:
-                if 'session-cpu-core' not in commands.keys():
-                    commands['session-cpu-core'] = {}
                 key = "{} cpu-affinity event session".format(BASE_CGNAT_PATH)
                 commands['session-cpu-core'][tree] = (
                     key, cfg['cpu-affinity']['event']['session'])
@@ -470,16 +423,8 @@ def build_export_kafka_cluster_config(commands, cfg):
     if 'bootstrap' not in cfg.keys():
         return
 
-    if 'ipv4-address' not in commands.keys():
-        commands['ipv4-address'] = {}
     commands['ipv4-address'] = cfg['bootstrap'].get('ipv4-address')
-
-    if 'ipv6-address' not in commands.keys():
-        commands['ipv6-address'] = {}
     commands['ipv6-address'] = cfg['bootstrap'].get('ipv6-address')
-
-    if 'routing-instance' not in commands.keys():
-        commands['routing-instance'] = {}
     commands['routing-instance'] = cfg['bootstrap'].get('routing-instance')
 
 
@@ -489,10 +434,6 @@ def build_export_kafka_config(commands, cfg, tree):
 
     if 'cluster' in cfg:
         for cluster in cfg['cluster']:
-            if cluster not in commands.keys():
-                commands[cluster] = {}
-            if tree not in commands[cluster].keys():
-                commands[cluster][tree] = {}
             build_export_kafka_cluster_config(
                     commands[cluster][tree],
                     cfg['cluster'][cluster])
@@ -503,8 +444,6 @@ def build_export_config(commands, cfg, tree):
     """ Process 'system export' """
 
     if 'kafka' in cfg:
-        if 'export' not in commands.keys():
-            commands['export'] = {}
         build_export_kafka_config(commands['export'], cfg['kafka'], tree)
 
 
@@ -1039,7 +978,7 @@ def program_cgnat_config():
     global FORCE, client
     dbg.pprint("program_cgnat_config()")
 
-    commands = {}
+    commands = nested_dict()
 
     try:
         status = client.node_get_status(CONFIG_CANDIDATE, BASE_CGNAT_PATH)
@@ -1213,7 +1152,7 @@ def program_system_export_config(FORCE):
 
     global client
 
-    commands = {}
+    commands = nested_dict()
 
     try:
         status = client.node_get_status(CONFIG_CANDIDATE,
