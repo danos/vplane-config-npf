@@ -2,9 +2,9 @@ Source: vplane-config-npf
 Section: contrib/net
 Priority: extra
 Maintainer: Vyatta Package Maintainers <DL-vyatta-help@att.com>
-Build-Depends: debhelper (>= 9), autotools-dev, autoconf, automake,
+Build-Depends: debhelper (>= 11), autotools-dev, autoconf, automake,
  cpio, libfile-copy-recursive-perl, libset-scalar-perl, dh-yang, dh-vci,
- dh-python, python3, dh-systemd, python3-pytest
+ dh-python, python3, python3-pytest
 X-Python3-Version: >= 3.5
 Standards-Version: 3.9.6
 
