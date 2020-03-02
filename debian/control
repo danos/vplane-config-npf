@@ -120,7 +120,7 @@ Description: vyatta pbr yang for routing instances
 
 Package: vyatta-policy-pbr-bridge-v1-yang
 Architecture: all
-Depends: ${yang:Depends},
+Depends: ${misc:Depends}, ${yang:Depends},
  vyatta-policy-pbr-v1-yang
 Description: vyatta-policy-pbr-bridge-v1 module
  The YANG module for vyatta-policy-pbr-bridge-v1
@@ -133,56 +133,64 @@ Description: vyatta npf operational yang types
 
 Package: vyatta-op-policy-pbr-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-policy-pbr
  The Vyatta operation YANG for PBR commands
 
 Package: vyatta-op-security-firewall-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-security-firewall
  The Vyatta operation YANG for firewall commands
 
 Package: vyatta-op-system-session-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-system-session
  The Vyatta operation YANG for session commands
 
 Package: vyatta-op-resources-group-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-resources-group
  The Vyatta operation YANG for resources group commands
 
 Package: vyatta-op-service-nat-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-service-nat
  The Vyatta operation YANG for NAT commands
 
 Package: vyatta-op-service-nat-nptv6-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-service-nat-nptv6
  The Vyatta operation YANG for NPTv6 commands
 
 Package: vyatta-op-service-nat64-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version}),
- python3, ${python3:Depends}
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version}), python3, ${python3:Depends}
 Description: operational CLI yang for vyatta-service-nat64
  The Vyatta operation YANG for NAT64 and NAT46 commands
 
 Package: vyatta-interfaces-switch-vif-policy-pbr-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: vyatta pbr yang for switch vlan interfaces
  YANG module for enabling PBR on switch VLAN interfaces
 
 Package: vyatta-interfaces-switch-vif-firewall-v1-yang
 Architecture: all
-Depends: ${yang:Depends}, vplane-config-npf (= ${binary:Version})
+Depends: ${misc:Depends}, ${yang:Depends},
+ vplane-config-npf (= ${binary:Version})
 Description: vyatta firewall yang for switch vlan interfaces
  YANG module for enabling firewall on switch VLAN interfaces
 
