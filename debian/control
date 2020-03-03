@@ -37,7 +37,7 @@ Description: vyatta firewall yang groups
 
 Package: vyatta-resources-group-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+Depends: ${misc:Depends}, ${yang:Depends},
  vplane-config-npf (= ${binary:Version}),
  python3-vplane-config-npf (= ${binary:Version}), vyatta-util,
  libvyatta-file-perl, libvyatta-cfg1, vyatta-cfg, python3:any, python3-netaddr
@@ -91,7 +91,7 @@ Description: vyatta nat nptv6 yang and scripts
 
 Package: vyatta-service-nat64-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
+Depends: ${misc:Depends}, ${yang:Depends}, libset-scalar-perl,
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
  libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang,
@@ -101,7 +101,7 @@ Description: vyatta nat64 yang and scripts
 
 Package: vyatta-policy-pbr-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends},
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
  vplane-config-npf (= ${binary:Version}), vyatta-interfaces (>= 0.5),
  vyatta-cfg
 Breaks: vyatta-policy-route-v1-yang (<< 1.8.6)
@@ -147,14 +147,14 @@ Description: operational CLI yang for vyatta-security-firewall
 
 Package: vyatta-op-system-session-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends},
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
  vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-system-session
  The Vyatta operation YANG for session commands
 
 Package: vyatta-op-resources-group-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends},
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
  vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-resources-group
  The Vyatta operation YANG for resources group commands
@@ -236,7 +236,7 @@ Description: vyatta operational CGNAT yang and scripts
 
 Package: vyatta-ippf-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+Depends: ${misc:Depends}, ${yang:Depends},
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-cfg, libvyatta-cfg1, vyatta-system (>= 1.6.1),
  vyatta-interfaces (>= 0.5), python3:any,
@@ -245,8 +245,7 @@ Description: vyatta IP Packet Filter yang and scripts
 
 Package: vyatta-op-ippf-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
- python3:any, vyatta-ippf-v1-yang
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any, vyatta-ippf-v1-yang
 Description: vyatta IP Packet Filter op-mode yang and scripts
  YANG module for Vyatta IP packet filter op-mode
 
@@ -266,13 +265,13 @@ Description: vyatta alg yang and scripts for routing instances
 
 Package: vyatta-op-system-alg-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, vplane-config-npf,
+Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, vplane-config-npf
 Description: operational CLI yang for vyatta-system-alg
  The Vyatta operation YANG for ALG commands
 
 Package: vyatta-zone-based-firewall-feature
 Architecture: all
-Depends: ${misc:Depends}, libvyatta-interface-perl (>= 1.46)
+Depends: ${misc:Depends}, ${perl:Depends}, libvyatta-interface-perl (>= 1.46)
 Breaks: vyatta-op-security-firewall-v1-yang (<< 1.10.5),
  vyatta-security-firewall-v1-yang (<< 1.10.5)
 Replaces: vyatta-op-security-firewall-v1-yang (<< 1.10.5),
