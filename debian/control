@@ -10,13 +10,13 @@ Standards-Version: 4.3.0
 
 Package: vplane-config-npf
 Architecture: all
-Depends: ${misc:Depends}, ${perl:Depends}, libreadonly-perl, libsnmp-perl, python3:any,
+Depends: ${misc:Depends}, ${perl:Depends}, libreadonly-perl, libsnmp-perl,
  vplane-config, libvyatta-file-perl, libvyatta-dscp-perl, libvyatta-rate-perl,
  libvyatta-typechecker-perl, libvyatta-interface-perl, libvyatta-cfg1,
  libmodule-load-conditional-perl, vyatta-dataplane-cfg-qos-10,
  vyatta-dataplane-cfg-npf-cfg-2, vyatta-dataplane-op-npf-op-0,
  python3-vyatta-interfaces (>= 1.52),
- python3, python3-vyatta-cfgclient, ${python3:Depends},
+ python3:any, python3-vyatta-cfgclient
 Conflicts: vyatta-cfg-firewall, vyatta-op-firewall, vyatta-nat
 Description: vyatta common firewall scripts
  Vyatta common scripts and libraries for firewall services
@@ -95,7 +95,7 @@ Depends: ${misc:Depends}, ${yang:Depends}, libset-scalar-perl,
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
  libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang,
- python3, ${python3:Depends}
+ python3:any
 Description: vyatta nat64 yang and scripts
  YANG module and scripts for Vyatta NAT64 configuration
 
@@ -176,7 +176,7 @@ Description: operational CLI yang for vyatta-service-nat-nptv6
 Package: vyatta-op-service-nat64-v1-yang
 Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends},
- vplane-config-npf (= ${binary:Version}), python3, ${python3:Depends}
+ vplane-config-npf (= ${binary:Version}), python3:any
 Description: operational CLI yang for vyatta-service-nat64
  The Vyatta operation YANG for NAT64 and NAT46 commands
 
@@ -202,7 +202,7 @@ Description: vyatta application service yang
 
 Package: python3-vplane-config-npf
 Architecture: all
-Depends: ${misc:Depends}, python3:any
+Depends: ${misc:Depends}, ${python3:Depends}
 Description: Vyatta python3 libraries for vplane-config-npf
  Library of python3 modules for vplane-config-npf
 
