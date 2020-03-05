@@ -70,12 +70,6 @@ EOF
             }
         }
 
-        stage('Install dependencies') {
-            steps {
-                sh 'pip3 install flake8'
-            }
-        }
-
         // Workspace specific chroot location used instead of /var/tmp
         // Allows parallel builds between jobs, but not between stages in a single job
         // TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
