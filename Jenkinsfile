@@ -133,6 +133,42 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 }
             }
         }
+
+        stage('Codechecks') {
+            when {
+                allOf {
+                    // Only if this is a Pull Request
+                    expression { env.CHANGE_ID != null }
+                    expression { env.CHANGE_TARGET != null }
+                }
+            }
+            steps {
+                dir('vplane-config-npf') {
+                    sh "./codechecks upstream/${env.CHANGE_TARGET} origin/${env.BRANCH_NAME}"
+                }
+            }
+        }
+
+        stage('Gitlint') {
+            agent {
+                docker {
+                    image 'jorisroovers/gitlint'
+                    args '--entrypoint=""'
+                }
+            }
+            when {
+                allOf {
+                    // Only if this is a Pull Request
+                    expression { env.CHANGE_ID != null }
+                    expression { env.CHANGE_TARGET != null }
+                }
+            }
+            steps {
+                dir('vplane-config-npf') {
+                    sh "gitlint --commits upstream/${env.CHANGE_TARGET}...origin/${env.BRANCH_NAME}"
+                }
+            }
+        }
     } // stages
 
     post {
