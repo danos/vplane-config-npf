@@ -8,7 +8,7 @@ module vyatta-op-resources-group-v1 {
 	import vyatta-op-show-v1 {
 		prefix show;
 	}
-	
+
 	organization "AT&T Inc.";
 	contact
 		"AT&T

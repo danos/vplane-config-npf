@@ -361,7 +361,7 @@ module vyatta-service-nat-v1 {
 					key "tagnode";
 					// Note: should also have following "must" check (it is done for source nat),
 					// but the check was missing in a previous release, and to add it will make
-					// the yang not backward compatible - can be added when can implement Yang 
+					// the yang not backward compatible - can be added when can implement Yang
 					// version incompatible changes.
 					//
 					// must "translation/address or translation/port or exclude" {

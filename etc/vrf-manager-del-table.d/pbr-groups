@@ -30,7 +30,7 @@ foreach my $g ( $config->listEffectiveNodes("$config_prefix") ) {
     foreach my $r ( $config->listEffectiveNodes("$config_prefix $g rule") ) {
         my $action =
             $config->returnEffectiveValue("$config_prefix $g rule $r action");
-        continue 
+        continue
             if !defined($action) || $action ne "accept";
 
         my $pbr_table = $config->returnEffectiveValue(

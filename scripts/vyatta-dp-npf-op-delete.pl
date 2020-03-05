@@ -113,8 +113,8 @@ sub usage {
 
 # input:
 #     $_[0] - string array of tuples {name_from_yang, value_from_yang}
-#                        {name, value}...{name, value} 
-#     index in array:        0      1        i    i+1   
+#                        {name, value}...{name, value}
+#     index in array:        0      1        i    i+1
 #
 # uses:
 #     global hash g_yang_to_dataplane_dict - hash table that contain

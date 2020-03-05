@@ -86,7 +86,7 @@ sub format_nat_trans {
 
 		my $features_count = $entries{$entry}->{features_count};
 
-		# Loop through all feature records 
+		# Loop through all feature records
 		for ( my $i = 0; $i < $features_count; $i++ ) {
 			my $feature = $entries{$entry}->{features}->[$i];
 
