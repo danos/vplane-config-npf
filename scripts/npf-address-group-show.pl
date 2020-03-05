@@ -1,6 +1,7 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2017-2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2017-2019, AT&T Intellectual Property.
+# All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #

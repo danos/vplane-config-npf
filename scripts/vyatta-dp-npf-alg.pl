@@ -1,12 +1,12 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
 #
 # Copyright (c) 2013-2017, Brocade Communications Systems, Inc.
-# All Rights Reserved
+# All rights reserved
 #
 # SPDX-License-Identifier: GPL-2.0-only
-#
 #
 #  Disabling and enabling of ALGs is done independent of configuring
 #  of ports and programs.

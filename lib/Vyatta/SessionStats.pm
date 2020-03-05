@@ -1,8 +1,9 @@
 #
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
 #
 # Copyright (C) 2015 Vyatta, Inc.
-# All Rights Reserved.
+# All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #

@@ -1,11 +1,14 @@
 #! /usr/bin/perl
-
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
 #
 # Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
+#
+
 use strict;
 use warnings;
 

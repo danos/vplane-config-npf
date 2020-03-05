@@ -1,10 +1,13 @@
 #! /usr/bin/perl
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
 #
 # Copyright (C) 2012-2015 Vyatta, Inc.
-# All Rights Reserved.
+# All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
+#
 
 use strict;
 use lib '/opt/vyatta/share/perl5';

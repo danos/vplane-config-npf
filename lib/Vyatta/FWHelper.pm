@@ -1,7 +1,9 @@
 #
-# Copyright (c) 2017-2019, AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2017-2019, AT&T Intellectual Property.
+# All rights reserved.
+#
 # Copyright (C) 2012-2017, Brocade Communications Systems, Inc.
-# All Rights Reserved.
+# All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #

@@ -1,11 +1,13 @@
 #! /usr/bin/perl
-
-# Copyright (c) 2019-2020, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2019-2020, AT&T Intellectual Property.
+# All rights reserved.
 #
 # Copyright (C) 2013-2015 Vyatta, Inc.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
+#
 
 use strict;
 use warnings;

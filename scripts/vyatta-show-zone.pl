@@ -1,7 +1,8 @@
 #! /usr/bin/perl
-
-# Copyright (c) 2018-2019, AT&T Intellectual Property. All rights reserved.
-# All Rights Reserved.
+#
+# Copyright (c) 2018-2019, AT&T Intellectual Property.
+# All rights reserved.
+#
 # Copyright (c) 2012-2015, Brocade Communications Systems, Inc.
 # All rights reserved.
 #

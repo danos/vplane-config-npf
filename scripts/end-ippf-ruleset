@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property. All rights reserved.
+# Copyright (c) 2019 AT&T Intellectual Property.
+# All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
+
 """Build and send dataplane configuration messages from the IP packet filter YANG"""
 
 # Grammar:
