@@ -1,4 +1,10 @@
 #!/bin/bash
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
 
 if [ ${COMMIT_ACTION} = 'DELETE' ] ;
 then

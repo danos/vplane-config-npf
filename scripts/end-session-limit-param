@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 declare -A cmdval=(["SET"]="update" ["DELETE"]="delete" ["ACTIVE"]="update")
 
 npf-session-limit.pl --cmd=${cmdval[$COMMIT_ACTION]} --type="param" --name="$1"

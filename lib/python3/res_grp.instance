@@ -1,3 +1,9 @@
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: LGPL-2.1-only
+#
+
 [Component]
 Name=net.vyatta.vci.ephemeral.res-grp
 Start=/lib/res_grp_vci.py --action=start

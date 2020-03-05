@@ -1,2 +1,9 @@
 #!/bin/bash
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 getent protocols | awk '{ ORS=" "; print $1 }'

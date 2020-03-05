@@ -1,5 +1,12 @@
 #!groovy
 
+/*
+ * Copyright (c) 2020, AT&T Intellectual Property.
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 // Pull Request builds might fail due to missing diffs: https://issues.jenkins-ci.org/browse/JENKINS-45997
 // Pull Request builds relationship to their targets branch: https://issues.jenkins-ci.org/browse/JENKINS-37491
 

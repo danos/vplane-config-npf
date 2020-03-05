@@ -1,2 +1,9 @@
 #!/opt/vyatta/bin/cliexpr
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 syntax:expression: ! exec "vyatta-validate-type -q official_port $VAR(@) || vyatta-validate-type -q portrange $VAR(@)"; "Port group name must not match a service name, or be like a port or port-range"

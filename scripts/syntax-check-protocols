@@ -1,3 +1,10 @@
 #!/opt/vyatta/bin/cliexpr
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 syntax:expression: exec "vyatta-validate-type -q official_protocol $VAR(@)"; "Invalid protocol name"
 syntax:expression: $VAR(@) != "all" ; "Invalid protocol name"

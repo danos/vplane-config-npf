@@ -1,3 +1,10 @@
 #!/opt/vyatta/bin/cliexec
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
 vyatta-dp-npf.pl --cmd=commit
 vyatta-dp-npf-snmptrap.pl --level='security $VAR(@)'

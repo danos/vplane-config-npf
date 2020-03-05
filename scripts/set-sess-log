@@ -1,4 +1,10 @@
 #!/bin/bash
+#
+# Copyright (c) 2019, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
 
 declare -A cmdval=(["SET"]="enable" ["DELETE"]="disable" ["ACTIVE"]="enable")
 
