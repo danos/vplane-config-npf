@@ -1,0 +1,17 @@
+# Gitlint configuration
+#
+# Copyright (c) 2020, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+[general]
+# Ignore "B6 Body message is missing".
+ignore=B6
+
+[title-max-length]
+line-length=72
+
+[body-max-line-length]
+line-length=80
