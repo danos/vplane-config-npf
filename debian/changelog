@@ -1,3 +1,11 @@
+vplane-config-npf (4.0.14) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: Add subs-addr <addr> to filter string for update and clear commands
+  * cgnat: Add counts of dest addr/port hash tables created and destroyed
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 09 Mar 2020 17:02:55 +0000
+
 vplane-config-npf (4.0.13) unstable; urgency=medium
 
   * Updated due to in-pkts count now including unknown-sources
