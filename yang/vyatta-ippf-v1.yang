@@ -79,6 +79,7 @@ module vyatta-ippf-v1 {
 			  - ICMP (IPv4) type/code
 			  - ICMPv6 type/code
 			  - ICMPv6 class
+			  - L4 ports
 			";
 	}
 
@@ -159,6 +160,33 @@ module vyatta-ippf-v1 {
 				type vy-types:ipv6-address {
 					configd:help "IPv6 address to match";
 				}
+			}
+		}
+		container port {
+			description  "Match port";
+			configd:help "Match port";
+			/* If a port is specified, then we need to specify a protocol supporting ports */
+			must "not (../port) or ((../../protocol/final) and not (../../protocol/base)) or
+			       ((../../protocol/base/name = 'tcp') or (../../protocol/base/number = 6) or
+			        (../../protocol/base/name = 'udp') or (../../protocol/base/number = 17) or
+			        (../../protocol/base/name = 'udplite') or (../../protocol/base/number = 136) or
+			        (../../protocol/base/name = 'sctp') or (../../protocol/base/number = 132) or
+			        (../../protocol/base/name = 'dccp') or (../../protocol/base/number = 33))" {
+				error-message "Configure a 'match protocol base [name|number]' which supports ports (tcp(6), udp(17), udplite(136), sctp(132), dccp(33))";
+			}
+			must "not (../port) or ((../../protocol/base) and not (../../protocol/final)) or
+			       ((../../protocol/final/name = 'tcp') or (../../protocol/final/number = 6) or
+			        (../../protocol/final/name = 'udp') or (../../protocol/final/number = 17) or
+			        (../../protocol/final/name = 'udplite') or (../../protocol/final/number = 136) or
+			        (../../protocol/final/name = 'sctp') or (../../protocol/final/number = 132) or
+			        (../../protocol/final/name = 'dccp') or (../../protocol/final/number = 33))" {
+				error-message "Configure a 'match protocol final [name|number]' which supports ports (tcp(6), udp(17), udplite(136), sctp(132), dccp(33))";
+			}
+			leaf-list number {
+				description  "Port number to match";
+				configd:help "Port number to match";
+				type vy-types:port;
+				max-elements 1;
 			}
 		}
 	}
