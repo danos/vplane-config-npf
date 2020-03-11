@@ -381,7 +381,7 @@ def icmpv6_fn(icmp):
     @output: ICMPv6 config string, "icmpv6=TT:CC", "icmpv6=AAAA", or "icmpv6-class:AAAA"
     """
 
-    return "proto-final=58 " + icmp_fn("icmpv6", icmp)
+    return icmp_fn("icmpv6", icmp)
 
 
 def get_proto(protocol):
