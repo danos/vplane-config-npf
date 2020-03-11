@@ -14,6 +14,12 @@ module vyatta-ippf-v1 {
 	import vyatta-types-v1 {
 		prefix vy-types;
 	}
+	import vyatta-dscp-v1 {
+		prefix dscp;
+	}
+	import ietf-inet-types {
+		prefix inet;
+	}
 
 	organization "AT&T Inc.";
 	contact
@@ -65,7 +71,8 @@ module vyatta-ippf-v1 {
 	revision 2020-04-15 {
 		description
 			"Add additional match criteria:
-			  - TTL";
+			  - TTL
+			  - DSCP";
 	}
 
 	revision 2020-04-03 {
@@ -214,6 +221,23 @@ module vyatta-ippf-v1 {
 
 	grouping ippf-match {
 		description "Definition of a single IP packet filter match rule";
+		container dscp {
+			description  "DSCP parameters";
+			configd:help "DSCP parameters";
+			leaf name {
+				description  "DSCP name to match in IP header";
+				configd:help "DSCP name to match in IP header";
+				must "not (../value)" {
+					error-message "Configure either 'name' or 'value', not both";
+				}
+				type dscp:dscp-name;
+			}
+			leaf value {
+				description  "DSCP value to match in IP header";
+				configd:help "DSCP value to match in IP header";
+				type inet:dscp;
+			}
+		}
 		container ttl {
 			description  "Match TTL in IPv4 header or Hop Count in IPv6 header";
 			configd:help "Match TTL in IPv4 header or Hop Count in IPv6 header";
