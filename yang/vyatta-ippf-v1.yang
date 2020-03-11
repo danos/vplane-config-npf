@@ -20,6 +20,9 @@ module vyatta-ippf-v1 {
 	import ietf-inet-types {
 		prefix inet;
 	}
+	import vyatta-npf-v1 {
+		prefix npf;
+	}
 
 	organization "AT&T Inc.";
 	contact
@@ -72,7 +75,8 @@ module vyatta-ippf-v1 {
 		description
 			"Add additional match criteria:
 			  - TTL
-			  - DSCP";
+			  - DSCP
+			  - ICMP (IPv4) type/code";
 	}
 
 	revision 2020-04-03 {
@@ -291,6 +295,33 @@ module vyatta-ippf-v1 {
 			description  "Destination parameters";
 			configd:help "Destination parameters";
 			uses ippf-address-group;
+		}
+		container icmp {
+			description  "ICMP for IPv4";
+			configd:help "ICMP for IPv4";
+			must "not (../icmp) or not (../../../ip-version = 'ipv6')" {
+				error-message "'match icmp' is not available in IPv6 groups";
+			}
+			must "not (../icmp) or (../protocol/base) or (../protocol/final)" {
+				error-message "'match icmp' requires 'protocol base' or 'protocol final'";
+			}
+			must "not (../icmp) or not (../protocol/base) or
+			      (../protocol/base/name = 'icmp') or (../protocol/base/number = 1)" {
+				error-message "'match icmp' can only be used if 'protocol base' is ICMP or not set";
+			}
+			must "not (../icmp) or not (../protocol/final) or
+			      (../protocol/final/name = 'icmp') or (../protocol/final/number = 1)" {
+				error-message "'match icmp' can only be used if 'protocol final' is ICMP or not set";
+			}
+			must "not (../icmp) or count( name | type ) = 1" {
+				error-message "Configure either 'name' or 'type', not both";
+			}
+			uses npf:rule-icmp-numeric;
+			leaf name {
+				description  "Choose a type (and optional code) by name";
+				configd:help "Choose a type (and optional code) by name";
+				type fw-types:icmpv4-symbolic;
+			}
 		}
 	}
 

@@ -366,7 +366,7 @@ def icmpv4_fn(icmp):
     @output: ICMPv4 config string, "icmpv4=TT:CC" or "icmpv4=AAAA"
     """
 
-    return "proto-base=1 " + icmp_fn("icmpv4", icmp)
+    return icmp_fn("icmpv4", icmp)
 
 
 def icmpv6_fn(icmp):
