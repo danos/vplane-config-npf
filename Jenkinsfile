@@ -165,7 +165,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
             }
             steps {
                 dir('vplane-config-npf') {
-                    sh "gitlint --commits upstream/${env.CHANGE_TARGET}...origin/${env.BRANCH_NAME}"
+                    sh "gitlint --commits upstream/${env.CHANGE_TARGET}..origin/${env.BRANCH_NAME}"
                 }
             }
         }
