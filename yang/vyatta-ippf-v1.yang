@@ -76,7 +76,8 @@ module vyatta-ippf-v1 {
 			"Add additional match criteria:
 			  - TTL
 			  - DSCP
-			  - ICMP (IPv4) type/code";
+			  - ICMP (IPv4) type/code
+			  - ICMPv6 type/code";
 	}
 
 	revision 2020-04-03 {
@@ -321,6 +322,33 @@ module vyatta-ippf-v1 {
 				description  "Choose a type (and optional code) by name";
 				configd:help "Choose a type (and optional code) by name";
 				type fw-types:icmpv4-symbolic;
+			}
+		}
+		container icmpv6 {
+			description  "ICMP for IPv6";
+			configd:help "ICMP for IPv6";
+			must "not (../icmpv6) or not (../../../ip-version = 'ipv4')" {
+				error-message "'match icmpv6' is not available in IPv4 groups";
+			}
+			must "not (../icmpv6) or (../protocol/base) or (../protocol/final)" {
+				error-message "'match icmpv6' requires 'protocol base' or 'protocol final'";
+			}
+			must "not (../icmpv6) or not (../protocol/base) or
+			      (../protocol/base/name = 'ipv6-icmp') or (../protocol/base/number = 58)" {
+				error-message "'match icmpv6' can only be used if 'protocol base' is ICMPv6 or not set";
+			}
+			must "not (../icmpv6) or not (../protocol/final) or
+			      (../protocol/final/name = 'ipv6-icmp') or (../protocol/final/number = 58)" {
+				error-message "'match icmpv6' can only be used if 'protocol final' is ICMPv6 or not set";
+			}
+			must "not (../icmpv6) or count( name | type ) = 1" {
+				error-message "Configure exactly one of 'name', or 'type'";
+			}
+			uses npf:rule-icmp-numeric;
+			leaf name {
+				description  "Choose a type (and optional code) by name";
+				configd:help "Choose a type (and optional code) by name";
+				type fw-types:icmpv6-symbolic;
 			}
 		}
 	}
