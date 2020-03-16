@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-
-# Copyright (c) 2019, AT&T Intellectual Property. All rights reserved.
+#
+# Copyright (c) 2019-2020, AT&T Intellectual Property.
+# All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
@@ -89,7 +90,13 @@ def np_op_show_pool_one(pool):
     print("    %-30s %18s" % ("Contention ratio", ratio))
     print("    %-30s" % ("Address Ranges:"))
     for r in ranges:
-        print("      %-14s %32s" % (r.get('name'), r.get('range')))
+        print("      %s (%s)" % (r.get('name'), r.get('type')))
+        print("        %-12s %32s" % ("Range", r.get('range')))
+        print("        %-16s %28s" % ("Address count", r.get('naddrs')))
+        if r.get('type') == "prefix":
+            print("        %-12s %32s" % ("Prefix:", r.get('prefix')))
+        if r.get('type') == "subnet":
+            print("        %-12s %32s" % ("Subnet:", r.get('subnet')))
 
     cur = pool.get('current')
     print("  %-32s" % ("Last Allocated Address:"))
