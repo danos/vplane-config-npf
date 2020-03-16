@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2020 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -112,6 +112,8 @@ def build_nat_pool_config(commands, cfg, tree):
                     ipa = p['entry'][entryname]['ip-address']
                     if 'prefix' in ipa:
                         cmd += "prefix={}/{} ".format(entryname, ipa['prefix'])
+                    if 'subnet' in ipa:
+                        cmd += "subnet={}/{} ".format(entryname, ipa['subnet'])
                     if 'range' in ipa:
                         addr_range = ipa['range']
                         if 'start' in addr_range and 'end' in addr_range:

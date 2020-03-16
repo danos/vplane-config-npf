@@ -35,7 +35,7 @@ module vyatta-service-nat-pool-v1 {
          Web: www.att.com";
 
     description
-        "Copyright (c) 2019, AT&T Intellectual Property.  All rights reserved.
+        "Copyright (c) 2019-2020, AT&T Intellectual Property.  All rights reserved.
 
         Redistribution and use in source and binary forms,
         with or without modification, are permitted provided
@@ -72,6 +72,10 @@ module vyatta-service-nat-pool-v1 {
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for NAT pool configuration";
+
+    revision 2020-03-16 {
+        description "Add subnet option to NAT pool range.";
+    }
 
     revision 2019-10-01 {
         description "Deprecated 'service nat pool NNNN log block-allocation'
@@ -148,7 +152,7 @@ module vyatta-service-nat-pool-v1 {
                 configd:help "Name of the address entry";
                 description "Name of the address entry. Multiple entries can " +
                             "be configured, using either addresses with " +
-                            "prefixes or ranges.";
+                            "prefixes, subnets or ranges.";
                 key "entry-name";
                 leaf "entry-name" {
                     description "Name of address entry";
@@ -158,18 +162,35 @@ module vyatta-service-nat-pool-v1 {
                     }
                 }
                 container ip-address {
-                    description "Choose the IPv4 address prefix or range " +
-                                "for this pool entry";
+                    description "Choose the IPv4 address prefix, subnet " +
+                                "or range for this pool entry";
                     configd:help "IPv4 address settings";
-                    must "count(prefix|range) = 1" {
-                        error-message "One of 'prefix' or 'range' (not both) " +
+                    must "count(prefix|range|subnet) = 1" {
+                        error-message "One of 'prefix', 'range' or 'subnet' " +
                                       "must be set";
                     }
                     leaf prefix {
-                        description "IPv4 address and mask";
+                        description "IPv4 address and mask.  All addresses " +
+                                    "in the prefix range are used.  This " +
+                                    "includes the first address (host all-zeroes) " +
+                                    "and last address (host all-ones) provided " +
+                                    "these are not .0 or .255, respectively";
                         configd:help "IPv4 address and mask";
                         type types:ipv4-prefix {
                             configd:help "IPv4 address and mask";
+                            configd:normalize "normalize ipv4-prefix";
+                        }
+                    }
+                    leaf subnet {
+                        description "IPv4 subnet and mask.  All addresses " +
+                                    "in the subnet range are used, except " +
+                                    "for the first address (host all-zeroes) " +
+                                    "and last address (host all-ones). " +
+                                    "Exceptions are subnets with mask length " +
+                                    "31 or 32, for which all addresses are used.";
+                        configd:help "IPv4 subnet and mask";
+                        type types:ipv4-prefix {
+                            configd:help "IPv4 subnet and mask";
                             configd:normalize "normalize ipv4-prefix";
                         }
                     }
