@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2020 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -70,6 +70,8 @@ def sub_rpc(entry):
     rpc_entry['session-rate-max-time'] = entry['sess_rate_max_tm']
     rpc_entry['session-rate-1m-max'] = entry['sess_rate_1m_max']
     rpc_entry['session-rate-1m-max-time'] = entry['sess_rate_1m_max_tm']
+    rpc_entry['sub-sess-created'] = entry['sess2_crtd']
+    rpc_entry['sub-sess-destroyed'] = entry['sess2_dstrd']
     rpc_entry['packets-out'] = entry['out_pkts']
     rpc_entry['packets-in'] = entry['in_pkts']
     rpc_entry['bytes-out'] = entry['out_bytes']

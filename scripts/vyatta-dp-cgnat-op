@@ -15,6 +15,18 @@ from time import localtime, strftime
 from vyatta.npf.npf_addr_group import npf_show_address_group
 
 
+#
+# num2str
+#
+def num2str(count, approx):
+    """Convert a count into a string"""
+    if approx:
+        str = "~%u" % (count)
+    else:
+        str = "%u" % (count)
+    return str
+
+
 # Yes or No string
 def yes_or_no(val):
     return "Yes" if val else "No"
@@ -45,6 +57,8 @@ def cgn_op_show_summary():
                 if not summary:
                     return
 
+                tbl_full = yes_or_no(summary.get('sess_table_full'))
+
                 #
                 # If we ever change to supporting multiple dataplanes then a
                 # description of the dataplane should be displayed before each
@@ -52,19 +66,21 @@ def cgn_op_show_summary():
                 #
                 print("CGNAT Summary")
                 print("  %-32s" % ("Sessions:"))
-                print("    %-30s %18u" % ("Active 3-tuple sessions",
+                print("    %-30s %18u" % ("Active sessions",
                                           summary.get('sess_count')))
-                print("    %-30s %18u" % ("Active 5-tuple sessions",
+                print("      %-28s %18s" % ("Sessions created",
+                                            num2str(summary.get('sess_created'), True)))
+                print("      %-28s %18s" % ("Sessions destroyed",
+                                            num2str(summary.get('sess_destroyed'), True)))
+                print("    %-30s %18u" % ("Active sub-sessions",
                                           summary.get('sess2_count')))
+                print("      %-28s %18s" % ("Sub-sessions created",
+                                            num2str(summary.get('sess2_created'), True)))
+                print("      %-28s %18s" % ("Sub-sessions destroyed",
+                                            num2str(summary.get('sess2_destroyed'), True)))
                 print("    %-30s %18u" % ("Maximum table size",
                                           summary.get('max_sess')))
-                print("    %-30s %18s" %
-                      ("Table full",
-                       yes_or_no(summary.get('sess_table_full'))))
-                print("    %-30s %18u" % ("Sessions created",
-                                          summary.get('sess_created')))
-                print("    %-30s %18u" % ("Sessions destroyed",
-                                          summary.get('sess_destroyed')))
+                print("    %-30s %18s" % ("Table full", tbl_full))
                 print("  %-32s" % ("Public address mapping table:"))
                 print("    %-30s %18u" % ("Used",
                                           summary.get('apm_table_used')))
@@ -78,10 +94,10 @@ def cgn_op_show_summary():
 
                 # Out
                 print("  %-32s" % ("Out:"))
-                print("    %-30s %18u" % ("Translated packets",
-                                          summary.get('pkts_out')))
-                print("    %-30s %18u" % ("           bytes",
-                                          summary.get('bytes_out')))
+                print("    %-30s %18s" % ("Translated packets",
+                                          num2str(summary.get('pkts_out'), True)))
+                print("    %-30s %18s" % ("           bytes",
+                                          num2str(summary.get('bytes_out'), True)))
                 print("    %-30s %18u" % ("Did not match CGNAT policy",
                                           summary.get('nopolicy')))
                 if summary.get('bypass'):
@@ -94,12 +110,12 @@ def cgn_op_show_summary():
 
                 # In
                 print("  %-32s" % ("In:"))
-                print("    %-30s %18u" % ("Translated packets",
-                                          summary.get('pkts_in')))
-                print("    %-30s %18u" % ("           bytes",
-                                          summary.get('bytes_in')))
-                print("    %-30s %18u" % ("Unknown source address or port",
-                                          summary.get('unk_pkts_in')))
+                print("    %-30s %18s" % ("Translated packets",
+                                          num2str(summary.get('pkts_in'), True)))
+                print("    %-30s %18s" % ("           bytes",
+                                          num2str(summary.get('bytes_in'), True)))
+                print("    %-30s %18s" % ("Unknown source addr or port",
+                                          num2str(summary.get('unk_pkts_in'), True)))
                 print("    %-30s %18u" % ("Did not match CGNAT session",
                                           summary.get('nosess')))
                 if 'nopool' in summary:
@@ -285,14 +301,28 @@ def cgn_op_show_policy_one(pol):
     sess_dstrd = pol.get('sess_destroyed')
 
     print("  %-32s %18u" % ("Active subscribers", pol.get('source_count')))
-    print("  %-32s %18u" % ("Active sessions", sess_crtd - sess_dstrd))
-    print("  %-32s %18u" % ("Sessions created", sess_crtd))
-    print("  %-32s %18u" % ("Sessions destroyed", sess_dstrd))
-    print("  %-32s %18u" % ("Out, packets", pol.get('out_pkts')))
-    print("  %-32s %18u" % ("     bytes", pol.get('out_bytes')))
-    print("  %-32s %18u" % ("In,  packets", pol.get('in_pkts')))
-    print("  %-32s %18u" % ("     bytes", pol.get('in_bytes')))
-    print("  %-32s %18u" % ("     unknown source", pol.get('unk_pkts_in')))
+    print("  %-32s %18s" % ("Active sessions",
+                            num2str(sess_crtd - sess_dstrd, True)))
+    print("    %-30s %18s" % ("Sessions created", num2str(sess_crtd, True)))
+    print("    %-30s %18s" % ("Sessions destroyed", num2str(sess_dstrd, True)))
+
+    sess2_crtd = pol.get('sess2_created')
+    sess2_dstrd = pol.get('sess2_destroyed')
+
+    if sess2_crtd > 0:
+        print("  %-32s %18s" % ("Active sub-sessions",
+                                num2str(sess2_crtd - sess2_dstrd, True)))
+        print("    %-30s %18s" % ("Sub-sessions created",
+                                  num2str(sess2_crtd, True)))
+        print("    %-30s %18s" % ("Sub-sessions destroyed",
+                                  num2str(sess2_dstrd, True)))
+
+    print("  %-32s %18s" % ("Out, packets", num2str(pol.get('out_pkts'), True)))
+    print("  %-32s %18s" % ("     bytes", num2str(pol.get('out_bytes'), True)))
+    print("  %-32s %18s" % ("In,  packets", num2str(pol.get('in_pkts'), True)))
+    print("  %-32s %18s" % ("     bytes", num2str(pol.get('in_bytes'), True)))
+    print("  %-32s %18s" % ("     unknown source",
+                            num2str(pol.get('unk_pkts_in'), True)))
 
     print("  %s" % ("Max Session Rates:"))
     print("    %-16s %-8s  %-8s" % ("Subscriber", "Max Rate", "Time"))
