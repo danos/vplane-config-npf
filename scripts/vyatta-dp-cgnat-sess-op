@@ -36,6 +36,18 @@ CGN_SESS_STATE_HDR = "State codes: CL - CLOSED, OP - OPENING, " \
 
 
 #
+# num2str
+#
+def num2str(count, approx):
+    """Convert a count into a string"""
+    if approx:
+        str = "~%u" % (count)
+    else:
+        str = "%u" % (count)
+    return str
+
+
+#
 # int2ip
 #
 def int2ip(addr):
@@ -501,12 +513,19 @@ def cgn_sess_show_one_detail(outer, inner):
     print("  Out:       %s/%s --> %s, Proto: %s" %
           (outer.get('subs_addr'), outer.get('subs_port'),
            dst_info, proto))
-    print("    packets: %u, bytes: %u" % (pkts_out, bytes_out))
+
+    #
+    # If there are 2-tuple sessions then the pkt counts will
+    # be delayed.  We indicate this with a tilde, '~'.
+    #
+    print("    packets: %s, bytes: %s" % (num2str(pkts_out, inner),
+                                          num2str(bytes_out, inner)))
 
     print("  In:        %s --> %s/%s, Proto: %s" %
           (dst_info, outer.get('pub_addr'), outer.get('pub_port'),
            proto))
-    print("    packets: %u, bytes: %u" % (pkts_in, bytes_in))
+    print("    packets: %s, bytes: %s" % (num2str(pkts_in, inner),
+                                          num2str(bytes_in, inner)))
 
     # Unknown source count only applies to 3-tuple session
     if not inner:

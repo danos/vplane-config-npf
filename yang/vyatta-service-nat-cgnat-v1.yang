@@ -82,6 +82,11 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
+    revision 2020-02-16 {
+        description "Add sub-sess-created and sub-sess-destroyed " +
+                    "to subscriber, policy and summary.";
+    }
+
     revision 2020-01-20 {
         description "Add sess-ht-created and sess-ht-destroyed to summary.";
     }
@@ -589,39 +594,68 @@ module vyatta-service-nat-cgnat-v1 {
 
                     leaf sessions-created {
                         description "Total number of CGNAT sessions which " +
-                                    "were created using this policy " +
-                                    "(including those destroyed).";
+                                    "were created using this policy, " +
+                                    "including those destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf sessions-destroyed {
-                        description "Total number of this subscriber's CGNAT " +
-                                    "sessions which were destroyed.";
+                        description "Total number of this policy's CGNAT " +
+                                    "sessions which were destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
+                        type uint64;
+                    }
+                    leaf sub-sess-created {
+                        description "Total number of CGNAT sub-sessions which " +
+                                    "were created using this policy, " +
+                                    "including those destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
+                        type uint64;
+                    }
+                    leaf sub-sess-destroyed {
+                        description "Total number of this policy's CGNAT " +
+                                    "sub-sessions which were destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf packets-out {
                         description "Number of packets sent out the CGNAT " +
-                                    "interface by all sessions.";
+                                    "interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf packets-in {
                         description "Number of packets received into the " +
-                                    "CGNAT interface by all sessions.";
+                                    "CGNAT interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf bytes-out {
                         description "Number of bytes sent out the CGNAT " +
-                                    "interface by all sessions.";
+                                    "interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf bytes-in {
                         description "Number of bytes received into the " +
-                                    "CGNAT interface by all sessions.";
+                                    "CGNAT interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf unknown-source {
                         description "Number of packets received into the " +
                                     "CGNAT interface and translated, but " +
-                                    "from an unknown source address or port.";
+                                    "from an unknown source address or port. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf active-subscribers {
@@ -852,22 +886,39 @@ module vyatta-service-nat-cgnat-v1 {
                         type uint64;
                     }
                     leaf sessions-created {
-                        description "Total number of CGNAT sessions which " +
-                                    "were created (including those destroyed).";
+                        description "Total number of CGNAT sessions " +
+                                    "which were created, including those. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf sessions-destroyed {
-                        description "Total number of CGNAT sessions destroyed.";
+                        description "Total number of CGNAT sessions destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
+                        type uint64;
+                    }
+                    leaf sub-sess-created {
+                        description "Total number of CGNAT sub-sessions which " +
+                                    "were created, including those destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
+                        type uint64;
+                    }
+                    leaf sub-sess-destroyed {
+                        description "Total number of CGNAT sub-sessions " +
+                                    "destroyed. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf sessions-3-tuple-active {
-                        description "Total number of active CGNAT 3-tuple " +
-                                    "sessions.";
+                        description "Total number of active CGNAT sessions.";
                         type uint64;
                     }
                     leaf sessions-5-tuple-active {
-                        description "Total number of active CGNAT 5-tuple " +
-                                    "sessions.";
+                        description "Total number of active CGNAT " +
+                                    "sub-sessions.";
                         type uint64;
                     }
                     leaf sessions-table-max-size {
@@ -880,28 +931,38 @@ module vyatta-service-nat-cgnat-v1 {
                     }
                     leaf packets-out {
                         description "Number of packets sent out the CGNAT " +
-                                    "interface by all sessions.";
+                                    "interface by all sessions " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf packets-in {
                         description "Number of packets received into the " +
-                                    "CGNAT interface by all sessions.";
+                                    "CGNAT interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf bytes-out {
                         description "Number of bytes sent out the CGNAT " +
-                                    "interface by all sessions.";
+                                    "interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf bytes-in {
                         description "Number of bytes received into the " +
-                                    "CGNAT interface by all sessions.";
+                                    "CGNAT interface by all sessions. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf unknown-source {
                         description "Number of packets received into the " +
                                     "CGNAT interface and translated, but " +
-                                    "from an unknown source address or port.";
+                                    "from an unknown source address or port. " +
+                                    "Note that this counter is only updated " +
+                                    "periodically.";
                         type uint64;
                     }
                     leaf packets-hairpinned {
@@ -1278,8 +1339,8 @@ module vyatta-service-nat-cgnat-v1 {
                 }
                 leaf sessions-created {
                     description "Total number of CGNAT sessions which " +
-                                "were created by this subscriber (including " +
-                                "those destroyed).";
+                                "were created by this subscriber, including " +
+                                "those destroyed.";
                     type uint64;
                 }
                 leaf sessions-destroyed {
@@ -1338,30 +1399,51 @@ module vyatta-service-nat-cgnat-v1 {
                     units "microseconds";
                     type uint64;
                 }
+                leaf sub-sess-created {
+                    description "Total number of CGNAT sub-sessions " +
+                                "which were created by this subscriber, " +
+                                "including those destroyed.";
+                    type uint64;
+                }
+                leaf sub-sess-destroyed {
+                    description "Total number of CGNAT sub-sessions of " +
+                                "this subscriber which were destroyed.";
+                    type uint64;
+                }
                 leaf packets-out {
                     description "Number of packets sent out the CGNAT " +
-                                "interface by this subscriber.";
+                                "interface by this subscriber. " +
+                                "Note that this counter is only updated " +
+                                "periodically.";
                     type uint64;
                 }
                 leaf packets-in {
                     description "Number of packets received into the " +
-                                "CGNAT interface by this subscriber.";
+                                "CGNAT interface by this subscriber. " +
+                                "Note that this counter is only updated " +
+                                "periodically.";
                     type uint64;
                 }
                 leaf bytes-out {
                     description "Number of bytes sent out the CGNAT " +
-                                "interface by this subscriber.";
+                                "interface by this subscriber. " +
+                                "Note that this counter is only updated " +
+                                "periodically.";
                     type uint64;
                 }
                 leaf bytes-in {
                     description "Number of bytes received into the " +
-                                "CGNAT interface by this subscriber.";
+                                "CGNAT interface by this subscriber. " +
+                                "Note that this counter is only updated " +
+                                "periodically.";
                     type uint64;
                 }
                 leaf unknown-source {
                     description "Number of packets received into the " +
                                 "CGNAT interface and translated, but " +
-                                "from an unknown source address or port.";
+                                "from an unknown source address or port. " +
+                                "Note that this counter is only updated " +
+                                "periodically.";
                     type uint64;
                 }
                 leaf assigned-ports {

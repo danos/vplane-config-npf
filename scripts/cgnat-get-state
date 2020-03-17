@@ -49,6 +49,8 @@ def policy_netconf(entry):
     state_entry = {}
     state_entry['sessions-created'] = entry['sess_created']
     state_entry['sessions-destroyed'] = entry['sess_destroyed']
+    state_entry['sub-sess-created'] = entry['sess2_created']
+    state_entry['sub-sess-destroyed'] = entry['sess2_destroyed']
     state_entry['packets-out'] = entry['out_pkts']
     state_entry['packets-in'] = entry['in_pkts']
     state_entry['bytes-out'] = entry['out_bytes']
@@ -102,6 +104,8 @@ def summary_netconf(entry):
     state_entry['subscribers-max'] = entry['subs_table_max']
     state_entry['sessions-created'] = entry['sess_created']
     state_entry['sessions-destroyed'] = entry['sess_destroyed']
+    state_entry['sub-sess-created'] = entry['sess2_created']
+    state_entry['sub-sess-destroyed'] = entry['sess2_destroyed']
     state_entry['sessions-3-tuple-active'] = entry['sess_count']
     state_entry['sessions-5-tuple-active'] = entry['sess2_count']
     state_entry['sessions-table-max-size'] = entry['max_sess']
