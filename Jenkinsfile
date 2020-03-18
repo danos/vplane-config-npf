@@ -182,7 +182,9 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
 
             recordIssues tool: flake8(pattern: 'vplane-config-npf/flake8.out'),
-                qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true]]
+                referenceJobName: "DANOS/vplane-config-npf/${env.CHANGE_TARGET}",
+                qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
+                               [type: 'NEW', threshold: 26, unstable: true]]
 
             // Do any clean up for DRAM?
         }
