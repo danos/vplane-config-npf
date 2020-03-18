@@ -38,7 +38,11 @@ pipeline {
         OSC_BUILD_ROOT = "${WORKSPACE}" + '/build-root/' + "${env.OBS_TARGET_PROJECT.replace(':','_')}" + '-' + "${env.OBS_TARGET_REPO}" + '-' + "${OBS_TARGET_ARCH}"
         DH_VERBOSE = 1
         DH_QUIET = 0
-        DEB_BUILD_OPTIONS ='verbose'
+        DEB_BUILD_OPTIONS = 'verbose'
+
+        // CHANGE_TARGET is set for PRs.
+        // When CHANGE_TARGET is not set it's a regular build so we use BRANCH_NAME.
+        REF_BRANCH = "${env.CHANGE_TARGET ?: ${env.BRANCH_NAME}}"
     }
 
     options {
@@ -177,7 +181,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
 
             recordIssues tool: flake8(pattern: 'vplane-config-npf/flake8.out'),
-                referenceJobName: "DANOS/vplane-config-npf/${env.CHANGE_TARGET}",
+                referenceJobName: "DANOS/vplane-config-npf/${env.REF_BRANCH}",
                 qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
                                [type: 'NEW', threshold: 26, unstable: true]]
 
