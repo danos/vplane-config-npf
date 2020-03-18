@@ -173,11 +173,6 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
 
     post {
         always {
-            sh 'rm -f *.deb' // top-level dir
-            // Re-enable these once the osc wipe is fixed.
-            //sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
-            //deleteDir()
-
             recordIssues tool: perlCritic(pattern: 'vplane-config-npf/perlcritic.txt'),
                 qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
 
@@ -185,6 +180,10 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 referenceJobName: "DANOS/vplane-config-npf/${env.CHANGE_TARGET}",
                 qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
                                [type: 'NEW', threshold: 26, unstable: true]]
+
+            sh 'rm -f *.deb' // top-level dir
+            sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
+            deleteDir()
 
             // Do any clean up for DRAM?
         }
