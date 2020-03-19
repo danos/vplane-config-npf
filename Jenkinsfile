@@ -42,7 +42,7 @@ pipeline {
 
         // CHANGE_TARGET is set for PRs.
         // When CHANGE_TARGET is not set it's a regular build so we use BRANCH_NAME.
-        REF_BRANCH = "${env.CHANGE_TARGET ?: ${env.BRANCH_NAME}}"
+        REF_BRANCH = "${env.CHANGE_TARGET != null ? env.CHANGE_TARGET : env.BRANCH_NAME}"
     }
 
     options {
