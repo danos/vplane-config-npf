@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2020 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -540,7 +540,8 @@ def counter_fn(counter, rproc_list):
 
     # NB there's only one element in the dictionary
     for count in counter:
-        rproc_list += ["ctr_ref({}={});ctr({})".format(count, counter.get(count), counter.get(count))]
+        rproc_list += ["ctr_ref({}={});ctr({})".format(
+            count, counter.get(count), counter.get(count))]
         return ""
 
 
@@ -611,9 +612,9 @@ def process_rule(group_name, rule, ctr_type):
         # because the whole group is deleted and rules resent on a change.
         return
 
-    number   = rule.get("number")
-    match    = rule.get("match")
-    action   = rule.get("action")
+    number = rule.get("number")
+    match = rule.get("match")
+    action = rule.get("action")
 
     config = "npf-cfg add acl:{} {} ".format(group_name, number)
 

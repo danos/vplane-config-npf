@@ -222,13 +222,13 @@ if __name__ == "__main__":
     summary_state_info = get_cgnat_summary_state()
     if summary_state_info:
         if 'state' not in state_info:
-                state_info['state'] = {}
+            state_info['state'] = {}
         state_info['state']['summary'] = summary_state_info
 
     errors_state_info = get_cgnat_errors_state()
     if errors_state_info:
         if 'state' not in state_info:
-                state_info['state'] = {}
+            state_info['state'] = {}
         state_info['state']['errors'] = {}
         state_info['state']['errors']['error-causes'] = errors_state_info
 

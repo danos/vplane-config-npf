@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2020 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -24,17 +24,17 @@ FORCE = False
 CONFIG_CANDIDATE = configd.Client.CANDIDATE
 CONFIG_RUNNING = configd.Client.RUNNING
 
-ADDR_CMD  = "address-group"
-ICMP_CMD  = "icmp-group"
+ADDR_CMD = "address-group"
+ICMP_CMD = "icmp-group"
 ICMP6_CMD = "icmpv6-group"
-PORT_CMD  = "port-group"
+PORT_CMD = "port-group"
 PROTO_CMD = "protocol-group"
 
 RG_BASE = "resources group"
-BASE_ADDR_PATH  = RG_BASE + " " + ADDR_CMD
-BASE_ICMP_PATH  = RG_BASE + " " + ICMP_CMD
+BASE_ADDR_PATH = RG_BASE + " " + ADDR_CMD
+BASE_ICMP_PATH = RG_BASE + " " + ICMP_CMD
 BASE_ICMP6_PATH = RG_BASE + " " + ICMP6_CMD
-BASE_PORT_PATH  = RG_BASE + " " + PORT_CMD
+BASE_PORT_PATH = RG_BASE + " " + PORT_CMD
 BASE_PROTO_PATH = RG_BASE + " " + PROTO_CMD
 
 COMMAND_ADDRESS_PREFIX = "npf-cfg fw table"
@@ -263,7 +263,7 @@ def create_icmp_group(group, proto, path, group_cfg):
     dbg.pprint("Creating {} group {}".format(proto, group))
     store_cfg("{} {} {}".format(path, group, proto),
               "npf-cfg add {}-group:{} 0 {}".
-                  format(proto, group, ";".join(group_cfg)),
+              format(proto, group, ";".join(group_cfg)),
               "SET", dbg)
 
 
@@ -312,8 +312,8 @@ def program_icmp_groups(proto):
     (cand_cfg, running_cfg) = get_configs(cmd)
 
     if cand_cfg == {} and running_cfg == {}:
-            dbg.pprint("unchanged so no work to do")
-            return
+        dbg.pprint("unchanged so no work to do")
+        return
 
     # Look for deleted groups
     for group in sorted(running_cfg.keys()):
@@ -469,8 +469,8 @@ def program_port_groups():
     (cand_cfg, running_cfg) = get_configs(PORT_CMD)
 
     if cand_cfg == {} and running_cfg == {}:
-            dbg.pprint("unchanged so no work to do")
-            return
+        dbg.pprint("unchanged so no work to do")
+        return
 
     # Look for deleted groups
     for group in sorted(running_cfg):
@@ -489,7 +489,7 @@ def program_port_groups():
             cfg = cand_cfg[group].get('port')
             if cfg:
                 group_cfg = ";".join("{}".format(getPort(c))
-                    for c in sorted(cfg, key=getPortKey))
+                                     for c in sorted(cfg, key=getPortKey))
             else:
                 group_cfg = "1-65535"        # default
             delete_port_group(group)
@@ -504,7 +504,7 @@ def program_port_groups():
             cfg = cand_cfg[group].get('port')
             if cfg:
                 group_cfg = ";".join("{}".format(getPort(c))
-                    for c in sorted(cfg, key=getPortKey))
+                                     for c in sorted(cfg, key=getPortKey))
             else:
                 group_cfg = "1-65535"        # default
             create_port_group(group, group_cfg)
@@ -572,8 +572,8 @@ def program_protocol_groups():
     (cand_cfg, running_cfg) = get_configs(PROTO_CMD)
 
     if cand_cfg == {} and running_cfg == {}:
-            dbg.pprint("unchanged so no work to do")
-            return
+        dbg.pprint("unchanged so no work to do")
+        return
 
     # Look for deleted groups
     for group in sorted(running_cfg):
@@ -591,7 +591,7 @@ def program_protocol_groups():
         if running_cfg[group]['protocol'] != cand_cfg[group]['protocol']:
             dbg.pprint("changed group {}". format(group))
             group_cfg = ";".join("{}".format(getProtocol(c))
-                for c in sorted(cand_cfg[group]['protocol']))
+                                 for c in sorted(cand_cfg[group]['protocol']))
             delete_protocol_group(group)
             create_protocol_group(group, group_cfg)
 
@@ -602,7 +602,7 @@ def program_protocol_groups():
         if group not in running_cfg:
             dbg.pprint("New group {}". format(group))
             group_cfg = ";".join("{}".format(getProtocol(c))
-                for c in sorted(cand_cfg[group]['protocol']))
+                                 for c in sorted(cand_cfg[group]['protocol']))
             create_protocol_group(group, group_cfg)
 
 

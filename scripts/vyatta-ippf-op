@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2020 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -51,8 +51,10 @@ def show_stats(client, args):
         return 1
 
     outfmt = "{:<15} {:>3} {:>15} {:>4} {:>6} {:>15} {:>15} {:>15} {:>15}"
-    print(outfmt.format("Interface", "Dir", "Group", "Rule", "Action", "HW packets", "SW packets", "HW bytes", "SW bytes"))
-    print(outfmt.format("---------", "---", "-----", "----", "------", "----------", "----------", "--------", "--------"))
+    print(outfmt.format("Interface", "Dir", "Group", "Rule", "Action",
+                        "HW packets", "SW packets", "HW bytes", "SW bytes"))
+    print(outfmt.format("---------", "---", "-----", "----", "------",
+                        "----------", "----------", "--------", "--------"))
 
     stats = sorted(stats["statistics"], key=itemgetter('interface', 'direction', 'group', 'rule'))
     for stat in stats:
