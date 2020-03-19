@@ -131,7 +131,7 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
             steps {
                 dir('vplane-config-npf') {
                     sh '''
-pyfiles=`find . -exec file {} \\; | grep -i python | cut -d: -f1 | cut -c3- | xargs`
+pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
 python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
 '''
                 }
