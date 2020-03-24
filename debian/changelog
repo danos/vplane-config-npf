@@ -1,3 +1,52 @@
+vplane-config-npf (4.1.4) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * flake8
+
+  [ Brian Russell ]
+  * Change QoS dataplane command version dependency
+
+  [ Gavin Shearer ]
+  * lintian: fix debhelper-but-no-misc-depends warnings
+  * lintian: fix debian-source-dir warning
+  * lintian: fix build-depends-on-obsolete-package warning
+  * lintian: fix global-files-wildcard-not-first-paragraph-in-dep5-copyright
+  * lintian: fix ancient-standards-version 3.9.6 warning
+  * lintian: fix debian-changelog-line-too-long warning
+  * lintian: fix priority-extra-is-replaced-by-priority-optional warning
+  * dpkg-gencontrol: fix ${perl:Depends} substitution variable warnings
+  * dpkg-gencontrol: fix ${python3:Depends} substitution variable warnings
+  * Update the end date of copyrights to be 2020
+
+  [ ak487r ]
+  * add protocol filter to "delete session table" command
+
+  [ Paul Aitken ]
+  * Add missing copyrights
+  * Remove trailing WS
+  * Standard format copyright message
+  * New codechecks script
+  * Remove flake8 install
+  * Add gitlint config file
+  * Add codechecks to Jenkinsfile
+  * Change gitlint ... to ..
+  * JenkinsFile: add referenceJobName
+  * JenkinsFile: re-enable osc chroot wipe
+  * JenkinsFile: target acquisition
+
+  [ Nicholas Brown ]
+  * Jenkinsfile: CHANGE_TARGET is null
+
+  [ Paul Aitken ]
+  * Fix some flake8 issues
+  * make "pyfiles" more selective
+
+  [ Ian Wilson ]
+  * cgnat: Add 5-tuple counts to subscriber, policy and summary
+  * cgnat: Add subnet option to nat pool range
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 24 Mar 2020 12:08:58 +0000
+
 vplane-config-npf (4.1.3) unstable; urgency=medium
 
   [ ak487r ]
