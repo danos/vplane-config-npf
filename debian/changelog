@@ -1,3 +1,11 @@
+vplane-config-npf (4.0.15) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: Add 5-tuple counts to subscriber, policy and summary
+  * cgnat: Add subnet option to nat pool range
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 25 Mar 2020 16:28:54 +0000
+
 vplane-config-npf (4.0.14) unstable; urgency=medium
 
   [ Ian Wilson ]
