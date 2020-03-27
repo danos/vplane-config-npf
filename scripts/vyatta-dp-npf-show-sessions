@@ -112,18 +112,23 @@ sub get_dpi_sess_detail {
     my ($dpi) = @_;
 
     my $app_name   = $dpi->{"app-name"};
+    my $type       = $dpi->{"type"};
     my $proto_name = $dpi->{"proto-name"};
     my $engine     = $dpi->{"engine"};
     my $detail     = "";
 
-    $detail .= "engine $engine "
-      if defined($engine);
+    return if ( ($app_name eq "Unknown" || $app_name eq "Unavailable") &&
+                ($proto_name eq "Unknown" || $proto_name eq "Unavailable") &&
+                $type eq "None");
 
-    $detail .= "app-name $app_name "
+    $detail .= "app-name:$app_name "
       if defined($app_name);
 
-    $detail .= "l5-proto-name $proto_name"
+    $detail .= "l5-proto-name:$proto_name "
       if defined($proto_name);
+
+    $detail .= "type:$type"
+      if defined($type);
 
     return $detail;
 }
@@ -156,19 +161,18 @@ sub print_sess_feature_detail {
     }
 
     my $intf = $feature->{interface} // "inactive";
+    my $dpi     = $feature->{dpi};
+    my @engines = $dpi->{engines};
+    my $num_engines = $dpi->{'num-engines'};
 
-    my @engines = $feature->{dpi};
-    my @tmp     = $engines[0];
-    my $len     = @tmp;
-    foreach my $i ( 0 .. $len ) {
-        my $feat = get_dpi_sess_detail( $engines[0][$i] );
-
-        if ( $i == 0 ) {
-            printf( $fmt_str, $id, $src, $dst, $proto, $intf, $feat );
-        } else {
-            printf( $fmt_str, "", "", "", "", "", $feat );
-        }
+    my $feat;
+    foreach my $i ( 0 .. $num_engines - 1 ) {
+        $feat = get_dpi_sess_detail( $engines[0][$i] );
+        last if ( $feat ); # Only show the first one.
     }
+
+    $feat ||= "engine=None app-name=None proto-name=None type=None";
+    printf( $fmt_str, $id, $src, $dst, $proto, $intf, $feat );
 
     return 1;
 }
@@ -196,7 +200,13 @@ sub print_sess_feature_dpi {
     return
       if !defined $feature->{dpi};
 
-    my @engines = $feature->{dpi};
+    my $dpi = $feature->{dpi};
+
+    return
+      if !defined $dpi->{engines};
+
+    my @engines = $dpi->{engines};
+    my $num_engines = $dpi->{'num-engines'};
 
     my $fmt_str =
       "%-9s %-9s %-15s %-15s %-10s %-6s %-9s %-10s %-9s %-10s %-20s\n";
@@ -212,9 +222,7 @@ sub print_sess_feature_dpi {
             "--------",  "---------", "----" );
     }
 
-    my @tmp = $engines[0];
-    my $len = @tmp;
-    foreach my $i ( 0 .. $len ) {
+    foreach my $i ( 0 .. $num_engines - 1 ) {
         my $di         = $engines[0][$i];
         my $app_name   = $di->{"app-name"} // "";
         my $proto_name = $di->{"proto-name"} // "";
@@ -231,16 +239,10 @@ sub print_sess_feature_dpi {
         my $error = "false";
         $error = "true" if ( $di->{"error"} );
 
-        if ( $i == 0 ) {
-            printf( $fmt_str,
+        printf( $fmt_str,
                 $id,        $engine,   $app_name, $proto_name,
                 $offloaded, $error,    $fw_pkts,  $fw_bytes,
                 $bw_pkts,   $bw_bytes, $type );
-        } else {
-            printf( $fmt_str,
-                "", $engine, $app_name, $proto_name, $offloaded,
-                $error, "", "", "", "", $type );
-        }
     }
 }
 
@@ -375,11 +377,11 @@ for my $dp_id ( sort @{$dp_ids} ) {
     do {
         my $t =
           $sock->execute( "session-op show sessions "
-	      . $full
-	      . $conn
-	      . $start
-	      . " "
-	      . $req_count );
+              . $full
+              . $conn
+              . $start
+              . " "
+              . $req_count );
         if ( defined($t) && $t !~ /^\s*$/ ) {
             my $decoded = decode_json($t);
             $ret_count =
