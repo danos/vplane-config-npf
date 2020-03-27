@@ -99,7 +99,7 @@ def get_cgnat_policy_state():
 def summary_netconf(entry):
     state_entry = {}
     state_entry['public-address-mappings'] = entry['apm_table_used']
-    state_entry['public-address-mappings-max'] = entry['apm_table_max']
+    state_entry['public-address-mappings-max'] = 0               # deprecated
     state_entry['active-subscribers'] = entry['subs_table_used']
     state_entry['subscribers-max'] = entry['subs_table_max']
     state_entry['sessions-created'] = entry['sess_created']

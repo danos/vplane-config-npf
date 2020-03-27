@@ -82,8 +82,10 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2020-02-16 {
-        description "Add sub-sess-created and sub-sess-destroyed " +
+    revision 2020-02-27 {
+        description "Obsolete mapping-table resource warning config. " +
+                    "Obsolete public-address-mappings-max state. " +
+                    "Add sub-sess-created and sub-sess-destroyed " +
                     "to subscriber, policy and summary.";
     }
 
@@ -194,8 +196,8 @@ module vyatta-service-nat-cgnat-v1 {
                             "entries are in use (resource limitation)";
             }
             enum "mapping-table-full" {
-                description "Failure to allocate an address mapping because " +
-                            "all entries are in use (resource limitation)";
+                status obsolete;
+                description "This is no longer used, and should be ignored";
             }
             enum "session-table-full" {
                 description "Failure to allocate a session because all " +
@@ -813,6 +815,7 @@ module vyatta-service-nat-cgnat-v1 {
                                 uses resource-warning;
                             }
                             container mapping-table {
+                                status obsolete;
                                 description  "Configure mapping-table resource warning";
                                 configd:help "Configure mapping-table resource warning";
                                 presence "CGNAT resource criteria; mandatory child nodes when configured";
@@ -870,6 +873,7 @@ module vyatta-service-nat-cgnat-v1 {
                         type uint64;
                     }
                     leaf public-address-mappings-max {
+                        status obsolete;
                         description "The maximum number of public addresses " +
                                     "that could be mapped to by CGNAT " +
                                     "subscribers on the system.";

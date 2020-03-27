@@ -82,8 +82,6 @@ def cgn_op_show_summary():
                 print("  %-32s" % ("Public address mapping table:"))
                 print("    %-30s %18u" % ("Used",
                                           summary.get('apm_table_used')))
-                print("    %-30s %18u" % ("Max",
-                                          summary.get('apm_table_max')))
                 print("  %-32s" % ("Subscriber address table:"))
                 print("    %-30s %18u" % ("Used",
                                           summary.get('subs_table_used')))
