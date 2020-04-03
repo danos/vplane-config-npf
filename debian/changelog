@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.16) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * CGNAT: Remove unnecessary APM table resource constraint notifications
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 03 Apr 2020 14:08:00 +0100
+
 vplane-config-npf (4.0.15) unstable; urgency=medium
 
   [ Ian Wilson ]
