@@ -62,8 +62,9 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-02-20 {
-		description "Added 'ipv6-frag' matching option in 'protocol base'.";
+	revision 2020-04-03 {
+		description "Added 'ipv6-frag' matching option in 'protocol base'. " +
+			    "Added help/description for 'protocol base/final'.";
 	}
 
 	revision 2019-06-20 {
@@ -221,6 +222,8 @@ module vyatta-ippf-v1 {
 			description  "Protocol parameters";
 			configd:help "Protocol parameters";
 			container base {
+				description  "Match on protocol/next-header in IPv4/v6 header";
+				configd:help "Match on protocol/next-header in IPv4/v6 header";
 				uses ippf-protocol;
 				presence "Base protocol match criteria; mandatory child nodes when configured";
 				must "count( name | number ) = 1" {
@@ -228,6 +231,8 @@ module vyatta-ippf-v1 {
 				}
 			}
 			container final {
+				description  "Match on protocol of final header";
+				configd:help "Match on protocol of final header";
 				uses ippf-protocol;
 				presence "Final protocol match criteria; mandatory child nodes when configured";
 				must "count( name | number ) = 1" {
