@@ -57,7 +57,7 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-02-20 {
+	revision 2020-04-03 {
 		description "Initial revision.";
 	}
 
@@ -69,5 +69,9 @@ module vyatta-ippf-deviations-siad-v1 {
 				error-message "IPv6 group rules that match on fragments must also match on 'ipv6-frag' protocol base";
 			}
 		}
+	}
+
+	deviation /security:security/ippf:ip-packet-filter/ippf:group/ippf:rule/ippf:match/ippf:protocol/ippf:final {
+		deviate not-supported;
 	}
 }
