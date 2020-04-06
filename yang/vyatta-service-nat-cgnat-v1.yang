@@ -83,8 +83,12 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2020-03-27 {
-        description "Obsolete mapping-table resource warning config. " +
+    revision 2020-04-06 {
+        description "Obsolete pool-addr-echo-req error state. " +
+                    "Obsolete public-address-locked-on-destroy error state. " +
+                    "Obsolete state too-short-packet error state. " +
+                    "Add pool-addr-echo-req summary state. " +
+                    "Obsolete mapping-table resource warning config. " +
                     "Obsolete public-address-mappings-max state. " +
                     "Add sub-sess-created and sub-sess-destroyed " +
                     "to subscriber, policy and summary. " +
@@ -243,6 +247,7 @@ module vyatta-service-nat-cgnat-v1 {
                             "the table (thread contention)";
             }
             enum "public-address-locked-on-destroy" {
+                status obsolete;
                 description "Public address was destroyed while waiting for " +
                             "lock (thread contention)";
             }
@@ -263,6 +268,7 @@ module vyatta-service-nat-cgnat-v1 {
                             "manipulation (packet buffer)";
             }
             enum "too-short-packet" {
+                status obsolete;
                 description "Failed to NAT the packet as it was too short " +
                             "(packet buffer)";
             }
@@ -271,6 +277,7 @@ module vyatta-service-nat-cgnat-v1 {
                             "(other)";
             }
             enum "pool-addr-echo-req" {
+                status obsolete;
                 description "ICMP Echo Request for a CGNAT pool address";
             }
             enum "alg-packet" {
@@ -1035,6 +1042,10 @@ module vyatta-service-nat-cgnat-v1 {
                     leaf sess-ht-destroyed {
                         description "Number of destination address/port hash " +
                                     "tables destroyed.";
+                        type uint64;
+                    }
+                    leaf pool-addr-echo-req {
+                        description "ICMP Echo Request for a CGNAT pool address";
                         type uint64;
                     }
                 }

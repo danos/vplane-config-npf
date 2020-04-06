@@ -119,6 +119,8 @@ def summary_netconf(entry):
     state_entry['packets-not-cgnat'] = entry['nopool']
     state_entry['pcp-ok'] = entry['pcp_ok']
     state_entry['pcp-fail'] = entry['pcp_err']
+    if 'icmp_echoreq' in entry:
+        state_entry['pool-addr-echo-req'] = entry['icmp_echoreq']
     if 'sess_ht_created' in entry:
         state_entry['sess-ht-created'] = entry['sess_ht_created']
         state_entry['sess-ht-destroyed'] = entry['sess_ht_destroyed']
@@ -178,6 +180,9 @@ error_maps = OrderedDict([
     ('PCP_ENOSPC', 'pcp-mapping-unavailable'),
 ])
 
+# List of obsoleted errors
+obsolete_error_list = ['APM_ENOENT', 'BUF_ENOSPC', 'ICMP_ECHOREQ']
+
 
 def errors_netconf(entries):
 
@@ -191,8 +196,12 @@ def errors_netconf(entries):
     for errno, cause in error_maps.items():
         state_entry = {}
         state_entry['cause'] = cause
-        state_entry['in-count'] = errors_dict['in'][errno]
-        state_entry['out-count'] = errors_dict['out'][errno]
+        if errno not in obsolete_error_list and errno in errors_dict['in']:
+            state_entry['in-count'] = errors_dict['in'][errno]
+            state_entry['out-count'] = errors_dict['out'][errno]
+        else:
+            state_entry['in-count'] = 0
+            state_entry['out-count'] = 0
         state_entries.append(state_entry)
 
     dbg.pprint("policy netconf entry: {}".format(state_entries))

@@ -145,6 +145,9 @@ def cgn_op_show_summary():
                                         summary.get('ethread')))
                 print("  %-32s %18u" % ("Packet buffer errors",
                                         summary.get('embuf')))
+                if 'icmp_echoreq' in summary:
+                    print("  %-32s %18u" % ("ICMP Echo Req for CGNAT addr",
+                                            summary.get('icmp_echoreq')))
                 print()
 
 
@@ -241,21 +244,18 @@ def cgn_op_show_errors():
     print("  Thread contention errors:")
     cgn_op_show_error_one('S1_EEXIST', fmt, in_d, out_d)
     cgn_op_show_error_one('S2_EEXIST', fmt, in_d, out_d)
-    cgn_op_show_error_one('APM_ENOENT', fmt, in_d, out_d)
     cgn_op_show_error_one('SRC_ENOENT', fmt, in_d, out_d)
 
     print("  Packet buffer errors:")
     cgn_op_show_error_one('BUF_ENOL3', fmt, in_d, out_d)
     cgn_op_show_error_one('BUF_ENOL4', fmt, in_d, out_d)
     cgn_op_show_error_one('BUF_ENOMEM', fmt, in_d, out_d)
-    cgn_op_show_error_one('BUF_ENOSPC', fmt, in_d, out_d)
 
     print("  PCP errors:")
     cgn_op_show_error_one('PCP_EINVAL', fmt, in_d, out_d)
     cgn_op_show_error_one('PCP_ENOSPC', fmt, in_d, out_d)
 
     print("  Other:")
-    cgn_op_show_error_one('ICMP_ECHOREQ', fmt, in_d, out_d)
     cgn_op_show_error_one('ERR_UNKWN', fmt, in_d, out_d)
 
     print()
