@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.6) unstable; urgency=medium
+
+  * l3acl: add help/description for 'protocol base/final'
+  * l3acl: remove "protocol final" config for SIAD platform
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 07 Apr 2020 10:22:29 +0100
+
 vplane-config-npf (4.1.5) unstable; urgency=medium
 
   [ Ian Wilson ]
