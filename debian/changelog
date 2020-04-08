@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.7) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * cgnat: Obsolete some error counts, and add echo-req count to summary
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 08 Apr 2020 09:58:50 +0100
+
 vplane-config-npf (4.1.6) unstable; urgency=medium
 
   * l3acl: add help/description for 'protocol base/final'
