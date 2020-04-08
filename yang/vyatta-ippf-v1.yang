@@ -62,6 +62,12 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
+	revision 2020-04-15 {
+		description
+			"Add additional match criteria:
+			  - TTL";
+	}
+
 	revision 2020-04-03 {
 		description "Added 'ipv6-frag' matching option in 'protocol base'. " +
 			    "Added help/description for 'protocol base/final'.";
@@ -208,6 +214,18 @@ module vyatta-ippf-v1 {
 
 	grouping ippf-match {
 		description "Definition of a single IP packet filter match rule";
+		container ttl {
+			description  "Match TTL in IPv4 header or Hop Count in IPv6 header";
+			configd:help "Match TTL in IPv4 header or Hop Count in IPv6 header";
+			leaf equals {
+				description  "TTL value to match";
+				configd:help "TTL value to match";
+				type uint32 {
+					range "1 | 255";
+					configd:help "TTL to match";
+				}
+			}
+		}
 		leaf fragment {
 			description  "Match fragments";
 			configd:help "Match fragments";
