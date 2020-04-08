@@ -77,7 +77,9 @@ module vyatta-ippf-v1 {
 			  - TTL
 			  - DSCP
 			  - ICMP (IPv4) type/code
-			  - ICMPv6 type/code";
+			  - ICMPv6 type/code
+			  - ICMPv6 class
+			";
 	}
 
 	revision 2020-04-03 {
@@ -341,14 +343,28 @@ module vyatta-ippf-v1 {
 			      (../protocol/final/name = 'ipv6-icmp') or (../protocol/final/number = 58)" {
 				error-message "'match icmpv6' can only be used if 'protocol final' is ICMPv6 or not set";
 			}
-			must "not (../icmpv6) or count( name | type ) = 1" {
-				error-message "Configure exactly one of 'name', or 'type'";
+			must "not (../icmpv6) or count( name | type | class ) = 1" {
+				error-message "Configure exactly one of 'name', 'type', or 'class'";
 			}
 			uses npf:rule-icmp-numeric;
 			leaf name {
 				description  "Choose a type (and optional code) by name";
 				configd:help "Choose a type (and optional code) by name";
 				type fw-types:icmpv6-symbolic;
+			}
+			leaf class {
+				description  "Match ICMPv6 class";
+				configd:help "Match ICMPv6 class";
+				type enumeration {
+					enum "info" {
+						description  "Match ICMPv6 info packets";
+						configd:help "Match ICMPv6 info packets";
+					}
+					enum "error" {
+						description  "Match ICMPv6 error packets";
+						configd:help "Match ICMPv6 error packets";
+					}
+				}
 			}
 		}
 	}
