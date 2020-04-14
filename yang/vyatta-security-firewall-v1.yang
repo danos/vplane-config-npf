@@ -20,6 +20,9 @@ module vyatta-security-firewall-v1 {
 	import vyatta-interfaces-openvpn-v1 {
 		prefix interfaces-openvpn;
 	}
+	import vyatta-interfaces-pppoe-v1 {
+		prefix interfaces-pppoe;
+	}
 	import vyatta-interfaces-tunnel-v1 {
 		prefix interfaces-tunnel;
 	}
@@ -53,7 +56,7 @@ module vyatta-security-firewall-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2020, AT&T Intellectual Property.
 		 All rights reserved.
 		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
 		 All rights reserved.
@@ -94,6 +97,9 @@ module vyatta-security-firewall-v1 {
 
 		 YANG module for Vyatta firewalls";
 
+	revision 2020-04-01 {
+		description "Add firewall to PPPoE interfaces";
+	}
 	revision 2019-02-20 {
 		description "Update firewall validation and commit handling
 			     to improve performance.";
@@ -783,6 +789,9 @@ module vyatta-security-firewall-v1 {
 		uses firewall-vif-if-parameters;
 	}
 	augment /if:interfaces/interfaces-openvpn:openvpn {
+		uses firewall-if-parameters;
+	}
+	augment /if:interfaces/interfaces-pppoe:pppoe {
 		uses firewall-if-parameters;
 	}
 	augment /if:interfaces/interfaces-tunnel:tunnel {

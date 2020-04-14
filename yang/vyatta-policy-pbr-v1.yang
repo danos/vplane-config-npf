@@ -20,6 +20,9 @@ module vyatta-policy-pbr-v1 {
 	import vyatta-interfaces-openvpn-v1 {
 		prefix interfaces-openvpn;
 	}
+	import vyatta-interfaces-pppoe-v1 {
+		prefix interfaces-pppoe;
+	}
 	import vyatta-interfaces-tunnel-v1 {
 		prefix interfaces-tunnel;
 	}
@@ -56,7 +59,7 @@ module vyatta-policy-pbr-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019 AT&T Intellectual Property
+		"Copyright (c) 2017-2020 AT&T Intellectual Property
 		 All rights reserved.
 
 		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
@@ -97,6 +100,10 @@ module vyatta-policy-pbr-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for Vyatta Policy-based Routing (PBR)";
+
+	revision 2020-04-02 {
+		description "Add PBR to PPPoE interfaces";
+	}
 
 	revision 2019-02-15 {
 		description "Update PBR commit handling to improve
@@ -294,6 +301,9 @@ module vyatta-policy-pbr-v1 {
 		uses pbr-vif-if-parameters;
 	}
 	augment /if:interfaces/interfaces-openvpn:openvpn/interfaces-policy:policy {
+		uses pbr-if-parameters;
+	}
+	augment /if:interfaces/interfaces-pppoe:pppoe/interfaces-policy:policy {
 		uses pbr-if-parameters;
 	}
 	augment /if:interfaces/interfaces-tunnel:tunnel/interfaces-policy:policy {
