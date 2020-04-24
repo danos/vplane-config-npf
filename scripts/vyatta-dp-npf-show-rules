@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2018-2019, AT&T Intellectual Property.
+# Copyright (c) 2018-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
@@ -349,21 +349,28 @@ sub print_nat_stats_rule {
     my ( $attach_point, $rule_num, $rule, $ruleset_type, $rule_header_printed )
       = @_;
 
-    my $fmt_str = "%-7s %-15s %-24s %-15s %-15s\n";
+    my $fmt_str = "%-7s %-15s %-20s %-15s %-10s %-10s %-10s %-10s\n";
 
     if ( $$rule_header_printed == 0 ) {
         $$rule_header_printed = 1;
-        printf( $fmt_str, "rule", "pkts", "bytes", "interface", "used/total" );
-        printf( $fmt_str, "----", "----", "-----", "---------", "----------" );
+        printf( $fmt_str,
+            "rule",  "pkts",     "bytes",    "interface",
+            "total", "used TCP", "used UDP", "used other" );
+        printf( $fmt_str,
+            "----",  "----",     "-----",    "---------",
+            "-----", "--------", "--------", "----------" );
     }
 
-    my $used_total = "n/a";
-    $used_total = "$rule->{used_ts}/$rule->{total_ts}"
-      if defined( $rule->{used_ts} ) && defined( $rule->{used_ts} );
+    my $total = $rule->{total_ts};
+    my %used;
+
+    foreach my $prot ( @{ $rule->{protocols} } ) {
+        $used{ $prot->{protocol} } = $prot->{used_ts};
+    }
 
     printf( $fmt_str,
-        $rule_num,     $rule->{packets}, $rule->{bytes},
-        $attach_point, $used_total );
+        $rule_num, $rule->{packets}, $rule->{bytes},
+        $attach_point, $total, $used{tcp}, $used{udp}, $used{other} );
 }
 
 sub print_group_nat_stats {
