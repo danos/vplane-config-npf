@@ -283,10 +283,16 @@ def nat64_show_rule(rlnum, rule, col1):
     # If source mapping is type 'overload', then a nat policy will exists
     # and 'used_ts' and 'total_ts' should be present
     #
-    if 'used_ts' in rule and 'total_ts' in rule:
+    if 'total_ts' in rule:
         map_src = map_src.rstrip()
-        map_src += ", Used %u/%u" % (rule.get('used_ts'),
-                                     rule.get('total_ts'))
+        map_src += ", Total %u" % (rule.get('total_ts'))
+
+    if 'protocols' in rule:
+        used = {}
+        for prot in rule['protocols']:
+            used[prot.get('protocol')] = prot.get('used_ts')
+        map_src += ", Used TCP %u, Used UDP %u, Used other %u" % \
+                   (used['tcp'], used['udp'], used['other'])
 
     rl_head = "  Rule: %s, %s: %s" % (rlnum, ptype, proto)
     if log and log == "1":
