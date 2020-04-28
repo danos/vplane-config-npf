@@ -349,16 +349,29 @@ sub print_nat_stats_rule {
     my ( $attach_point, $rule_num, $rule, $ruleset_type, $rule_header_printed )
       = @_;
 
-    my $fmt_str = "%-7s %-15s %-20s %-15s %-10s %-10s %-10s %-10s\n";
+    my ( $tot_format, $tot_title, $tot_under );
+
+    # Don't display total for DNAT, as it is not limited by amount of ports
+    if ( $ruleset_type eq 'dnat' ) {
+        $tot_format = "%s";
+        $tot_title  = "";
+        $tot_under  = "";
+    } else {
+        $tot_format = "%-10s ";
+        $tot_title  = "total";
+        $tot_under  = "-----";
+    }
+
+    my $fmt_str = "%-7s %-15s %-20s %-15s$tot_format %-10s %-10s %-10s\n";
 
     if ( $$rule_header_printed == 0 ) {
         $$rule_header_printed = 1;
         printf( $fmt_str,
-            "rule",  "pkts",     "bytes",    "interface",
-            "total", "used TCP", "used UDP", "used other" );
+            "rule",     "pkts",     "bytes",    "interface",
+            $tot_title, "used TCP", "used UDP", "used other" );
         printf( $fmt_str,
-            "----",  "----",     "-----",    "---------",
-            "-----", "--------", "--------", "----------" );
+            "----",     "----",     "-----",    "---------",
+            $tot_under, "--------", "--------", "----------" );
     }
 
     my $total = $rule->{total_ts};
@@ -367,6 +380,8 @@ sub print_nat_stats_rule {
     foreach my $prot ( @{ $rule->{protocols} } ) {
         $used{ $prot->{protocol} } = $prot->{used_ts};
     }
+
+    $total = "" if $ruleset_type eq 'dnat';
 
     printf( $fmt_str,
         $rule_num, $rule->{packets}, $rule->{bytes},
