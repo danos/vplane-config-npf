@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019, AT&T Intellectual Property.
+# Copyright (c) 2019-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -284,6 +284,7 @@ def nat64_show_rule(rlnum, rule, col1):
     # and 'used_ts' and 'total_ts' should be present
     #
     if 'used_ts' in rule and 'total_ts' in rule:
+        map_src = map_src.rstrip()
         map_src += ", Used %u/%u" % (rule.get('used_ts'),
                                      rule.get('total_ts'))
 
