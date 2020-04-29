@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.8) unstable; urgency=medium
+
+  [ Paul Carson ]
+  * Add firewall and PBR to PPPoE interfaces (Fixes: VRVDR-43273)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 29 Apr 2020 15:00:20 +0100
+
 vplane-config-npf (4.1.7) unstable; urgency=medium
 
   [ Ian Wilson ]
