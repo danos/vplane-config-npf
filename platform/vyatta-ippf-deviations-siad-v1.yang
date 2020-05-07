@@ -57,7 +57,7 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-05-08 {
+	revision 2020-05-22 {
 		description
 			"Preclude the additional ingress match criteria:
 			  - TTL
@@ -67,7 +67,8 @@ module vyatta-ippf-deviations-siad-v1 {
 			  - ICMPv6 class
 			  - L4 ports
 			at Egress IP Packet Filter.
-			Preclude counters at Egress IP Packet Filter";
+			Preclude counters at Egress IP Packet Filter.
+			Constrain IPv6 input rules for TCAM.";
 	}
 
 	revision 2020-04-03 {
@@ -110,6 +111,25 @@ module vyatta-ippf-deviations-siad-v1 {
 			}
 			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match/ippf:destination[ippf:port])" {
 				error-message "Unsupported L4 destination port matching for outbound traffic";
+			}
+		}
+	}
+
+	deviation /security:security/ippf:ip-packet-filter {
+		deviate add {
+			/*
+			 * Ensure that the total set of rules applied inbound for IPv6
+			 * do not exceed the available key space of the TCAM.
+			 * We have 320 bits total, and 20 are used for fixed qualifiers.
+			 */
+			must "128 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[destination/ipv6]) > 0) + " +
+			     "128 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[source/ipv6]) > 0) + " +
+			     "16 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[destination/port]) > 0) + " +
+			     "16 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[source/port or icmpv6]) > 0) + " +
+			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[protocol]) > 0) + " +
+			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[ttl]) > 0) + " +
+			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[dscp]) > 0) <= 300" {
+				error-message "IPv6 input matches across all groups would exceed TCAM key space";
 			}
 		}
 	}
