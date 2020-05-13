@@ -58,7 +58,14 @@ my %ruleset_data = (
         group_line         => "Firewall \"%s\":\n",
         override_direction => "local",
     },
-    "zone" => {
+    "originate" => {
+        print_group_fn     => \&print_group_npf,
+        tag_fn             => \&raw_tag,
+        header             => "Rulesets Information: Firewall",
+        group_line         => "Firewall \"%s\":\n",
+        override_direction => "originate",
+    },
+     "zone" => {
         print_group_fn           => \&print_group_npf,
         tag_fn                   => \&raw_tag,
         header                   => "Rulesets Information: From zone ",
@@ -630,7 +637,7 @@ sub print_rules {
     my ( $config, $variant ) = @_;
 
     my $fw_header_printed = 0;
-    foreach my $ruleset_type ( 'fw-in', 'fw-out', 'bridge', 'local', 'zone' ) {
+    foreach my $ruleset_type ( 'fw-in', 'fw-out', 'bridge', 'local', 'originate', 'zone' ) {
         print_ruleset( $ruleset_type, $config, $variant, \$fw_header_printed );
     }
 

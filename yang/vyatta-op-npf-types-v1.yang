@@ -14,7 +14,7 @@ module vyatta-op-npf-types-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2018-2019, AT&T Intellectual Property.
+		"Copyright (c) 2018-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -52,6 +52,10 @@ module vyatta-op-npf-types-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for NPF operation mode types.";
+
+	revision 2020-05-12 {
+		description "Added originate firewall support.";
+	}
 
 	revision 2019-04-05 {
 		description "Added type op-group-name.";
@@ -112,8 +116,8 @@ module vyatta-op-npf-types-v1 {
 	typedef op-direction {
 		type string {
 			opd:pattern-help "<direction>";
-			pattern '(in|out|l2|local)' {
-				error-message "Must be: in, out, l2, or local";
+			pattern '(in|out|l2|local|originate)' {
+				error-message "Must be: in, out, l2, local or originate";
 			}
 			opd:help "Traffic direction to select";
 		}

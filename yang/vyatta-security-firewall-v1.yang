@@ -97,6 +97,10 @@ module vyatta-security-firewall-v1 {
 
 		 YANG module for Vyatta firewalls";
 
+	revision 2020-05-12 {
+		description "Add originate firewall support
+			    for dataplane and loopback interfaces";
+	}
 	revision 2020-04-01 {
 		description "Add firewall to PPPoE interfaces";
 	}
@@ -227,7 +231,37 @@ module vyatta-security-firewall-v1 {
 			}
 		}
 	}
-
+	grouping firewall-if-state-originate {
+		container state {
+			config false;
+			description "State of rulesets associated with interface";
+			container out {
+				description "State for forwarded packets on outbound interface";
+				uses npf:rule-group-state;
+			}
+			container in {
+				description "State for forwarded packets on inbound interface";
+				uses npf:rule-group-state;
+			}
+			container local {
+				description "State for packets terminated on router";
+				uses npf:rule-group-state;
+			}
+			container originate {
+				description "State for packets originate on router";
+				uses npf:rule-group-state;
+			}
+		}
+	}
+	grouping firewall-if-parameters-originate {
+		container firewall {
+			description "Firewall options";
+			configd:help "Firewall options";
+			uses firewall-if-parameters-cfg;
+			uses firewall-if-parameters-cfg-originate;
+			uses firewall-if-state-originate;
+		}
+	}
 	grouping firewall-if-parameters {
 		container firewall {
 			description "Firewall options";
@@ -236,7 +270,47 @@ module vyatta-security-firewall-v1 {
 			uses firewall-if-state;
 		}
 	}
+	grouping firewall-if-parameters-cfg-originate {
+		leaf-list originate {
+			type leafref {
+				path "/security:security/firewall/name/ruleset-name";
+			}
+			ordered-by "user";
+			description "Ruleset for packets originated on router";
+			configd:help "Ruleset for packets originated on router";
 
+			must "not(/security:security/firewall/name[ruleset-name = current()]/default-action)" {
+				error-message "This ruleset has default-action which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/default-log)" {
+				error-message "This ruleset has default-log which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/session)" {
+				error-message "This ruleset has session rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/fragment)" {
+				error-message "This ruleset has fragment rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/protocol = 'ipv6-frag')" {
+				error-message "This ruleset has protocol equal to ipv6-frag rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/state = 'enable')" {
+				error-message "This ruleset has state rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/ethertype)" {
+				error-message "This ruleset has ethertype rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/pcp)" {
+				error-message "This ruleset has pcp rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/source/mac-address)" {
+				error-message "This ruleset has source mac-address rules which can't be configured for originate firewall";
+			}
+			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/destination/mac-address)" {
+				error-message "This ruleset has destination mac-address rules which can't be configured for originate firewall";
+			}
+		}
+	}
 	grouping firewall-if-parameters-cfg {
 			leaf-list out {
 				type leafref {
@@ -745,12 +819,54 @@ module vyatta-security-firewall-v1 {
 		}
 	}
 	augment /if:interfaces/interfaces-dataplane:dataplane {
-		uses firewall-if-parameters;
+		uses firewall-if-parameters-originate;
 	}
 	augment /if:interfaces/interfaces-loopback:loopback {
 		container firewall {
 			description "Firewall options";
 			configd:help "Firewall options";
+			leaf-list originate {
+				type leafref {
+					path "/security:security/firewall/name/ruleset-name";
+				}
+				ordered-by "user";
+				description "Ruleset for packets originated on router";
+				configd:help "Ruleset for packets originated on router";
+
+				must "(../../interfaces-loopback:tagnode = 'lo')" {
+					error-message "Originate firewall can only be applied to lo.";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/default-action)" {
+					error-message "This ruleset has default-action which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/default-log)" {
+					error-message "This ruleset has default-log which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/session)" {
+					error-message "This ruleset has session rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/fragment)" {
+					error-message "This ruleset has fragment rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/protocol = 'ipv6-frag')" {
+					error-message "This ruleset has protocol equal to ipv6-frag rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/state = 'enable')" {
+					error-message "This ruleset has state rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/ethertype)" {
+					error-message "This ruleset has ethertype rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/pcp)" {
+					error-message "This ruleset has pcp rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/source/mac-address)" {
+					error-message "This ruleset has source mac-address rules which can't be configured for originate firewall";
+				}
+				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/destination/mac-address)" {
+					error-message "This ruleset has destination mac-address rules which can't be configured for originate firewall";
+				}
+			}
 			leaf-list local {
 				type leafref {
 					path "/security:security/firewall/name/ruleset-name";
@@ -772,6 +888,10 @@ module vyatta-security-firewall-v1 {
 			container state {
 				config false;
 				description "State of rulesets associated with interface";
+				container originate {
+					description "State for packets originate on router";
+					uses npf:rule-group-state;
+				}
 				container local {
 					description "State for packets terminated on router";
 					uses npf:rule-group-state;

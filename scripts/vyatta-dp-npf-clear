@@ -36,7 +36,7 @@ my %base_type_supports = (
 );
 
 my %base_type_to_rs = (
-    'fw'      => [ 'fw-in', 'fw-out', 'bridge', 'local' ],
+    'fw'      => [ 'fw-in', 'fw-out', 'bridge', 'local', 'originate' ],
     'bridge'  => [ 'bridge' ],
     'zone'    => [ 'zone' ],
     'nat'     => [ 'snat', 'dnat', 'nat64' ],
@@ -66,6 +66,7 @@ my %dir_to_rs = (
     'out'   => 'fw-out',
     'l2'    => 'bridge',
     'local' => 'local',
+    'originate' => 'originate',
 );
 
 my %base_type_to_group_class = (

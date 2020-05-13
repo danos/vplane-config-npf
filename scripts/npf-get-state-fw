@@ -1,9 +1,9 @@
 #!/bin/dash
 #
-# Copyright (c) 2018-2019, AT&T Intellectual Property.
+# Copyright (c) 2018-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-exec /opt/vyatta/sbin/npf-get-state --cmd "npf-op state all: fw-in fw-out local bridge"
+exec /opt/vyatta/sbin/npf-get-state --cmd "npf-op state all: fw-in fw-out local bridge originate"

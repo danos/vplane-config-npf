@@ -55,6 +55,7 @@ fw_ruleset_dict = {
     "out": "fw-out",
     "l2": "bridge",
     "local": "local",
+    "originate": "originate",
 }
 
 

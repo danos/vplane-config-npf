@@ -32,7 +32,7 @@ module vyatta-op-security-firewall-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -71,6 +71,10 @@ module vyatta-op-security-firewall-v1 {
 
 		 YANG module for firewall-related operation mode commands.";
 
+	revision 2020-05-12 {
+		description "Added originate firewall support.";
+	}
+
 	revision 2019-11-14 {
 		description "Correct spellings of 'specified'";
 	}
@@ -101,18 +105,18 @@ module vyatta-op-security-firewall-v1 {
 
 		opd:command firewall {
 			opd:help "Show dataplane firewall information";
-			opd:on-enter "vyatta-dp-npf-show-rules all: fw-in fw-out local bridge zone";
+			opd:on-enter "vyatta-dp-npf-show-rules all: fw-in fw-out local originate bridge zone";
 
 			opd:command detail {
 				opd:help "Show dataplane firewall detail information";
-				opd:on-enter "vyatta-dp-npf-show-rules --detail all: fw-in fw-out local bridge zone";
+				opd:on-enter "vyatta-dp-npf-show-rules --detail all: fw-in fw-out local originate bridge zone";
 			}
 
 			opd:argument name {
 				opd:help "Show dataplane firewall information";
 				type op-npf-types:op-ifname;
 				opd:allowed "vyatta-interfaces.pl --show all";
-				opd:on-enter "vyatta-dp-npf-show-rules interface:$3 fw-in fw-out local bridge zone";
+				opd:on-enter "vyatta-dp-npf-show-rules interface:$3 fw-in fw-out local originate bridge zone";
 			}
 		}
 
@@ -144,13 +148,13 @@ module vyatta-op-security-firewall-v1 {
 				opd:help "Show log for the specified firewall";
 				type op-npf-types:op-ruleset-name;
 				opd:allowed "allowed-nodes security firewall name";
-				opd:on-enter 'npf-show-logs "(fw|bridge|local) rule $5:[0-9]+ "';
+				opd:on-enter 'npf-show-logs "(fw|bridge|local|originate) rule $5:[0-9]+ "';
 
 				opd:option rule {
 					opd:help "Show log for a rule in the specified firewall";
 					type op-npf-types:op-rule-number;
 					opd:allowed "allowed-nodes security firewall name ${COMP_WORDS[4]} rule";
-					opd:on-enter 'npf-show-logs "(fw|bridge|local) rule $5:$7 "';
+					opd:on-enter 'npf-show-logs "(fw|bridge|local|originate) rule $5:$7 "';
 				}
 			}
 		}
@@ -251,13 +255,13 @@ module vyatta-op-security-firewall-v1 {
 				opd:help "Monitor the specified firewall";
 				type op-npf-types:op-ruleset-name;
 				opd:allowed "allowed-nodes security firewall name";
-				opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local) rule $4:[0-9]+ "';
+				opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local|originate) rule $4:[0-9]+ "';
 
 				opd:option rule {
 					opd:help "Monitor a rule in the specified firewall";
 					type op-npf-types:op-rule-number;
 					opd:allowed "allowed-nodes security firewall name ${COMP_WORDS[3]} rule";
-					opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local) rule $4:$6 "';
+					opd:on-enter 'vyatta-monitor FIREWALL "(fw|bridge|local|originate) rule $4:$6 "';
 				}
 			}
 		}
