@@ -72,7 +72,8 @@ module vyatta-ippf-v1 {
 		 YANG module for Vyatta IP Packet Filter";
 
 	revision 2020-05-08 {
-		description "Updated 'interface:in' form to use leafref for validation";
+		description "Added Egress IP Packet Filter support.
+		             Updated 'interface:in' form to use leafref for validation";
 	}
 
 	revision 2020-04-15 {
@@ -541,8 +542,8 @@ module vyatta-ippf-v1 {
 				configd:help "Interface for IP packet filter";
 				configd:allowed "vyatta-interfaces.pl --show all";
 				configd:end "end-ippf-ruleset --interface $VAR(@)";
-				must "in" {
-					error-message "Configure at least one group for input";
+				must "in | out" {
+					error-message "Configure at least one group for input or output";
 				}
 				/* There's a limit of one group per address-family.
 				 * Here we ensure there are no more than two groups.
@@ -550,6 +551,9 @@ module vyatta-ippf-v1 {
 				 * a higher level configd:validate ensures they have different AFs.
 				 */
 				must "count(in) <= 2" {
+					error-message "Configure only one group per address-family";
+				}
+				must "count(out) <= 2" {
 					error-message "Configure only one group per address-family";
 				}
 				key "interface-name";
@@ -561,6 +565,14 @@ module vyatta-ippf-v1 {
 				leaf-list in {
 					description  "Input group";
 					configd:help "Input group";
+					ordered-by "user";
+					type leafref {
+						path "/security:security/ip-packet-filter/group/group-name";
+					}
+				}
+				leaf-list out {
+					description  "Output group";
+					configd:help "Output group";
 					ordered-by "user";
 					type leafref {
 						path "/security:security/ip-packet-filter/group/group-name";

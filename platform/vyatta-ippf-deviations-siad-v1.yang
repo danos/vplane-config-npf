@@ -57,6 +57,10 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
+	revision 2020-05-08 {
+		description "Preclude counters at Egress IP Packet Filter";
+	}
+
 	revision 2020-04-03 {
 		description "Initial revision.";
 	}
@@ -73,5 +77,13 @@ module vyatta-ippf-deviations-siad-v1 {
 
 	deviation /security:security/ippf:ip-packet-filter/ippf:group/ippf:rule/ippf:match/ippf:protocol/ippf:final {
 		deviate not-supported;
+	}
+
+	deviation /security:security/ippf:ip-packet-filter/ippf:interface/ippf:out {
+		deviate add {
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:counters)" {
+				error-message "Unsupported counters for outbound traffic";
+			}
+		}
 	}
 }
