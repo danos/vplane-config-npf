@@ -58,7 +58,16 @@ module vyatta-ippf-deviations-siad-v1 {
 		 YANG module for Vyatta IP Packet Filter";
 
 	revision 2020-05-08 {
-		description "Preclude counters at Egress IP Packet Filter";
+		description
+			"Preclude the additional ingress match criteria:
+			  - TTL
+			  - DSCP
+			  - ICMP (IPv4) type/code
+			  - ICMPv6 type/code
+			  - ICMPv6 class
+			  - L4 ports
+			at Egress IP Packet Filter.
+			Preclude counters at Egress IP Packet Filter";
 	}
 
 	revision 2020-04-03 {
@@ -83,6 +92,24 @@ module vyatta-ippf-deviations-siad-v1 {
 		deviate add {
 			must "not (../../ippf:group[ippf:group-name = current()]/ippf:counters)" {
 				error-message "Unsupported counters for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:dscp])" {
+				error-message "Unsupported DSCP matching for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:ttl])" {
+				error-message "Unsupported TTL matching for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:icmp])" {
+				error-message "Unsupported ICMPv4 matching for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:icmpv6])" {
+				error-message "Unsupported ICMPv6 matching for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match/ippf:source[ippf:port])" {
+				error-message "Unsupported L4 source port matching for outbound traffic";
+			}
+			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match/ippf:destination[ippf:port])" {
+				error-message "Unsupported L4 destination port matching for outbound traffic";
 			}
 		}
 	}
