@@ -71,6 +71,10 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
+	revision 2020-05-08 {
+		description "Updated 'interface:in' form to use leafref for validation";
+	}
+
 	revision 2020-04-15 {
 		description
 			"Add additional match criteria:
@@ -557,7 +561,6 @@ module vyatta-ippf-v1 {
 				leaf-list in {
 					description  "Input group";
 					configd:help "Input group";
-					configd:allowed "echo $VAR(/security/ip-packet-filter/group/@@)";
 					ordered-by "user";
 					type leafref {
 						path "/security:security/ip-packet-filter/group/group-name";
