@@ -1,3 +1,37 @@
+vplane-config-npf (4.2.0) unstable; urgency=medium
+
+  [ Derek Fawcus ]
+  * IPPF: Add additional match criteria - TTL
+  * IPPF: Add additional match criteria - DSCP
+  * IPPF: Add additional match criteria - IPv4 ICMP
+  * IPPF: Add additional match criteria - ICMPv6
+  * IPPF: Add additional match criteria - ICMPv6 class
+  * IPPF: Add additional match criteria - L4 Ports
+
+  [ Gavin Shearer ]
+  * nat: show nat used port counts per-protocol
+  * nat: don't show total ports available for DNAT
+  * nat64: remove space after a comma in nat64 overload show cmd
+  * nat64: show nat used port counts per-protocol for overload
+
+  [ Stuart Reilly ]
+  * Add dpi engine support
+  * Replace multiple user types with arbitrary types
+
+  [ Paul Aitken ]
+  * Simplify appname; add apptype
+  * Update vyatta-dp-npf-show-sessions DPI handling
+
+  [ ck487r ]
+  * Use 'leafref' for validation
+  * Egress ACLs: Enable egress ACLs at CLI
+  * Egress ACLs: preclude new ingress ACL matching fields
+
+  [ ak487r ]
+  * fw: add originating firewall
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 18 May 2020 10:18:36 +0100
+
 vplane-config-npf (4.1.8) unstable; urgency=medium
 
   [ Paul Carson ]
