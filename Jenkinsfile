@@ -119,7 +119,7 @@ EOF
 yang=`echo yang/*.yang | sed 's@yang/vyatta-policy-pbr-bridge-v1.yang @@' | sed 's/ /,/g'`
 platform=`echo platform/*.platform | sed 's/ /,/g'`
 platyang=`echo platform/*.yang | sed 's/ /,/g'`
-dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-policy-pbr-bridge-v1.yang
+dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-policy-pbr-bridge-v1.yang -s
 '''
                 }
             }
