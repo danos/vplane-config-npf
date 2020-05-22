@@ -391,12 +391,11 @@ def build_cgnat_config(commands, cfg, tree):
             if 'event' in cfg['select']['warning']:
                 if 'resource-constraint' in cfg['select']['warning']['event']:
                     key = "{} resource-constraint".format(BASE_CGNAT_PATH)
-                    cmd = build_cgnat_warning_config(
+                    build_cgnat_warning_config(
                         commands['resource-constraint'],
                         cfg['select']['warning']['event']
                            ['resource-constraint'],
                         tree)
-                    # TODO: not using cmd here?
 
     if 'log' in cfg:
         if 'event' in cfg['log']:
