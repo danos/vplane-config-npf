@@ -66,6 +66,12 @@ def pool_netconf(entry):
     # Active state boolean
     state_entry['active'] = entry['active']
 
+    # Are all addrs in-use?
+    if 'full' in entry:
+        state_entry['full'] = entry['full']
+    else:
+        state_entry['full'] = False
+
     # Number of address in this pool
     state_entry['pool-addr-count'] = entry['naddrs']
 

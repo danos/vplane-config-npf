@@ -73,6 +73,10 @@ module vyatta-service-nat-pool-v1 {
 
         YANG module for NAT pool configuration";
 
+    revision 2020-05-26 {
+        description "Add 'full' boolean to NAT pool state.";
+    }
+
     revision 2020-03-16 {
         description "Add subnet option to NAT pool range.";
     }
@@ -408,6 +412,10 @@ module vyatta-service-nat-pool-v1 {
                 }
                 leaf active {
                     description "Pool active state.";
+                    type boolean;
+                }
+                leaf full {
+                    description "All addresses are in-use.";
                     type boolean;
                 }
                 leaf pool-addr-count {

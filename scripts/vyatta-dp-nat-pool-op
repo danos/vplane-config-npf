@@ -80,6 +80,8 @@ def np_op_show_pool_one(pool):
 
     print("  %-32s %18s" % ("Active", yes_or_no(pool.get('active'))))
     print("  %-32s %18s" % ("Type", pool.get('type')))
+    if "full" in pool:
+        print("  %-32s %18s" % ("Full", yes_or_no(pool.get('full'))))
     print("  %-32s %18u" % ("User count", pool.get('nusers')))
     print("    %-30s %18u" % ("User addresses", pool.get('nuser_addrs')))
 
@@ -117,12 +119,6 @@ def np_op_show_pool_one(pool):
     print("    %-30s %18u" % ("Port count", pool.get('nports')))
     print("    %-30s %18u" % ("Port-block size", pool.get('block_sz')))
     print("    %-30s %18u" % ("Max port-blocks per user", pool.get('mbpu')))
-
-    print("  %-32s" % ("Logging:"))
-    print("    %-30s %18s" % ("Log port-block allocation",
-                              yes_or_no(pool.get('log_pba'))))
-    print("    %-30s %18s" % ("Log all",
-                              yes_or_no(pool.get('log_all'))))
 
     tm = pool.get('map_stats')
     print("  %-32s" % ("Translation Mappings:"))
