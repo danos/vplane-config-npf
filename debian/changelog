@@ -1,3 +1,23 @@
+vplane-config-npf (4.0.17) unstable; urgency=medium
+
+  [ Vinicius Soares ]
+  * IPPF: Added 'ipv6-frag' matching option.
+
+  [ Gavin Shearer ]
+  * l3acl: add help/description for 'protocol base/final'
+  * l3acl: remove "protocol final" config for SIAD platform
+
+  [ Derek Fawcus ]
+  * IPPF: Add additional match criteria - TTL
+  * IPPF: Add additional match criteria - DSCP
+  * IPPF: Add additional match criteria - IPv4 ICMP
+  * IPPF: Add additional match criteria - ICMPv6
+  * IPPF: Add additional match criteria - ICMPv6 class
+  * IPPF: Add additional match criteria - L4 Ports
+  * IPPF: Constrain IPv6 input rules on QAX platform
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 27 May 2020 15:39:10 +0100
+
 vplane-config-npf (4.0.16) unstable; urgency=medium
 
   [ Ian Wilson ]
