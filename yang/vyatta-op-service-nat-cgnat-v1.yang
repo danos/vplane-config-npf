@@ -8,6 +8,9 @@ module vyatta-op-service-nat-cgnat-v1 {
     import vyatta-op-show-v1 {
         prefix show;
     }
+    import vyatta-op-show-log-v1 {
+        prefix show-log;
+    }
     import vyatta-op-clear-v1 {
         prefix clear;
     }
@@ -66,6 +69,10 @@ module vyatta-op-service-nat-cgnat-v1 {
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT operation mode commands";
+
+    revision 2020-05-27 {
+        description "Add show log.";
+    }
 
     revision 2020-02-18 {
         description "Removed unnecessary CLI parameter by changing
@@ -296,6 +303,13 @@ module vyatta-op-service-nat-cgnat-v1 {
                              "is only iterated over once.";
                 }
             }
+        }
+    }
+
+    opd:augment /show:show/show-log:log {
+        opd:command cgnat {
+            opd:help "Show log for Carrier Grade NAT (CGNAT)";
+            opd:on-enter "journalctl -a -o short-precise --no-hostname -u vyatta-dataplane | egrep CGNAT:";
         }
     }
 
