@@ -97,9 +97,12 @@ module vyatta-security-firewall-v1 {
 
 		 YANG module for Vyatta firewalls";
 
-	revision 2020-05-12 {
+	revision 2020-06-01 {
 		description "Add originate firewall support
-			    for dataplane and loopback interfaces";
+			    for dataplane and loopback interfaces.
+			    Reuse interface dataplane firewall originate configuration
+			    for loopback interfaces.
+			    Add protocol-group validation script for originate firewall";
 	}
 	revision 2020-04-01 {
 		description "Add firewall to PPPoE interfaces";
@@ -258,7 +261,7 @@ module vyatta-security-firewall-v1 {
 			description "Firewall options";
 			configd:help "Firewall options";
 			uses firewall-if-parameters-cfg;
-			uses firewall-if-parameters-cfg-originate;
+			uses firewall-if-cfg-originate;
 			uses firewall-if-state-originate;
 		}
 	}
@@ -270,7 +273,7 @@ module vyatta-security-firewall-v1 {
 			uses firewall-if-state;
 		}
 	}
-	grouping firewall-if-parameters-cfg-originate {
+	grouping firewall-if-cfg-originate {
 		leaf-list originate {
 			type leafref {
 				path "/security:security/firewall/name/ruleset-name";
@@ -825,46 +828,11 @@ module vyatta-security-firewall-v1 {
 		container firewall {
 			description "Firewall options";
 			configd:help "Firewall options";
-			leaf-list originate {
-				type leafref {
-					path "/security:security/firewall/name/ruleset-name";
-				}
-				ordered-by "user";
-				description "Ruleset for packets originated on router";
-				configd:help "Ruleset for packets originated on router";
-
-				must "(../../interfaces-loopback:tagnode = 'lo')" {
-					error-message "Originate firewall can only be applied to lo.";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/default-action)" {
-					error-message "This ruleset has default-action which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/default-log)" {
-					error-message "This ruleset has default-log which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/session)" {
-					error-message "This ruleset has session rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/fragment)" {
-					error-message "This ruleset has fragment rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/protocol = 'ipv6-frag')" {
-					error-message "This ruleset has protocol equal to ipv6-frag rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/state = 'enable')" {
-					error-message "This ruleset has state rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/ethertype)" {
-					error-message "This ruleset has ethertype rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/pcp)" {
-					error-message "This ruleset has pcp rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/source/mac-address)" {
-					error-message "This ruleset has source mac-address rules which can't be configured for originate firewall";
-				}
-				must "not(/security:security/firewall/name[ruleset-name = current()]/rule/destination/mac-address)" {
-					error-message "This ruleset has destination mac-address rules which can't be configured for originate firewall";
+			uses firewall-if-cfg-originate {
+				refine originate {
+					must "(../../interfaces-loopback:tagnode = 'lo')" {
+						error-message "Originate firewall can only be applied to the 'lo' loopback interface.";
+					}
 				}
 			}
 			leaf-list local {
@@ -875,7 +843,7 @@ module vyatta-security-firewall-v1 {
 				description "Ruleset for packets terminated on router";
 				configd:help "Ruleset for packets terminated on router";
 				must "(../../interfaces-loopback:tagnode = 'lo')" {
-					error-message "Local firewall can only be applied to lo.";
+					error-message "Local firewall can only be applied to the 'lo' loopback interface.";
 				}
 				must "not(/security:security/" +
 				     "vyatta-security-firewall-v1:firewall/" +
@@ -930,6 +898,7 @@ module vyatta-security-firewall-v1 {
 		uses firewall-if-parameters;
 	}
 	augment /if:interfaces {
+		configd:validate "validate-fw-protocol-group";
 		configd:end "end-npf-interfaces";
 		configd:get-state "npf-get-state-fw";
 	}

@@ -61,6 +61,7 @@ sbin_SCRIPTS += scripts/npf-get-state-pbr
 sbin_SCRIPTS += scripts/npf-get-state-zones
 sbin_SCRIPTS += scripts/npf-address-group-show.pl
 sbin_SCRIPTS += scripts/validate-resource-groups
+sbin_SCRIPTS += scripts/validate-fw-protocol-group
 sbin_SCRIPTS += scripts/npf-show-logs
 sbin_SCRIPTS += scripts/validate-nat-rules.pl
 sbin_SCRIPTS += scripts/validate-session-limit.pl
