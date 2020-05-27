@@ -1,3 +1,16 @@
+vplane-config-npf (4.1.9) unstable; urgency=medium
+
+  [ Derek Fawcus ]
+  * IPPF: Add additional match criteria - TTL
+  * IPPF: Add additional match criteria - DSCP
+  * IPPF: Add additional match criteria - IPv4 ICMP
+  * IPPF: Add additional match criteria - ICMPv6
+  * IPPF: Add additional match criteria - ICMPv6 class
+  * IPPF: Add additional match criteria - L4 Ports
+  * IPPF: Constrain IPv6 input rules on QAX platform
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 27 May 2020 15:40:12 +0100
+
 vplane-config-npf (4.1.8) unstable; urgency=medium
 
   [ Paul Carson ]
