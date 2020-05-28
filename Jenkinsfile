@@ -7,6 +7,11 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+/* SRC_DIR is where the project will be checked out,
+ * and where all the steps will be run.
+ */
+def SRC_DIR="vplane-config-npf"
+
 // Pull Request builds might fail due to missing diffs: https://issues.jenkins-ci.org/browse/JENKINS-45997
 // Pull Request builds relationship to their targets branch: https://issues.jenkins-ci.org/browse/JENKINS-37491
 
@@ -43,11 +48,12 @@ pipeline {
         // CHANGE_TARGET is set for PRs.
         // When CHANGE_TARGET is not set it's a regular build so we use BRANCH_NAME.
         REF_BRANCH = "${env.CHANGE_TARGET != null ? env.CHANGE_TARGET : env.BRANCH_NAME}"
+        SRC_DIR = "${SRC_DIR}"
     }
 
     options {
         timeout(time: 180, unit: 'MINUTES') // Hopefully maximum even when Valgrind is included!
-        checkoutToSubdirectory("vplane-config-npf")
+        checkoutToSubdirectory("${SRC_DIR}")
         quietPeriod(30) // Wait in case there are more SCM pushes/PR merges coming
         ansiColor('xterm')
         timestamps()
@@ -81,7 +87,7 @@ EOF
 
         stage('OSC Build') {
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh """
 cat <<EOF > .osc-buildpackage.conf
 OSC_BUILDPACKAGE_TMP=\"${WORKSPACE}\"
@@ -96,7 +102,7 @@ EOF
         stage('Code Stats') {
             when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
             steps {
-                sh 'sloccount --duplicates --wide --details vplane-config-npf > sloccount.sc'
+                sh 'sloccount --duplicates --wide --details ${SRC_DIR} > sloccount.sc'
                 sloccountPublish pattern: '**/sloccount.sc'
             }
         }
@@ -108,7 +114,7 @@ EOF
  */
         stage('DRAM') {
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh '''
 yang=`echo yang/*.yang | sed 's@yang/vyatta-policy-pbr-bridge-v1.yang @@' | sed 's/ /,/g'`
 platform=`echo platform/*.platform | sed 's/ /,/g'`
@@ -121,7 +127,7 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
 
         stage('Perlcritic') {
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh script: "perlcritic --quiet --severity 5 . 2>&1 | tee perlcritic.txt", returnStatus: true
                 }
             }
@@ -129,7 +135,7 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
 
         stage('Flake8') {
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh '''
 pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
 python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
@@ -147,7 +153,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 }
             }
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh "./codechecks upstream/${env.CHANGE_TARGET} origin/${env.BRANCH_NAME}"
                 }
             }
@@ -168,7 +174,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 }
             }
             steps {
-                dir('vplane-config-npf') {
+                dir("${SRC_DIR}") {
                     sh "gitlint --commits upstream/${env.CHANGE_TARGET}..origin/${env.BRANCH_NAME}"
                 }
             }
@@ -177,13 +183,15 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
 
     post {
         always {
-            recordIssues tool: perlCritic(pattern: 'vplane-config-npf/perlcritic.txt'),
-                qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+            dir("${env.SRC_DIR}") {
+                    recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+                        qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
 
-            recordIssues tool: flake8(pattern: 'vplane-config-npf/flake8.out'),
-                referenceJobName: "DANOS/vplane-config-npf/${env.REF_BRANCH}",
-                qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
-                               [type: 'NEW', threshold: 26, unstable: true]]
+                    recordIssues tool: flake8(pattern: 'flake8.out'),
+                        referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
+                        qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
+                                       [type: 'NEW', threshold: 26, unstable: true]]
+            }
 
             sh 'rm -f *.deb' // top-level dir
             sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
