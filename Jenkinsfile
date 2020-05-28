@@ -189,8 +189,8 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
 
                     recordIssues tool: flake8(pattern: 'flake8.out'),
                         referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
-                        qualityGates: [[type: 'TOTAL', threshold: 69, unstable: true],
-                                       [type: 'NEW', threshold: 26, unstable: true]]
+                        qualityGates: [[type: 'TOTAL', threshold: 20, unstable: true],
+                                       [type: 'NEW', threshold: 1, unstable: true]]
             }
 
             sh 'rm -f *.deb' // top-level dir
