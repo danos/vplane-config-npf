@@ -57,7 +57,7 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-05-22 {
+	revision 2020-05-28 {
 		description
 			"Preclude the additional ingress match criteria:
 			  - TTL
@@ -67,8 +67,8 @@ module vyatta-ippf-deviations-siad-v1 {
 			  - ICMPv6 class
 			  - L4 ports
 			at Egress IP Packet Filter.
-			Preclude counters at Egress IP Packet Filter.
-			Constrain IPv6 input rules for TCAM.";
+			Constrain IPv6 input rules for TCAM.
+			Support counters at Egress IP Packet Filter.";
 	}
 
 	revision 2020-04-03 {
@@ -91,9 +91,6 @@ module vyatta-ippf-deviations-siad-v1 {
 
 	deviation /security:security/ippf:ip-packet-filter/ippf:interface/ippf:out {
 		deviate add {
-			must "not (../../ippf:group[ippf:group-name = current()]/ippf:counters)" {
-				error-message "Unsupported counters for outbound traffic";
-			}
 			must "not (../../ippf:group[ippf:group-name = current()]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:dscp])" {
 				error-message "Unsupported DSCP matching for outbound traffic";
 			}
