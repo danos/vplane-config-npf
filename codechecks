@@ -27,7 +27,7 @@ usage () {
 status=0
 
 # List of files to ignore.
-IGN_FILES="configure.ac\nMakefile.am\ndebian\/.*\nplatform\/.*\nfeatures\/.*"
+IGN_FILES="configure.ac\nMakefile.am\ndebian\/.*\nplatform\/.*\.platform\nfeatures\/.*"
 
 # All files in the diff, except deleted files.
 all_files=`git diff --diff-filter=d --name-only --format=format:'' $1..$2`
