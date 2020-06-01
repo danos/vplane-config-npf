@@ -35,6 +35,11 @@ all_files=`git diff --diff-filter=d --name-only --format=format:'' $1..$2`
 # Strip out the ignored files.
 check_files=`sed -e "$(sed 's:.*:s/&//ig:' <<< $(echo -e $IGN_FILES))" <<< $all_files`
 
+# Bail out if there's nothing to check.
+if [ -z "$check_files" ]; then
+    exit $status
+fi
+
 
 # Ensure all files contain a copyright message with the current year.
 #
