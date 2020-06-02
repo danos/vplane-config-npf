@@ -17,7 +17,7 @@ module vyatta-op-resources-group-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -56,6 +56,11 @@ module vyatta-op-resources-group-v1 {
 
 		 YANG module for resources-group-related operation mode commands.";
 
+	revision 2020-06-01 {
+		description "npf-address-group-show.pl replaced with python file. " +
+					"Missing show options added.";
+	}
+
 	revision 2018-06-25 {
 		description "For pattern-help use opd instead of configd.";
 	}
@@ -68,46 +73,67 @@ module vyatta-op-resources-group-v1 {
 
 		opd:command address-group {
 			opd:help "Show address-group information";
-			opd:on-enter 'npf-address-group-show.pl --name=all';
+			opd:on-enter 'npf-address-group-show';
 
+			opd:command list {
+				opd:help "Show list of all address-groups";
+				opd:on-enter 'npf-address-group-show --option=brief';
+			}
 			opd:command detail {
-				opd:help "Show address-group detailed information";
-				opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="all"';
+				opd:help "Show detailed address-group information for all address-groups";
+				opd:on-enter 'npf-address-group-show --option=detail';
+			}
+			opd:command optimal {
+				opd:help "Show address-group optimal prefix list for all address-groups";
+				opd:on-enter 'npf-address-group-show --option=optimal';
+			}
+			opd:command tree {
+				opd:help "Show address-group Patricia tree for all address-groups";
+				opd:on-enter 'npf-address-group-show --option=tree';
 			}
 
 			opd:command ipv4 {
 				opd:help "Show address-group information for IPv4";
-				opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="all"';
+				opd:on-enter 'npf-address-group-show --af=ipv4';
 
-				opd:command detail {
-					opd:help "Show address-group detailed information";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="all"';
+				opd:command list {
+					opd:help "Show list of address-groups with IPv4 entries";
+					opd:on-enter 'npf-address-group-show --af=ipv4 --option=brief';
 				}
-
+				opd:command detail {
+					opd:help "Show detailed address-group information for IPv4";
+					opd:on-enter 'npf-address-group-show --af=ipv4 --option=detail';
+				}
+				opd:command optimal {
+					opd:help "Show address-group optimal prefix list for IPv4";
+					opd:on-enter 'npf-address-group-show --af=ipv4 --option=optimal';
+				}
 				opd:command tree {
-					opd:help "Show address-group Patricia tree";
-					opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="all"';
+					opd:help "Show address-group tree for IPv4";
+					opd:on-enter 'npf-address-group-show --af=ipv4 --option=tree';
 				}
 			}
 
 			opd:command ipv6 {
 				opd:help "Show address-group information for IPv6";
-				opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="all"';
+				opd:on-enter 'npf-address-group-show --af=ipv6';
 
+				opd:command list {
+					opd:help "Show list of address-groups with IPv6 entries";
+					opd:on-enter 'npf-address-group-show --af=ipv6 --option=brief';
+				}
 				opd:command detail {
-					opd:help "Show address-group detailed information";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="all"';
+					opd:help "Show detailed address-group information for IPv6";
+					opd:on-enter 'npf-address-group-show --af=ipv6 --option=detail';
 				}
-
+				opd:command optimal {
+					opd:help "Show address-group optimal prefix list for IPv6";
+					opd:on-enter 'npf-address-group-show --af=ipv6 --option=optimal';
+				}
 				opd:command tree {
-					opd:help "Show address-group Patricia tree";
-					opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="all"';
+					opd:help "Show address-group tree for IPv6";
+					opd:on-enter 'npf-address-group-show --af=ipv6 --option=tree';
 				}
-			}
-
-			opd:command list {
-				opd:help "Show list of address-groups";
-				opd:on-enter 'npf-address-group-show.pl --name=all --action="show-summary"';
 			}
 
 			opd:option name {
@@ -116,62 +142,56 @@ module vyatta-op-resources-group-v1 {
 					opd:pattern-help "<group-name>";
 				}
 				opd:allowed 'allowed-nodes resources group address-group; echo -n " all"';
-				opd:on-enter 'npf-address-group-show.pl --name="$4"';
+				opd:on-enter 'npf-address-group-show --name="$4"';
 
 				opd:command detail {
-					opd:help "Show address-group detailed information";
-					opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="$4"';
+					opd:help "Show detailed address-group information";
+					opd:on-enter 'npf-address-group-show --name="$4" --option=detail';
+				}
+				opd:command optimal {
+					opd:help "Show address-group optimal prefix list";
+					opd:on-enter 'npf-address-group-show --name="$4" --option=optimal';
+				}
+				opd:command tree {
+					opd:help "Show address-group tree";
+					opd:on-enter 'npf-address-group-show --name="$4" --option=tree';
 				}
 
 				opd:command ipv4 {
 					opd:help "Show address-group information for IPv4";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$4"';
+					opd:on-enter 'npf-address-group-show --name="$4" --af=ipv4';
 
 					opd:command detail {
-						opd:help "Show address-group detailed information";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="$4"';
+						opd:help "Show detailed address-group information for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv4 --option=detail';
 					}
-
 					opd:command optimal {
-						opd:help "Show address-group IPv4 optimal prefix list";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$4" --action="show-optimal"';
+						opd:help "Show address-group optimal prefix list for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv4 --option=optimal';
 					}
-
 					opd:command tree {
-						opd:help "Show address-group Patricia tree";
-						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="$4"';
+						opd:help "Show address-group tree for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv4 --option=tree';
 					}
 				}
 
 				opd:command ipv6 {
 					opd:help "Show address-group information for IPv6";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$4"';
+					opd:on-enter 'npf-address-group-show --name="$4" --af=ipv6';
 
 					opd:command detail {
-						opd:help "Show address-group detailed information";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="$4"';
+						opd:help "Show detailed address-group information for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv6 --option=detail';
 					}
-
 					opd:command optimal {
-						opd:help "Show address-group IPv4 optimal prefix list";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$4" --action="show-optimal"';
+						opd:help "Show address-group optimal prefix list for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv6 --option=optimal';
 					}
-
 					opd:command tree {
-						opd:help "Show address-group Patricia tree";
-						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="$4"';
+						opd:help "Show address-group tree for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv6 --option=tree';
 					}
 				}
-
-				opd:command tree {
-					opd:help "Show address-group Patricia tree";
-					opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="$4"';
-				}
-			}
-
-			opd:command tree {
-				opd:help "Show address-group Patricia tree for all address-groups";
-				opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="all"';
 			}
 
 			opd:argument group-name {
@@ -180,56 +200,55 @@ module vyatta-op-resources-group-v1 {
 					opd:pattern-help "<group-name>";
 				}
 				opd:allowed 'allowed-nodes resources group address-group; echo -n " all"';
-				opd:on-enter 'npf-address-group-show.pl --name="$3"';
+				opd:on-enter 'npf-address-group-show --name="$3"';
 
 				opd:command detail {
-					opd:help "Show address-group detailed information";
-					opd:on-enter 'npf-address-group-show.pl --af="all" --list="all" --name="$3"';
+					opd:help "Show detailed address-group information";
+					opd:on-enter 'npf-address-group-show --name="$3" --option=detail';
+				}
+				opd:command optimal {
+					opd:help "Show address-group optimal prefix list";
+					opd:on-enter 'npf-address-group-show --name="$3" --option=optimal';
+				}
+				opd:command tree {
+					opd:help "Show address-group tree";
+					opd:on-enter 'npf-address-group-show --name="$3" --option=tree';
 				}
 
 				opd:command ipv4 {
 					opd:help "Show address-group information for IPv4";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$3"';
+					opd:on-enter 'npf-address-group-show --name="$3" --af=ipv4';
 
 					opd:command detail {
-						opd:help "Show address-group detailed information";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --list="all" --name="$3"';
+						opd:help "Show detailed address-group information for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$3" --af=ipv4 --option=detail';
 					}
-
 					opd:command optimal {
-						opd:help "Show address-group IPv4 optimal prefix list";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv4" --name="$3" --action="show-optimal"';
+						opd:help "Show address-group optimal prefix list for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$3" --af=ipv4 --option=optimal';
 					}
-
 					opd:command tree {
-						opd:help "Show address-group Patricia tree";
-						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv4" --list="none" --name="$3"';
+						opd:help "Show address-group tree for IPv4";
+						opd:on-enter 'npf-address-group-show --name="$3" -af=ipv4 --option=tree';
 					}
 				}
 
 				opd:command ipv6 {
 					opd:help "Show address-group information for IPv6";
-					opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$3"';
+					opd:on-enter 'npf-address-group-show --name="$3" --af=ipv6';
 
 					opd:command detail {
-						opd:help "Show address-group detailed information";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --list="all" --name="$3"';
+						opd:help "Show detailed address-group information for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$3" --af=ipv6 --option=detail';
 					}
-
 					opd:command optimal {
-						opd:help "Show address-group IPv4 optimal prefix list";
-						opd:on-enter 'npf-address-group-show.pl --af="ipv6" --name="$3" --action="show-optimal"';
+						opd:help "Show address-group optimal prefix list for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$3" --af=ipv6 --option=optimal';
 					}
-
 					opd:command tree {
-						opd:help "Show address-group Patricia tree";
-						opd:on-enter 'npf-address-group-show.pl --tree="all" --af="ipv6" --list="none" --name="$3"';
+						opd:help "Show address-group tree for IPv6";
+						opd:on-enter 'npf-address-group-show --name="$3" --af=ipv6 --option=tree';
 					}
-				}
-
-				opd:command tree {
-					opd:help "Show address-group Patricia tree";
-					opd:on-enter 'npf-address-group-show.pl --tree="all" --list="none" --name="$3"';
 				}
 			}
 		}

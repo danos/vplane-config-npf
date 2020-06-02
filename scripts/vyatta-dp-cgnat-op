@@ -270,7 +270,7 @@ def cgn_op_show_policy_one(pol):
     print("Policy: %s" % (pol.get('name')))
 
     if "match_group" in pol:
-        npf_show_address_group(pol.get('match_group'), "ipv4",
+        npf_show_address_group(pol.get('match_group'), "ipv4", None,
                                "Match address-group",
                                2, 22, 28,
                                4, 14, 34)
@@ -283,7 +283,7 @@ def cgn_op_show_policy_one(pol):
 
     log_grp = pol.get('log_sess_group')
     if log_grp:
-        npf_show_address_group(log_grp, "ipv4",
+        npf_show_address_group(log_grp, "ipv4", None,
                                "Log select sessions",
                                2, 22, 28,
                                6, 12, 34)

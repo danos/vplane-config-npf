@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) 2020, AT&T Intellectual Property.
+# All rights reserved.
+#
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+"""Scripts for displaying address groups"""
+
+import sys
+import getopt
+from vyatta.npf.npf_addr_group import npf_show_address_group
+
+
+#
+# npf_ag_op_main
+#
+def npf_ag_op_main():
+    """Main function"""
+
+    af_opt = None
+    n_opt = None
+    o_opt = None
+
+    #
+    # Parse options
+    #
+    # af - address family. "ipv4", "ipv6" or None (equates to both).
+    # name - Address group name. None equates to all groups.
+    # option - One of None, "detail", "brief", "tree" or "optimal".
+    #
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "",
+                                   ['name=', 'af=', 'option='])
+
+    except getopt.GetoptError as r:
+        print(r, file=sys.stderr)
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in '--af':
+            if arg == "ipv4" or arg == "ipv6":
+                af_opt = arg
+
+        if opt in '--name':
+            n_opt = arg
+
+        if opt in '--option':
+            o_opt = arg
+
+    npf_show_address_group(n_opt, af_opt, o_opt,
+                           "Address-group",
+                           0, 0, 0, 2, 14, 0)
+
+
+#
+# main
+#
+if __name__ == '__main__':
+    npf_ag_op_main()

@@ -12,6 +12,7 @@ import sys
 import getopt
 import vplaned
 from vyatta.npf.npf_addr_group import npf_show_address_group
+from vyatta.npf.npf_addr_group import npf_show_address_group_one
 
 
 # Yes or No string
@@ -68,7 +69,7 @@ def np_op_addr_or_none(addr):
 #
 # np_op_show_pool_one
 #
-def np_op_show_pool_one(pool):
+def np_op_show_pool_one(pool, d_opt):
     """Show pool one"""
 
     port_range = "%u-%u" % (pool.get('port_start'), pool.get('port_end'))
@@ -101,14 +102,22 @@ def np_op_show_pool_one(pool):
         if r.get('type') == "subnet":
             print("        %-12s %32s" % ("Subnet:", r.get('subnet')))
 
+    # Is the 'hidden' address-group included in the json?
+    if d_opt and "address-group" in pool:
+        npf_show_address_group_one(pool.get('address-group'),
+                                   "Address-group",
+                                   4, 24, 24,
+                                   6, 14, 32)
+
     cur = pool.get('current')
     print("  %-32s" % ("Last Allocated Address:"))
     print("    %-30s %18s" % ("TCP", np_op_addr_or_none(cur.get('tcp'))))
     print("    %-30s %18s" % ("UDP", np_op_addr_or_none(cur.get('udp'))))
     print("    %-30s %18s" % ("Other", np_op_addr_or_none(cur.get('other'))))
 
+    # A CGNAT blacklist should only contain IPv4 addresses
     if "blacklist" in pool:
-        npf_show_address_group(pool.get('blacklist'), "ipv4",
+        npf_show_address_group(pool.get('blacklist'), "ipv4", None,
                                "Blacklist address-group",
                                2, 24, 26,
                                4, 14, 34)
@@ -141,7 +150,7 @@ def np_op_show_pool_one(pool):
 #
 # np_op_show_pool
 #
-def np_op_show_pool(p_opt):
+def np_op_show_pool(p_opt, d_opt):
     """Show pool"""
 
     pool_list = []
@@ -160,7 +169,7 @@ def np_op_show_pool(p_opt):
 
     for pool in pool_list:
         if not p_opt or p_opt == pool.get('name'):
-            np_op_show_pool_one(pool)
+            np_op_show_pool_one(pool, d_opt)
 
 
 #
@@ -170,6 +179,7 @@ def np_op_main():
     """Main function"""
 
     p_opt = None
+    d_opt = False
 
     #
     # Parse options
@@ -177,7 +187,7 @@ def np_op_main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
-                                   ['pool='])
+                                   ['pool=', 'detail'])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -188,7 +198,10 @@ def np_op_main():
         if opt in '--pool':
             p_opt = arg
 
-    np_op_show_pool(p_opt)
+        if opt in '--detail':
+            d_opt = True
+
+    np_op_show_pool(p_opt, d_opt)
 
 
 #

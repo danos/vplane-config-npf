@@ -154,7 +154,7 @@ Description: operational CLI yang for vyatta-system-session
 
 Package: vyatta-op-resources-group-v1-yang
 Architecture: all
-Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
  vplane-config-npf (= ${binary:Version})
 Description: operational CLI yang for vyatta-resources-group
  The Vyatta operation YANG for resources group commands
