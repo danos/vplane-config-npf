@@ -53,14 +53,14 @@ def err(msg):
     print(msg, file=sys.stderr)
 
 
-def set_cgnat_config(key, cmd):
+def set_cgnat_config(key, cmd, intf="ALL"):
     fcmd = "cgn-cfg {} ".format(cmd)
-    store_cfg(key, fcmd, "SET", dbg)
+    store_cfg(key, fcmd, "SET", dbg, intf)
 
 
-def delete_cgnat_config(key, cmd):
+def delete_cgnat_config(key, cmd, intf="ALL"):
     fcmd = "cgn-cfg {}".format(cmd)
-    store_cfg(key, fcmd, "DELETE", dbg)
+    store_cfg(key, fcmd, "DELETE", dbg, intf)
 
 
 def create_file(filename):
@@ -635,18 +635,19 @@ def send_cgnat_interface_config(commands):
             if rc is None:
                 if cc is not None:
                     # this is new configuration
-                    set_cgnat_config(cc[0], "policy attach {}".format(cc[1]))
+                    set_cgnat_config(cc[0], "policy attach {}".format(cc[1]),
+                                     ifname)
             else:
                 if cc is None:
                     # configuration is being deleted
                     delete_cgnat_config(rc[0], "policy detach {}".format(
-                        rc[1]))
+                        rc[1]), ifname)
                 else:
                     # configuration is being updated
                     if cc[1] != rc[1]:
                         # only send if changed
                         set_cgnat_config(cc[0], "policy attach {}".format(
-                            cc[1]))
+                            cc[1]), ifname)
                     else:
                         dbg.pprint("No change so not sent: KEY: {}; PARAM: {}".
                                    format(cc[0], cc[1]))
