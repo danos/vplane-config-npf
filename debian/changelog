@@ -1,3 +1,31 @@
+vplane-config-npf (4.2.1) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * CGNAT: fix flake8 warning
+
+  [ Derek Fawcus ]
+  * IPPF: Constrain IPv6 input rules on QAX platform
+
+  [ Ian Wilson ]
+  * cgnat: Use the NAT pool 'full' boolean json in show outout and netconf
+
+  [ ak487r ]
+  * npf: add validation for ipv6-frag protocol for originating firewall
+
+  [ Paul Aitken ]
+  * codechecks: bail out if there's nothing to check
+  * codechecks: relax platform ignore restriction
+
+  [ ck487r ]
+  * Egress ACLs: Support egress ACL counters for QAX platfom
+
+  [ Ian Wilson ]
+  * cgnat: Add log command
+  * Add an interface parameter to the npf store_cfg command
+  * cgnat: Pass an interface parameter to the store config function
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 10 Jun 2020 09:57:11 +0100
+
 vplane-config-npf (4.2.0) unstable; urgency=medium
 
   [ Derek Fawcus ]
