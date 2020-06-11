@@ -56,9 +56,11 @@ module vyatta-op-resources-group-v1 {
 
 		 YANG module for resources-group-related operation mode commands.";
 
-	revision 2020-06-01 {
+	revision 2020-06-11 {
 		description "npf-address-group-show.pl replaced with python file. " +
-					"Missing show options added.";
+					"Missing show options added. " +
+					"tree option obsoleted. " +
+					"group-name without name prefix deprecated.";
 	}
 
 	revision 2018-06-25 {
@@ -90,6 +92,7 @@ module vyatta-op-resources-group-v1 {
 			opd:command tree {
 				opd:help "Show address-group Patricia tree for all address-groups";
 				opd:on-enter 'npf-address-group-show --option=tree';
+				status obsolete;
 			}
 
 			opd:command ipv4 {
@@ -111,6 +114,7 @@ module vyatta-op-resources-group-v1 {
 				opd:command tree {
 					opd:help "Show address-group tree for IPv4";
 					opd:on-enter 'npf-address-group-show --af=ipv4 --option=tree';
+					status obsolete;
 				}
 			}
 
@@ -133,6 +137,7 @@ module vyatta-op-resources-group-v1 {
 				opd:command tree {
 					opd:help "Show address-group tree for IPv6";
 					opd:on-enter 'npf-address-group-show --af=ipv6 --option=tree';
+					status obsolete;
 				}
 			}
 
@@ -155,6 +160,7 @@ module vyatta-op-resources-group-v1 {
 				opd:command tree {
 					opd:help "Show address-group tree";
 					opd:on-enter 'npf-address-group-show --name="$4" --option=tree';
+					status obsolete;
 				}
 
 				opd:command ipv4 {
@@ -172,6 +178,7 @@ module vyatta-op-resources-group-v1 {
 					opd:command tree {
 						opd:help "Show address-group tree for IPv4";
 						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv4 --option=tree';
+						status obsolete;
 					}
 				}
 
@@ -190,6 +197,7 @@ module vyatta-op-resources-group-v1 {
 					opd:command tree {
 						opd:help "Show address-group tree for IPv6";
 						opd:on-enter 'npf-address-group-show --name="$4" --af=ipv6 --option=tree';
+						status obsolete;
 					}
 				}
 			}
@@ -201,23 +209,28 @@ module vyatta-op-resources-group-v1 {
 				}
 				opd:allowed 'allowed-nodes resources group address-group; echo -n " all"';
 				opd:on-enter 'npf-address-group-show --name="$3"';
+				status deprecated;
 
 				opd:command detail {
 					opd:help "Show detailed address-group information";
 					opd:on-enter 'npf-address-group-show --name="$3" --option=detail';
+					status obsolete;
 				}
 				opd:command optimal {
 					opd:help "Show address-group optimal prefix list";
 					opd:on-enter 'npf-address-group-show --name="$3" --option=optimal';
+					status obsolete;
 				}
 				opd:command tree {
 					opd:help "Show address-group tree";
 					opd:on-enter 'npf-address-group-show --name="$3" --option=tree';
+					status obsolete;
 				}
 
 				opd:command ipv4 {
 					opd:help "Show address-group information for IPv4";
 					opd:on-enter 'npf-address-group-show --name="$3" --af=ipv4';
+					status obsolete;
 
 					opd:command detail {
 						opd:help "Show detailed address-group information for IPv4";
@@ -236,6 +249,7 @@ module vyatta-op-resources-group-v1 {
 				opd:command ipv6 {
 					opd:help "Show address-group information for IPv6";
 					opd:on-enter 'npf-address-group-show --name="$3" --af=ipv6';
+					status obsolete;
 
 					opd:command detail {
 						opd:help "Show detailed address-group information for IPv6";
