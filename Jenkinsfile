@@ -164,6 +164,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 docker {
                     image 'jorisroovers/gitlint'
                     args '--entrypoint=""'
+                    reuseNode true
                 }
             }
             when {
