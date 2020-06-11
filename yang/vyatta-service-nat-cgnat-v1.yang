@@ -83,6 +83,10 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
+    revision 2020-06-11 {
+        description "Change max-dest-per-session range.  Upper limit now 128.";
+    }
+
     revision 2020-04-06 {
         description "Obsolete pool-addr-echo-req error state. " +
                     "Obsolete public-address-locked-on-destroy error state. " +
@@ -840,7 +844,7 @@ module vyatta-service-nat-cgnat-v1 {
                 configd:help "Max number of destination records that can be " +
                              "associated with a session";
                 type uint32 {
-                    range 1..64;
+                    range 1..128;
                 }
                 default 64;
             }
