@@ -381,14 +381,26 @@ sub print_nat_stats_rule {
             $tot_under, "--------", "--------", "----------" );
     }
 
-    my $total = $rule->{total_ts};
-    my %used;
+    my $total;
+    my %used  = (
+        "tcp"   => 'n/a',
+        "udp"   => 'n/a',
+        "other" => 'n/a',
+    );
 
-    foreach my $prot ( @{ $rule->{protocols} } ) {
-        $used{ $prot->{protocol} } = $prot->{used_ts};
+    if ( $ruleset_type eq 'dnat' ) {
+        $total = "";
+    } elsif ( defined $rule->{total_ts} ) {
+        $total = $rule->{total_ts};
+    } else {
+        $total = 'n/a';
     }
 
-    $total = "" if $ruleset_type eq 'dnat';
+    if ( defined $rule->{protocols} ) {
+        foreach my $prot ( @{ $rule->{protocols} } ) {
+            $used{ $prot->{protocol} } = $prot->{used_ts};
+        }
+    }
 
     printf( $fmt_str,
         $rule_num, $rule->{packets}, $rule->{bytes},
