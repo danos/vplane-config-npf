@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019, AT&T Intellectual Property.
+# Copyright (c) 2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -104,7 +104,7 @@ def ippf_show_rpc(filters):
 
                                         # match action
                                         # Get the raw action from "config" rather than from "action"
-                                        action = re.match("(.*)action=(.*?)\s|$", rule["config"])
+                                        action = re.match(r"(.*)action=(.*?)\s|$", rule["config"])
                                         if action:
                                             action = action.group(2)
                                         if (not match_actions) or (action in match_actions):
