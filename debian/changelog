@@ -1,3 +1,25 @@
+vplane-config-npf (4.2.2) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * npf: Change address group show cmd to use python
+
+  [ Paul Aitken ]
+  * Jenkinsfile: use $SRC_DIR
+  * Jenkinsfile: improve qualitygates metric
+  * DRAM: suppress download progress indication
+
+  [ Nicholas Brown ]
+  * Reuse the node when starting docker container
+
+  [ Ian Wilson ]
+  * cgnat: Change upper bound of max-dest-per-session from 64 to 128
+  * Obsolete address-group 'tree' and deprecate unqualified name show commands
+
+  [ Gavin Shearer ]
+  * nat: fix issue of python uninit message for exclude
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 22 Jun 2020 10:38:05 +0100
+
 vplane-config-npf (4.2.1) unstable; urgency=medium
 
   [ Paul Aitken ]
