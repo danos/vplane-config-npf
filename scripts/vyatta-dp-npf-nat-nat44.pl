@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2018-2019, AT&T Intellectual Property.
+# Copyright (c) 2018-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (C) 2012-2016 Vyatta, Inc.
@@ -35,6 +35,24 @@ my $type;
 GetOptions( "type=s" => \$type, );
 
 my $ctrl = new Vyatta::VPlaned;
+
+die "usage: vyatta-dp-npf-nat-nat44.pl --type=source|destination\n"
+    if ( !defined($type) );
+
+# A 'pinhole' option is added to every firewall rule by default
+my $def_rule_pinhole = 1;
+
+#
+# If "explicit-firewall-pinhole" is configured then the per-rule command
+# "firewall-pinhole" is required to enable pinhole behaviour for a NAT
+# session.
+#
+my $def_pinhole_cmd = "service nat $type explicit-firewall-pinhole";
+
+if ( $config->exists($def_pinhole_cmd) ) {
+    # A 'pinhole' option is *not* added to every firewall rule by default
+    $def_rule_pinhole = 0;
+}
 
 #
 # Get the sets of current and proposed rule numbers.
@@ -275,8 +293,10 @@ sub generate_rule {
         return ( $rule, $iface );
     }
 
-    # Always install a pin-hole
-    $rule .= "nat-pinhole=y ";
+    # Conditionally install a pin-hole
+    if ( $def_rule_pinhole || $conf->exists("firewall-pinhole") ) {
+        $rule .= "nat-pinhole=y ";
+    }
 
     $val = $conf->returnValue("translation address");
     if ( defined($val) ) {

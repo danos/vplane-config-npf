@@ -32,7 +32,7 @@ module vyatta-service-nat-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2020, AT&T Intellectual Property.
 		 All rights reserved.
 		 Copyright (c) 2014-2017 by Brocade Communications Systems, Inc.
 		 All rights reserved.
@@ -73,6 +73,9 @@ module vyatta-service-nat-v1 {
 
 		 YANG module for Vyatta NAT configuration";
 
+	revision 2020-07-09 {
+		description "Add NAT firewall pinhole commands.";
+	}
 	revision 2019-03-01 {
 		description "Changed script for getting state.  Deprecate ipv6-to-ipv4.";
 	}
@@ -200,6 +203,9 @@ module vyatta-service-nat-v1 {
 			must "not(../translation/address)" {
 				error-message "A translation address cannot be defined when using 'exclude'";
 			}
+			must "not(../firewall-pinhole)" {
+				error-message "A 'firewall-pinhole' cannot be defined when using 'exclude'";
+			}
 			// Note: should also not allow translation port, but that validation script had a
 			// bug which meant it did not work - should add check when can implement Yang
 			// version incompatible changes.
@@ -235,6 +241,34 @@ module vyatta-service-nat-v1 {
 			refine protocol {
 				description "Protocol to NAT";
 				configd:help "Protocol to NAT";
+			}
+		}
+	}
+
+	// Global NAT command to override the default behaviour of
+	// NAT reverse flow pinhole
+	grouping explicit-firewall-pinhole {
+		leaf explicit-firewall-pinhole {
+			type empty;
+			description "Disable default NAT session pinhole for reverse traffic";
+			configd:help "Disable default NAT session pinhole for reverse traffic";
+			must "(../rule)" {
+				error-message "At least one rule must be configured when  " +
+					          "explicit-firewall-pinhole is configured.";
+			}
+		}
+	}
+
+	// Per-rule NAT command to override the global NAT command,
+	// explicit-firewall-pinhole
+	grouping firewall-pinhole {
+		leaf firewall-pinhole {
+			type empty;
+			description "Enable NAT session pinhole for reverse traffic";
+			configd:help "Enable NAT session pinhole for reverse traffic";
+			must "(../../explicit-firewall-pinhole)" {
+				error-message "NAT explicit-firewall-pinhole must be configured " +
+					          "when firewall-pinhole is configured on a rule.";
 			}
 		}
 	}
@@ -294,6 +328,7 @@ module vyatta-service-nat-v1 {
 				description "Source NAT settings";
 				configd:help "Source NAT settings";
 				configd:end "vyatta-dp-npf-nat-nat44.pl --type=source";
+				uses explicit-firewall-pinhole;
 				list rule {
 					description "Rule number";
 					configd:help "Rule number";
@@ -309,6 +344,7 @@ module vyatta-service-nat-v1 {
 						description "Rule description";
 						configd:help "Rule description";
 					}
+					uses firewall-pinhole;
 					uses nat-rule-exclude;
 					leaf disable {
 						type empty;
@@ -355,6 +391,7 @@ module vyatta-service-nat-v1 {
 				description "Destination NAT settings";
 				configd:help "Destination NAT settings";
 				configd:end "vyatta-dp-npf-nat-nat44.pl --type=destination";
+				uses explicit-firewall-pinhole;
 				list rule {
 					description "Rule number";
 					configd:help "Rule number";
@@ -375,6 +412,7 @@ module vyatta-service-nat-v1 {
 						description "Rule description";
 						configd:help "Rule description";
 					}
+					uses firewall-pinhole;
 					uses nat-rule-exclude;
 					leaf disable {
 						type empty;
