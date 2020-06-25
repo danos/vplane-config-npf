@@ -57,6 +57,10 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
+	revision 2020-06-25 {
+		description "Fix IPv6 TCAM input constraints.";
+	}
+
 	revision 2020-05-28 {
 		description
 			"Preclude the additional ingress match criteria:
@@ -119,13 +123,13 @@ module vyatta-ippf-deviations-siad-v1 {
 			 * do not exceed the available key space of the TCAM.
 			 * We have 320 bits total, and 20 are used for fixed qualifiers.
 			 */
-			must "128 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[destination/ipv6]) > 0) + " +
-			     "128 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[source/ipv6]) > 0) + " +
-			     "16 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[destination/port]) > 0) + " +
-			     "16 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[source/port or icmpv6]) > 0) + " +
-			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[protocol]) > 0) + " +
-			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[ttl]) > 0) + " +
-			     "8 * (count(group[ip-version = 'ipv6' and group-name = ../interface/in]/rule[not(disable)]/match[dscp]) > 0) <= 300" {
+			must "128 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:destination/ippf:ipv6]) > 0) + " +
+			     "128 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:source/ippf:ipv6]) > 0) + " +
+			     "16 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:destination/ippf:port]) > 0) + " +
+			     "16 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:source/ippf:port or ippf:icmpv6]) > 0) + " +
+			     "8 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:protocol]) > 0) + " +
+			     "8 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:ttl]) > 0) + " +
+			     "8 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:in]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:dscp]) > 0) <= 300" {
 				error-message "IPv6 input matches across all groups would exceed TCAM key space";
 			}
 		}
