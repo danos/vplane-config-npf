@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019, AT&T Intellectual Property.
+# Copyright (c) 2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
@@ -83,7 +83,7 @@ class Provisioner:
         for dataplane in ctrl.get_dataplanes():
             with dataplane:
                 ctrl.store("qos commit", "qos commit", "ALL", "SET")
-                LOG.debug(f"set qos commit")
+                LOG.debug("set qos commit")
 
     def commands(self, ctrl):
         """
