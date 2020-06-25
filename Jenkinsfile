@@ -190,7 +190,7 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
 
                     recordIssues tool: flake8(pattern: 'flake8.out'),
                         referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
-                        qualityGates: [[type: 'TOTAL', threshold: 20, unstable: true],
+                        qualityGates: [[type: 'TOTAL', threshold: 16, unstable: true],
                                        [type: 'NEW', threshold: 1, unstable: true]]
             }
 
