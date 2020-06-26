@@ -1,3 +1,13 @@
+vplane-config-npf (4.0.18) unstable; urgency=medium
+
+  [ ck487r ]
+  * YANG: Replace 'opd:option' with no type by 'opd:command'
+
+  [ Derek Fawcus ]
+  * SIAD-ACL: Make 'must' path component names qnames
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 26 Jun 2020 16:20:05 +0100
+
 vplane-config-npf (4.0.17) unstable; urgency=medium
 
   [ Vinicius Soares ]
