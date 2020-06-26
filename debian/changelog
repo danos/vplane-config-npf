@@ -1,3 +1,10 @@
+vplane-config-npf (4.1.10) unstable; urgency=medium
+
+  [ Derek Fawcus ]
+  * SIAD-ACL: Make 'must' path component names qnames
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 26 Jun 2020 16:21:32 +0100
+
 vplane-config-npf (4.1.9) unstable; urgency=medium
 
   [ Derek Fawcus ]
