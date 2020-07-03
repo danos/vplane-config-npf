@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019, AT&T Intellectual Property.
+# Copyright (c) 2019-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
@@ -105,6 +105,7 @@ def get_config():
 def get_state():
     """ Return any op-mode state, current resources group has none. """
     LOG.debug("res-grp-vci:get-state")
+    print("{}")
     return 0
 
 
