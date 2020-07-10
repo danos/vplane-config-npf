@@ -1,0 +1,259 @@
+module vyatta-dataplane-stats-npf-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-dataplane-stats-npf:1";
+	prefix vyatta-dataplane-stats-npf-v1;
+
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-types-v1 {
+		prefix vy-types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 75202, USA
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2020, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms,
+		 with or without modification, are permitted provided
+		 that the following conditions are met:
+
+		 1. Redistributions of source code must retain the
+		    above copyright notice, this list of conditions and
+		    the following disclaimer.
+		 2. Redistributions in binary form must reproduce
+		    the above copyright notice, this list of conditions
+		    and the following disclaimer in the documentation
+		    and/or other materials provided with the distribution.
+		 3. Neither the name of the copyright holder nor the
+		    names of its contributors may be used to endorse or
+		    promote products derived from this software without
+		    specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+		 AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+		 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+		 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+		 PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+		 THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+		 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+		 OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+		 TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+		 OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+		 HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+		 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+		 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+		 OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for firewall-related stats rpc commands.";
+
+	revision 2020-07-21 {
+		description "Initial revision.";
+	}
+
+	grouping dp-stats-npf-dir {
+		container unmatched {
+			description "Unmatched";
+			leaf count {
+				type uint64;
+			}
+		}
+		container pass {
+			description "Pass";
+			leaf count {
+				type uint64;
+			}
+		}
+		container block {
+			description "Block";
+			leaf count {
+				type uint64;
+			}
+		}
+		container drop {
+			description "Drop";
+			leaf count {
+				type uint64;
+			}
+		}
+	}
+
+	grouping dp-stats-npf {
+		container in {
+			uses dp-stats-npf-dir;
+		}
+		container out {
+			uses dp-stats-npf-dir;
+		}
+	}
+
+	rpc get-dataplane-stats-fw {
+		configd:call-rpc "npf-op-dataplane-stats --rpc";
+
+		input {
+			leaf feat {
+				description "Filter by feature name.";
+				type enumeration {
+					enum "ip" {
+						description "IP layer 3 firewall and NAT statistics";
+					}
+					enum "ip6" {
+						description "IPv6 layer 3 firewall statistics";
+					}
+					enum "local" {
+						description "Local and originate firewall statistics";
+					}
+					enum "l2" {
+						description "Layer 2 firewall statistics";
+					}
+					enum "ip-packet-filter" {
+						description "IP packet filter statistics";
+					}
+					enum "ip6-packet-filter" {
+						description "IPv6 packet filter statistics";
+					}
+					enum "nat64" {
+						description "NAT64 statistics";
+					}
+				}
+			}
+			leaf interface {
+				description "Filter by interface name.";
+				type string;
+			}
+			leaf direction {
+				description "Filter by direction.";
+				type enumeration {
+					enum "in" {
+						description "Inbound statistics";
+					}
+					enum "out" {
+						description "Outbound statistics";
+					}
+				}
+			}
+			leaf category {
+				description "Filter by category.";
+				type enumeration {
+					enum "unmatched" {
+						description "Packets not matching any session or rule";
+					}
+					enum "pass" {
+						description "Packets matching a session or rule";
+					}
+					enum "block" {
+						description "Packets blocked due to not matching a session or rule";
+					}
+					enum "drop" {
+						description "Packets dropped due to an error";
+					}
+				}
+			}
+		}
+		output {
+			container dataplane {
+				container statistics {
+					container firewall {
+						container ip {
+							description "IP layer 3 firewall and NAT statistics";
+							list interfaces {
+								key "name";
+								leaf name {
+									description "Interface name";
+									type vy-types:interface-ifname;
+								}
+								uses dp-stats-npf;
+							}
+						}
+						container ip6 {
+							description "IPv6 layer 3 firewall statistics";
+							list interfaces {
+								key "name";
+								leaf name {
+									description "Interface name";
+									type vy-types:interface-ifname;
+								}
+								uses dp-stats-npf;
+							}
+						}
+						container local {
+							description "Local and originate firewall statistics";
+							list interfaces {
+								key "name";
+								leaf name {
+									description "Interface name";
+									type vy-types:interface-ifname;
+								}
+								uses dp-stats-npf;
+							}
+						}
+						container l2 {
+							description "Layer 2 firewall statistics";
+							list interfaces {
+								key "name";
+								leaf name {
+									description "Interface name";
+									type vy-types:interface-ifname;
+								}
+								uses dp-stats-npf;
+							}
+						}
+					}
+					container ip-packet-filter {
+						description "IP packet filter statistics";
+						list interfaces {
+							key "name";
+							leaf name {
+								description "Interface name";
+								type vy-types:interface-ifname;
+							}
+							uses dp-stats-npf;
+						}
+					}
+					container ip6-packet-filter {
+						description "IPv6 packet filter statistics";
+						list interfaces {
+							key "name";
+							leaf name {
+								description "Interface name";
+								type vy-types:interface-ifname;
+							}
+							uses dp-stats-npf;
+						}
+					}
+					container nat64 {
+						description "NAT64 statistics";
+						list interfaces {
+							key "name";
+							leaf name {
+								description "Interface name";
+								type vy-types:interface-ifname;
+							}
+							uses dp-stats-npf;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	augment /get-dataplane-stats-fw/output/dataplane/statistics/nat64/interfaces/in/pass {
+		container detail {
+			leaf ipv6-to-ipv4 {
+				type uint64;
+			}
+			leaf ipv4-to-ipv6 {
+				type uint64;
+			}
+		}
+	}
+}

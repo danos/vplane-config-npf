@@ -1,0 +1,3 @@
+usr/share/configd/yang/vyatta-op-dataplane-stats-npf-v1.yang
+
+opt/vyatta/sbin/npf-op-dataplane-stats

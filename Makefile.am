@@ -83,6 +83,7 @@ sbin_SCRIPTS += scripts/vyatta-dp-cgnat-op
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-pub-op
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-subs-op
 sbin_SCRIPTS += scripts/vyatta-dp-cgnat-sess-op
+sbin_SCRIPTS += scripts/npf-op-dataplane-stats
 
 share_perl5_DATA = lib/Vyatta/Aggregate.pm
 share_perl5_DATA += lib/Vyatta/NpfRuleset.pm

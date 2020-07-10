@@ -1,0 +1,290 @@
+module vyatta-op-dataplane-stats-npf-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-op-dataplane-stats-npf:1";
+	prefix vyatta-op-dataplane-stats-npf-v1;
+
+	import vyatta-opd-extensions-v1 {
+		prefix opd;
+	}
+	import vyatta-op-show-v1 {
+		prefix show;
+	}
+	import vyatta-op-clear-v1 {
+		prefix clear;
+	}
+	import vyatta-op-npf-types-v1 {
+		prefix op-npf-types;
+	}
+	import vyatta-op-show-dataplane-v1 {
+		prefix show-dp;
+	}
+	import vyatta-op-clear-dataplane-v1 {
+		prefix clear-dp;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 75202, USA
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2020, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms,
+		 with or without modification, are permitted provided
+		 that the following conditions are met:
+
+		 1. Redistributions of source code must retain the
+		    above copyright notice, this list of conditions and
+		    the following disclaimer.
+		 2. Redistributions in binary form must reproduce
+		    the above copyright notice, this list of conditions
+		    and the following disclaimer in the documentation
+		    and/or other materials provided with the distribution.
+		 3. Neither the name of the copyright holder nor the
+		    names of its contributors may be used to endorse or
+		    promote products derived from this software without
+		    specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+		 AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+		 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+		 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+		 PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+		 THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+		 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+		 OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+		 TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+		 OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+		 HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+		 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+		 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+		 OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for firewall-related stats operation mode commands.";
+
+	revision 2020-07-21 {
+		description "Initial revision.";
+	}
+
+	// Options common to show and clear commands
+	grouping npf-stats-options {
+		opd:option category {
+			opd:help "Show or clear statistics for a specific category";
+			type enumeration {
+				enum pass {
+					opd:help "pass";
+				}
+				enum unmatched {
+					opd:help "unmatched";
+				}
+				enum block {
+					opd:help "block";
+				}
+				enum drop {
+					opd:help "drop";
+				}
+			}
+		}
+	}
+
+	// Options for show command only
+	grouping npf-stats-show-options {
+		uses npf-stats-options;
+
+		opd:option interface {
+			opd:help "Show statistics for a specific interface";
+			type op-npf-types:op-ifname;
+			opd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+		}
+		opd:command non-zero {
+			opd:help "Only show groups of statistics where at least one value is non-zero";
+		}
+		opd:command detail {
+			opd:help "Show detailed statistics";
+		}
+		opd:command brief {
+			opd:help "Show brief statistics";
+		}
+	}
+
+	// Options for clear command only
+	grouping npf-stats-clear-options {
+		uses npf-stats-options;
+
+		opd:option interface {
+			opd:help "Clear statistics for a specific interface";
+			type op-npf-types:op-ifname;
+			opd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+		}
+		opd:option direction {
+			opd:help "Clear statistics for a specific direction";
+			type enumeration {
+				enum in {
+					opd:help "Clear statistics for inbound packets";
+				}
+				enum out {
+					opd:help "Clear statistics for outbound packets";
+				}
+			}
+		}
+	}
+
+	opd:augment /show:show/show-dp:dataplane/show-dp:statistics {
+		opd:command firewall {
+			opd:help "Show firewall statistics";
+
+			opd:command ip {
+				opd:help "Show IP layer 3 firewall and NAT statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --show ip ${@:6}";
+				}
+				uses npf-stats-show-options;
+			}
+
+			opd:command ip6 {
+				opd:help "Show IPv6 layer 3 firewall statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --show ip6 ${@:6}";
+				}
+				uses npf-stats-show-options;
+			}
+
+			opd:command l2 {
+				opd:help "Show layer 2 firewall statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --show l2 ${@:6}";
+				}
+				uses npf-stats-show-options;
+			}
+
+			opd:command local {
+				opd:help "Show local and originate firewall statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --show local ${@:6}";
+				}
+				uses npf-stats-show-options;
+			}
+		}
+
+		opd:command ip-packet-filter {
+			opd:help "Show IP packet filter statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --show ip-packet-filter ${@:5}";
+			}
+			uses npf-stats-show-options;
+		}
+
+		opd:command ip6-packet-filter {
+			opd:help "Show IPv6 packet filter statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --show ip6-packet-filter ${@:5}";
+			}
+			uses npf-stats-show-options;
+		}
+
+		opd:command nat64 {
+			opd:help "Show NAT64 statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --show nat64 ${@:5}";
+			}
+			uses npf-stats-show-options;
+		}
+	}
+
+	opd:augment /clear:clear/clear-dp:dataplane/clear-dp:statistics {
+		opd:command firewall {
+			opd:help "Clear layer 3 firewall and NAT dataplane statistics";
+			opd:on-enter "npf-op-dataplane-stats --clear fw";
+
+			opd:command ip {
+				opd:help "Clear IP layer 3 firewall and NAT statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --clear ip ${@:6}";
+				}
+				uses npf-stats-clear-options;
+			}
+
+			opd:command ip6 {
+				opd:help "Clear IPv6 layer 3 firewall and NAT statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --clear ip6 ${@:6}";
+				}
+				uses npf-stats-clear-options;
+			}
+
+			opd:command local {
+				opd:help "Clear local and originate firewall statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --clear local ${@:6}";
+				}
+				uses npf-stats-clear-options;
+			}
+
+			opd:command l2 {
+				opd:help "Clear layer 2 firewall statistics";
+
+				opd:repeatable true;
+				opd:inherit "" {
+					opd:on-enter "npf-op-dataplane-stats --clear l2 ${@:6}";
+				}
+				uses npf-stats-clear-options;
+			}
+		}
+
+		opd:command ip-packet-filter {
+			opd:help "Clear IP packet filter statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --clear ip-packet-filter ${@:5}";
+			}
+			uses npf-stats-clear-options;
+		}
+
+		opd:command ip6-packet-filter {
+			opd:help "Clear IPv6 packet filter statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --clear ip6-packet-filter ${@:5}";
+			}
+			uses npf-stats-clear-options;
+		}
+
+		opd:command nat64 {
+			opd:help "Clear NAT64 statistics";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "npf-op-dataplane-stats --clear nat64 ${@:5}";
+			}
+			uses npf-stats-clear-options;
+		}
+	}
+}
