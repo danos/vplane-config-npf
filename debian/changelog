@@ -1,3 +1,18 @@
+vplane-config-npf (4.2.3) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * flake8: anomalous backslash
+  * improve flake8 quality gate in Jenkinsfile
+  * fix flake8 warning in res_grp_provisioner.py
+
+  [ Derek Fawcus ]
+  * SIAD-ACL: Make 'must' path component names qnames
+
+  [ Gavin Shearer ]
+  * Return empty JSON when resource group state is requested via VCI
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 20 Jul 2020 10:39:02 +0100
+
 vplane-config-npf (4.2.2) unstable; urgency=medium
 
   [ Ian Wilson ]
