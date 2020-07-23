@@ -1,3 +1,10 @@
+vplane-config-npf (4.2.4) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * Show, clear and rpc commands for NPF dataplane statistics
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 23 Jul 2020 12:42:01 +0100
+
 vplane-config-npf (4.2.3) unstable; urgency=medium
 
   [ Paul Aitken ]
