@@ -20,7 +20,7 @@ module vyatta-interfaces-switch-vif-firewall-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2018-2019, AT&T Intellectual Property.
+		"Copyright (c) 2018-2020, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -59,11 +59,14 @@ module vyatta-interfaces-switch-vif-firewall-v1 {
 
 		 YANG module for enabling firewalls on switch VLAN interfaces";
 
+	revision 2020-08-06 {
+			description "Add originate firewall for switch vif.";
+	}
 	revision 2018-03-07 {
 			description "Initial version.";
 	}
 
 	augment /if:interfaces/interfaces-switch:switch/interfaces-switch:vif {
-			uses security:firewall-vif-if-parameters;
+			uses security:firewall-if-parameters-originate;
 	}
 }
