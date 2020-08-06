@@ -97,12 +97,14 @@ module vyatta-security-firewall-v1 {
 
 		 YANG module for Vyatta firewalls";
 
-	revision 2020-06-01 {
+	revision 2020-08-06 {
 		description "Add originate firewall support
 			    for dataplane and loopback interfaces.
 			    Reuse interface dataplane firewall originate configuration
 			    for loopback interfaces.
-			    Add protocol-group validation script for originate firewall";
+			    Add protocol-group validation script for originate firewall
+			    Add namespace to originate firewall path leafref and must
+			    statements to use them in another yang";
 	}
 	revision 2020-04-01 {
 		description "Add firewall to PPPoE interfaces";
@@ -276,41 +278,90 @@ module vyatta-security-firewall-v1 {
 	grouping firewall-if-cfg-originate {
 		leaf-list originate {
 			type leafref {
-				path "/security:security/firewall/name/ruleset-name";
+				path "/security:security/vyatta-security-firewall-v1:firewall/vyatta-security-firewall-v1:name/vyatta-security-firewall-v1:ruleset-name";
 			}
 			ordered-by "user";
 			description "Ruleset for packets originated on router";
 			configd:help "Ruleset for packets originated on router";
 
-			must "not(/security:security/firewall/name[ruleset-name = current()]/default-action)" {
-				error-message "This ruleset has default-action which can't be configured for originate firewall";
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:default-action)" {
+					error-message "This ruleset has default-action which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/default-log)" {
-				error-message "This ruleset has default-log which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:default-log)" {
+					error-message "This ruleset has default-log which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/session)" {
-				error-message "This ruleset has session rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:session)" {
+					error-message "This ruleset has session rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/fragment)" {
-				error-message "This ruleset has fragment rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:fragment)" {
+					error-message "This ruleset has fragment rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/protocol = 'ipv6-frag')" {
-				error-message "This ruleset has protocol equal to ipv6-frag rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:protocol = 'ipv6-frag')" {
+					error-message "This ruleset has protocol equal to ipv6-frag rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/state = 'enable')" {
-				error-message "This ruleset has state rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:state = 'enable')" {
+					error-message "This ruleset has state rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/ethertype)" {
-				error-message "This ruleset has ethertype rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:ethertype)" {
+					error-message "This ruleset has ethertype rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/pcp)" {
-				error-message "This ruleset has pcp rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:pcp)" {
+					error-message "This ruleset has pcp rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/source/mac-address)" {
-				error-message "This ruleset has source mac-address rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:source/" +
+				     "vyatta-security-firewall-v1:mac-address)" {
+					error-message "This ruleset has source mac-address rules which can't be configured for originate firewall";
 			}
-			must "not(/security:security/firewall/name[ruleset-name = current()]/rule/destination/mac-address)" {
-				error-message "This ruleset has destination mac-address rules which can't be configured for originate firewall";
+
+			must "not(/security:security/" +
+				     "vyatta-security-firewall-v1:firewall/" +
+				     "vyatta-security-firewall-v1:name[vyatta-security-firewall-v1:ruleset-name = current()]/" +
+				     "vyatta-security-firewall-v1:rule/" +
+				     "vyatta-security-firewall-v1:destination/" +
+				     "vyatta-security-firewall-v1:mac-address)" {
+					error-message "This ruleset has destination mac-address rules which can't be configured for originate firewall";
 			}
 		}
 	}
