@@ -71,6 +71,10 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
+	revision 2020-08-07 {
+		description "Added counter type option 'auto-per-action'";
+	}
+
 	revision 2020-05-08 {
 		description "Added Egress IP Packet Filter support.
 		             Updated 'interface:in' form to use leafref for validation";
@@ -497,6 +501,19 @@ module vyatta-ippf-v1 {
 							configd:help "Auto per rule";
 							type empty;
 						}
+						container auto-per-action {
+							description  "Auto per action";
+							configd:help "Auto per action";
+							presence "Configure all actions";
+							container action {
+								description  "Configure actions";
+								configd:help "Configure actions";
+								uses ippf-action;
+								must "count(accept | drop) <= 1" {
+									error-message "Cannot specify both 'accept' and 'drop'";
+								}
+							}
+						}
 					}
 				}
 				list rule {
@@ -629,8 +646,11 @@ module vyatta-ippf-v1 {
 					type string;
 				}
 				leaf rule {
-					description "The rule number";
-					type uint32;
+					description "The rule number or action";
+					type union {
+						type uint32;
+						type string;
+					}
 				}
 				leaf action {
 					description "The group action";

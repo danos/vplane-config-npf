@@ -116,7 +116,7 @@ def ippf_show_rpc(filters):
                                                     'interface': attach_point["attach_point"],
                                                     'direction': group["direction"],
                                                     'group': group["name"],
-                                                    'rule': int(rulenum),
+                                                    'rule': rulenum,
                                                     'action': action,
                                                     'hardware': {}
                                                 }
@@ -133,7 +133,7 @@ def ippf_show_rpc(filters):
                                                     attach_point["attach_point"],
                                                     group["direction"],
                                                     group["name"],
-                                                    int(rulenum))
+                                                    rulenum)
                                                 stats[key] = row
                                                 rownum += 1
 
@@ -172,7 +172,7 @@ def ippf_show_rpc(filters):
                                         interface_name,
                                         direction,
                                         group["name"],
-                                        int(counter_name))
+                                        counter_name)
 
                                     if key in stats:
                                         # There are already SW stats for this key.
@@ -192,7 +192,7 @@ def ippf_show_rpc(filters):
                                                 'interface': interface_name,
                                                 'direction': direction,
                                                 'group': group_name,
-                                                'rule': int(counter_name),
+                                                'rule': counter_name,
                                                 'action': "-",
                                                 'software': {},
                                                 'hardware': {'packets': hw_counter.get("pkts", "-")}

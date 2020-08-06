@@ -74,13 +74,22 @@ def show_stats(client, args):
             SWpackets = "-"
             SWbytes = "-"
 
+        if stat["rule"] in ["accept", "drop"]:
+            # Counter type: auto-per-action:
+            rule = "all"
+            action = stat["rule"]
+        else:
+            # Counter type: auto-per-rule:
+            rule = stat["rule"]
+            action = stat["action"]
+
         print(
             outfmt.format(
                 stat["interface"],
                 stat["direction"],
                 stat["group"],
-                stat["rule"],
-                stat["action"],
+                rule,
+                action,
                 HWpackets, SWpackets,
                 HWbytes, SWbytes
             )

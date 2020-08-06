@@ -722,8 +722,16 @@ def process_group_counters(counters):
         config += ",type=named," + ",".join("named={}".format(n) for n in ctr_type["named"])
 
     elif "auto-per-action" in ctr_type:
-        # Add all the actions
-        config += ",type=named,named=accept,named=drop,named=punt,named=reject"
+        auto_per_action = ctr_type["auto-per-action"]
+        if "action" in auto_per_action:
+            action = auto_per_action["action"]
+            if "accept" in action:
+                config += ",type=named,named=accept"
+            elif "drop" in action:
+                config += ",type=named,named=drop"
+        else:
+            # Add all the actions
+            config += ",type=named,named=accept,named=drop"
 
     elif "auto-per-rule" in ctr_type:
         # The dataplane must name the counters after the rule numbers.
