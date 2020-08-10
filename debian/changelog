@@ -1,3 +1,10 @@
+vplane-config-npf (4.2.5) unstable; urgency=medium
+
+  [ Alexey Khan ]
+  * add originate firewall for switch vif
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 10 Aug 2020 17:26:03 +0100
+
 vplane-config-npf (4.2.4) unstable; urgency=medium
 
   [ Ian Wilson ]
