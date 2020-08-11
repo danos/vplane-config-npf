@@ -152,6 +152,13 @@ Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends},
 Description: operational CLI yang for vyatta-system-session
  The Vyatta operation YANG for session commands
 
+Package: vyatta-op-dataplane-session-v1-yang
+Architecture: all
+Depends: ${misc:Depends}, ${yang:Depends}, python3:any,
+ vplane-config-npf (= ${binary:Version})
+Description: operational CLI YANG for dataplane sessions
+ The Vyatta operation YANG for dataplane session commands
+
 Package: vyatta-op-resources-group-v1-yang
 Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, python3:any,

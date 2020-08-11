@@ -1,0 +1,278 @@
+module vyatta-op-dataplane-session-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-op-dataplane-session:1";
+	prefix vyatta-op-dataplane-session-v1;
+
+	import vyatta-opd-extensions-v1 {
+		prefix opd;
+	}
+	import vyatta-op-show-v1 {
+		prefix show;
+	}
+	import vyatta-op-clear-v1 {
+		prefix clear;
+	}
+    import ietf-inet-types {
+        prefix inet;
+    }
+	import vyatta-op-npf-types-v1 {
+		prefix op-npf-types;
+	}
+	import vyatta-op-show-dataplane-v1 {
+		prefix show-dp;
+	}
+	import vyatta-op-clear-dataplane-v1 {
+		prefix clear-dp;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 75202, USA
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2020, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms,
+		 with or without modification, are permitted provided
+		 that the following conditions are met:
+
+		 1. Redistributions of source code must retain the
+		    above copyright notice, this list of conditions and
+		    the following disclaimer.
+		 2. Redistributions in binary form must reproduce
+		    the above copyright notice, this list of conditions
+		    and the following disclaimer in the documentation
+		    and/or other materials provided with the distribution.
+		 3. Neither the name of the copyright holder nor the
+		    names of its contributors may be used to endorse or
+		    promote products derived from this software without
+		    specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+		 AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+		 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+		 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+		 PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+		 THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+		 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+		 OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+		 TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+		 OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+		 HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+		 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+		 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+		 OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for firewall-related stats operation mode commands.";
+
+	revision 2020-08-17 {
+		description "Initial revision.";
+	}
+
+    typedef op-addr-opt-mask {
+        type union {
+            type inet:ip-address-no-zone {
+                opd:pattern-help "<address>";
+                opd:help "An address";
+            }
+            type inet:ip-prefix {
+                opd:pattern-help "<address>/<mask-len>";
+                opd:help "An address with mask length";
+            }
+        }
+    }
+
+	grouping sess-fltr-addr-opts {
+		opd:option address {
+			opd:help "Address, or prefix and mask";
+			type op-addr-opt-mask;
+		}
+		opd:option port {
+			opd:help "Port number";
+			type inet:port-number {
+				opd:pattern-help "<port>";
+			}
+		}
+	}
+
+	grouping sess-fltr-opts {
+		opd:option id {
+			opd:help "Filter by session ID";
+			type uint64;
+		}
+		opd:option interface {
+			opd:help "Filter by interface";
+			type op-npf-types:op-ifname;
+			opd:allowed "vyatta-interfaces.pl --show all --skip=lo";
+		}
+		opd:command source {
+			opd:help "Filter by source address or port";
+			opd:on-enter "";
+			uses sess-fltr-addr-opts;
+		}
+		opd:command destination {
+			opd:help "Filter by destination address or port";
+			opd:on-enter "";
+			uses sess-fltr-addr-opts;
+		}
+		opd:option protocol {
+			opd:help "Filter by protocol";
+			type string;
+			opd:allowed "allowed-protocols";
+		}
+		opd:command direction {
+			opd:help "Filter by direction of initial packet flow";
+			opd:on-enter "";
+			opd:command in {
+				opd:help "Match sessions created by inbound flows";
+			}
+			opd:command out {
+				opd:help "Match sessions created by outbound flows";
+			}
+		}
+	}
+
+	grouping sess-orderby-opts {
+		opd:command source-address {
+			opd:help "Order by source address";
+		}
+		opd:command destination-address {
+			opd:help "Order by destination address";
+		}
+		opd:command id {
+			opd:help "Order by session ID";
+		}
+		opd:command timeout {
+			opd:help "Order by timeout";
+		}
+	}
+
+	grouping sess-order-opts {
+		opd:command unordered {
+			opd:help "Show sessions in table order";
+		}
+		opd:command ascending {
+			opd:help "Show sessions in ascending order";
+			opd:on-enter "";
+			uses sess-orderby-opts;
+		}
+		opd:command descending {
+			opd:help "Show session in descending order";
+			opd:on-enter "";
+			uses sess-orderby-opts;
+		}
+		opd:command starting-with {
+			opd:help "Start ordered display with sessions on or after a specified parameter";
+			opd:on-enter "";
+
+			opd:option address {
+				opd:help "Start ordered display with sessions on or after a specific source or destination address";
+				type inet:ip-address-no-zone {
+					opd:pattern-help "<address>";
+					opd:help "An address";
+				}
+			}
+			opd:option id {
+				opd:help "Start ordered display with sessions on or after a specific session ID";
+				type uint64;
+			}
+			opd:option timeout {
+				opd:help "Start ordered display with sessions on or after a specific timeout value";
+				type uint32;
+			}
+		}
+		opd:option count {
+			opd:help "Number of sessions to show";
+			type uint32 {
+				range 1..100000000;
+			}
+		}
+	}
+
+	grouping sess-feat-opts {
+		opd:option feature {
+			opd:help "Filter by session feature";
+			type enumeration {
+				enum firewall {
+					opd:help "Stateful firewall sessions";
+				}
+				enum snat {
+					opd:help "Source NAT sessions";
+				}
+				enum dnat {
+					opd:help "Destination NAT sessions";
+				}
+				enum alg {
+					opd:help "Application layer gateway sessions";
+				}
+				enum nat64 {
+					opd:help "IPv6-to-IPv4 initiated sessions";
+				}
+				enum nat46 {
+					opd:help "IPv4-to-IPv6 initiated sessions";
+				}
+				enum application {
+					opd:help "Sessions with a known application";
+				}
+				enum other {
+					opd:help "Sessions for which the feature is other, none or unknown";
+				}
+			}
+		}
+	}
+
+	opd:augment /show:show/show-dp:dataplane {
+		opd:command session {
+			opd:help "Show dataplane sessions";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "vyatta-op-dataplane-session --show ${@:4}";
+			}
+			opd:command ip {
+				opd:help "Show IP sessions";
+			}
+			opd:command ip6 {
+				opd:help "Show IPv6 sessions";
+			}
+			uses sess-fltr-opts;
+			uses sess-order-opts;
+			uses sess-feat-opts;
+
+			opd:command detail {
+				opd:help "Show detailed session information";
+			}
+			opd:command brief {
+				opd:help "Show brief session information";
+			}
+			opd:command summary {
+				opd:help "Show session summary information";
+			}
+		}
+	}
+
+	opd:augment /clear:clear/clear-dp:dataplane {
+		opd:command session {
+			opd:help "Clear dataplane sessions";
+
+			opd:repeatable true;
+			opd:inherit "" {
+				opd:on-enter "vyatta-op-dataplane-session --clear ${@:4}";
+			}
+			opd:command ip {
+				opd:help "Clear IP sessions";
+			}
+			opd:command ip6 {
+				opd:help "Clear IPv6 sessions";
+			}
+			uses sess-fltr-opts;
+			uses sess-feat-opts;
+		}
+	}
+}

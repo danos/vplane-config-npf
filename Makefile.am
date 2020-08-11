@@ -24,6 +24,7 @@ sbin_SCRIPTS += scripts/vyatta-dp-npf-show-session-stats
 sbin_SCRIPTS += scripts/vyatta-dp-npf-show-sessions
 sbin_SCRIPTS += scripts/vyatta-dp-npf-timeouts.pl
 sbin_SCRIPTS += scripts/vyatta-dp-npf-snmptrap.pl
+sbin_SCRIPTS += scripts/vyatta-op-dataplane-session
 sbin_SCRIPTS += scripts/vyatta-ethertype
 sbin_SCRIPTS += scripts/allowed-protocols
 sbin_SCRIPTS += scripts/set-ping
@@ -101,6 +102,7 @@ lib_python_npf_DATA += lib/python3/npf_debug.py
 lib_python_npf_DATA += lib/python3/npf_store.py
 lib_python_npf_DATA += lib/python3/npf_warning.py
 lib_python_npf_DATA += lib/python3/npf_addr_group.py
+lib_python_npf_DATA += lib/python3/IPProto.py
 
 vrf_mgr_del_table_SCRIPTS = etc/vrf-manager-del-table.d/pbr-groups
 

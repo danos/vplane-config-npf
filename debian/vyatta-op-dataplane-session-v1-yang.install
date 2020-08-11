@@ -1,0 +1,3 @@
+usr/share/configd/yang/vyatta-op-dataplane-session-v1.yang
+
+opt/vyatta/sbin/vyatta-op-dataplane-session
