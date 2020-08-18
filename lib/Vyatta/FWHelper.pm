@@ -553,12 +553,17 @@ sub build_app_rule {
     $value = $config->returnValue("action");
     $rule = "action=$value ";
 
-    @values = $config->listNodes("engine");
-    if (@values) {
-        $rule .= "engine=$values[0] ";
-        $config = Vyatta::Config->new("${level} engine $values[0]");
+    $value = $config->returnValue("group");
+    if (defined($value)) {
+        $rule .= "group=$value ";
     } else {
-        $rule .= "engine=ndpi "; # Maintain backwards compatibility
+        @values = $config->listNodes("engine");
+        if (@values) {
+            $rule .= "engine=$values[0] ";
+            $config = Vyatta::Config->new("${level} engine $values[0]");
+        } else {
+            $rule .= "engine=ndpi "; # Maintain backwards compatibility
+        }
     }
 
     # new engine-based dpi cli defines protos, names and types
