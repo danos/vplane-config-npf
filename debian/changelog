@@ -1,3 +1,10 @@
+vplane-config-npf (4.2.6) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * app groups: add group name to rule
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 19 Aug 2020 15:59:35 +0100
+
 vplane-config-npf (4.2.5) unstable; urgency=medium
 
   [ Alexey Khan ]
