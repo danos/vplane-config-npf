@@ -12,6 +12,7 @@ import json
 import sys
 import re
 import vplaned
+from vyatta import configd
 
 ROOTPATH = "security ip-packet-filter"
 
@@ -39,8 +40,42 @@ def send(cmd):
 
     return d
 
+def get_action_counters(client):
+    """
+    Gets the list of ACL groups from the system configuration that contains
+    action counters (auto-per-action)
 
-def ippf_show_rpc(filters):
+    @input: client: configd client
+
+    @output: Dictionary of groups that contain auto-per-action counters
+    """
+    auto_per_action_groups = {}
+    config = client.tree_get_full_dict(ROOTPATH + " group", client.RUNNING)
+    groups = config.get("group", {})
+    for group in groups:
+        group_name = group.get("group-name")
+        counters = group.get("counters", {})
+        counter_type = counters.get("type", {})
+
+        if "auto-per-rule" in counter_type:
+            continue
+        elif "auto-per-action" in counter_type:
+            auto_per_action_groups[group_name] = {}
+            grp_action_counters = auto_per_action_groups[group_name]
+
+            auto_per_action = counter_type.get("auto-per-action")
+            action = auto_per_action.get("action", {})
+            if "accept" in action:
+                grp_action_counters["accept"] = None
+            elif "drop" in action:
+                grp_action_counters["drop"] = None
+            else:
+                grp_action_counters["accept"] = None
+                grp_action_counters["drop"] = None
+
+    return auto_per_action_groups
+
+def ippf_show_rpc(filters, client):
     """
     Request IP Packet Filter statistics from dataplane
 
@@ -61,6 +96,8 @@ def ippf_show_rpc(filters):
     # Process SW statistics
 
     sw_reply = send("npf-op show all: acl-in acl-out")
+
+    auto_per_action_groups = get_action_counters(client)
 
     # iterate dataplane replies
     for dataplane in sw_reply:
@@ -94,6 +131,8 @@ def ippf_show_rpc(filters):
                             # match group name
                             if (not match_groupnames) or (group["name"] in match_groupnames):
 
+                                grp_action_counters = auto_per_action_groups.get(group["name"])
+
                                 # iterate rules
                                 for rulenum in group["rules"]:
 
@@ -111,32 +150,66 @@ def ippf_show_rpc(filters):
 
                                             rp = rule.get("rprocs")
                                             if rp:
-                                                row = {
-                                                    'row': rownum,
-                                                    'interface': attach_point["attach_point"],
-                                                    'direction': group["direction"],
-                                                    'group': group["name"],
-                                                    'rule': rulenum,
-                                                    'action': action,
-                                                    'hardware': {}
-                                                }
-
-                                                # Append SW packet counter, if any
-                                                ctr = rp.get("ctr")
-                                                if ctr:
-                                                    row['software'] = {
-                                                        'packets': ctr["hits"]
+                                                if grp_action_counters is not None:
+                                                    if action in grp_action_counters:
+                                                        ctr = rp.get("ctr")
+                                                        if ctr:
+                                                            if grp_action_counters[action] is None:
+                                                                grp_action_counters[action] = 0
+                                                            grp_action_counters[action] = grp_action_counters[action] + ctr["hits"]
+                                                else:
+                                                    row = {
+                                                        'row': rownum,
+                                                        'interface': attach_point["attach_point"],
+                                                        'direction': group["direction"],
+                                                        'group': group["name"],
+                                                        'rule': rulenum,
+                                                        'action': action,
+                                                        'hardware': {}
                                                     }
 
-                                                # key = interface, direction, group, rule
-                                                key = (
-                                                    attach_point["attach_point"],
-                                                    group["direction"],
-                                                    group["name"],
-                                                    rulenum)
-                                                stats[key] = row
-                                                rownum += 1
+                                                    # Append SW packet counter, if any
+                                                    ctr = rp.get("ctr")
+                                                    if ctr:
+                                                        row['software'] = {
+                                                            'packets': ctr["hits"]
+                                                        }
 
+                                                    # key = interface, direction, group, rule
+                                                    key = (
+                                                        attach_point["attach_point"],
+                                                        group["direction"],
+                                                        group["name"],
+                                                        rulenum)
+                                                    stats[key] = row
+                                                    rownum += 1
+                                if grp_action_counters is not None:
+                                    for counter_name in grp_action_counters:
+                                        if grp_action_counters[counter_name] is None:
+                                            continue
+                                        row = {
+                                            'row': rownum,
+                                            'interface': attach_point["attach_point"],
+                                            'direction': group["direction"],
+                                            'group': group["name"],
+                                            'rule': counter_name,
+                                            'action': action,
+                                            'hardware': {}
+                                        }
+
+                                        # Append SW packet action counter
+                                        row['software'] = {
+                                            'packets': grp_action_counters[counter_name]
+                                        }
+
+                                        # key = interface, direction, group, counter name
+                                        key = (
+                                            attach_point["attach_point"],
+                                            group["direction"],
+                                            group["name"],
+                                            counter_name)
+                                        stats[key] = row
+                                        rownum += 1
     # Process HW statistics
 
     hw_reply = send("npf-op acl show counters")
@@ -213,7 +286,7 @@ def ippf_show_rpc(filters):
     return 0
 
 
-def ippf_clear_rpc(filters):
+def ippf_clear_rpc(filters, client):
     """
     Send IP Packet Filter 'clear statistics' command to dataplane
 
@@ -275,6 +348,12 @@ def main():
         print("usage: {} [--show | --clear]\n".format(sys.argv[0]))
         return 1
 
+    try:
+        client = configd.Client()
+    except Exception as exc:
+        print("Cannot establish client session: '{}'".format(str(exc).strip()))
+        return 1
+
     # Get the RPC input
     try:
         rpc_input = json.load(sys.stdin)
@@ -282,7 +361,7 @@ def main():
         print("Failed to parse input JSON: {}".format(exc), sys.stderr)
         return 1
 
-    return cmd(rpc_input)
+    return cmd(rpc_input, client)
 
 
 if __name__ == "__main__":
