@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2019, AT&T Intellectual Property.
+# Copyright (c) 2017-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (C) 2012-2017, Brocade Communications Systems, Inc.
@@ -31,8 +31,10 @@ sub get_port_type_and_value {
     return ( "Port", $port_val )
       if ( $port_val =~ /^[0-9]+$/ );
     if ( $port_val =~ /^([0-9]+)-([0-9]+)$/ ) {
+        # Allow port range to start from 0 (rather than 1) to be backward
+        # compatible with earlier releases.
         return ( "Port-range", $port_val )
-          if ( $1 >= 1 && $1 <= 65535 && $2 >= 1 && $2 <= 65535 );
+          if ( $1 <= 65535 && $2 <= 65535 );
     }
     my $port_num = get_port_num($port_val);
     return ( "Services", $port_num )
