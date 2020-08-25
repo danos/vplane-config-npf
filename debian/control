@@ -59,7 +59,7 @@ Package: vyatta-system-session-v1-yang
 Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, python3:any,
  vplane-config-npf (= ${binary:Version}), libvyatta-cfg1, vyatta-cfg,
- vyatta-util, vyatta-protocols, libmodule-load-conditional-perl,
+ vyatta-util, libmodule-load-conditional-perl,
  libvyatta-interface-perl (>= 1.46)
 Description: vyatta session yang and scripts
  YANG module and scripts for Vyatta firewall session configuration
@@ -76,7 +76,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
- libvyatta-cfg1, vyatta-protocols, libvyatta-interface-perl (>= 1.46)
+ libvyatta-cfg1, libvyatta-interface-perl (>= 1.46)
 Description: vyatta nat yang and scripts
  YANG module and scripts for Vyatta NAT configuration
 
@@ -85,7 +85,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, ${perl:Depends}, libset-scalar-perl,
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
- libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang
+ libvyatta-cfg1, vyatta-service-nat-v1-yang
 Description: vyatta nat nptv6 yang and scripts
  YANG module and scripts for Vyatta NAT NPTv6 configuration
 
@@ -94,7 +94,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${yang:Depends}, libset-scalar-perl,
  vplane-config-npf (= ${binary:Version}), vplane-config,
  vyatta-system (>= 1.6.1), vyatta-interfaces (>= 0.5), vyatta-util, vyatta-cfg,
- libvyatta-cfg1, vyatta-protocols, vyatta-service-nat-v1-yang,
+ libvyatta-cfg1, vyatta-service-nat-v1-yang,
  python3:any
 Description: vyatta nat64 yang and scripts
  YANG module and scripts for Vyatta NAT64 configuration
