@@ -56,7 +56,7 @@ def show_stats(client, args):
     print(outfmt.format("---------", "---", "-----", "----", "------",
                         "----------", "----------", "--------", "--------"))
 
-    stats = sorted(stats["statistics"], key=itemgetter('interface', 'direction', 'group', 'rule'))
+    stats = sorted(stats["statistics"], key=itemgetter('interface', 'direction', 'group', 'rule', 'name'))
     for stat in stats:
         HWstats = stat.get("hardware")
         if HWstats:
@@ -74,10 +74,10 @@ def show_stats(client, args):
             SWpackets = "-"
             SWbytes = "-"
 
-        if stat["rule"] in ["accept", "drop"]:
+        if stat["name"] in ["accept", "drop"]:
             # Counter type: auto-per-action:
             rule = "all"
-            action = stat["rule"]
+            action = stat["name"]
         else:
             # Counter type: auto-per-rule:
             rule = stat["rule"]

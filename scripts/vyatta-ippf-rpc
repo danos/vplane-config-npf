@@ -15,6 +15,7 @@ import vplaned
 from vyatta import configd
 
 ROOTPATH = "security ip-packet-filter"
+RULENUM_ALL = 0
 
 
 def send(cmd):
@@ -153,6 +154,8 @@ def ippf_show_rpc(filters, client):
                                             rp = rule.get("rprocs")
                                             if rp:
                                                 if grp_action_counters is not None:
+                                                    # auto-per-action counter case.
+                                                    # The counter name is an action name.
                                                     if action in grp_action_counters:
                                                         ctr = rp.get("ctr")
                                                         if ctr:
@@ -160,12 +163,15 @@ def ippf_show_rpc(filters, client):
                                                                 grp_action_counters[action] = 0
                                                             grp_action_counters[action] = grp_action_counters[action] + ctr["hits"]
                                                 else:
+                                                    # auto-per-rule counter case.
+                                                    # The counter name is the rule number in string format.
                                                     row = {
                                                         'row': rownum,
                                                         'interface': attach_point["attach_point"],
                                                         'direction': group["direction"],
                                                         'group': group["name"],
-                                                        'rule': rulenum,
+                                                        'rule': int(rulenum),
+                                                        'name': rulenum,
                                                         'action': action,
                                                         'hardware': {}
                                                     }
@@ -177,11 +183,13 @@ def ippf_show_rpc(filters, client):
                                                             'packets': ctr["hits"]
                                                         }
 
-                                                    # key = interface, direction, group, rule
+                                                    # key = interface, direction, group, rule, counter name
+                                                    # The counter name is the rule number in string format.
                                                     key = (
                                                         attach_point["attach_point"],
                                                         group["direction"],
                                                         group["name"],
+                                                        int(rulenum),
                                                         rulenum)
                                                     stats[key] = row
                                                     rownum += 1
@@ -194,7 +202,8 @@ def ippf_show_rpc(filters, client):
                                             'interface': attach_point["attach_point"],
                                             'direction': group["direction"],
                                             'group': group["name"],
-                                            'rule': counter_name,
+                                            'rule': RULENUM_ALL,
+                                            'name': counter_name,
                                             'action': action,
                                             'hardware': {}
                                         }
@@ -204,11 +213,12 @@ def ippf_show_rpc(filters, client):
                                             'packets': grp_action_counters[counter_name]
                                         }
 
-                                        # key = interface, direction, group, counter name
+                                        # key = interface, direction, group, rule, counter name
                                         key = (
                                             attach_point["attach_point"],
                                             group["direction"],
                                             group["name"],
+                                            RULENUM_ALL,
                                             counter_name)
                                         stats[key] = row
                                         rownum += 1
@@ -242,11 +252,19 @@ def ippf_show_rpc(filters, client):
 
                                 hw_counter = counter.get("hw")
                                 if hw_counter:
-                                    # key = interface, direction, group, rule
+                                    if counter_name in ["accept", "drop"]:
+                                        # auto-per-action:
+                                        rule = RULENUM_ALL
+                                    else:
+                                        # auto-per-rule:
+                                        rule = int(counter_name)
+
+                                    # key = interface, direction, group, rule, counter name
                                     key = (
                                         interface_name,
                                         direction,
                                         group["name"],
+                                        rule,
                                         counter_name)
 
                                     if key in stats:
@@ -267,7 +285,8 @@ def ippf_show_rpc(filters, client):
                                                 'interface': interface_name,
                                                 'direction': direction,
                                                 'group': group_name,
-                                                'rule': counter_name,
+                                                'rule': rule,
+                                                'name': counter_name,
                                                 'action': "-",
                                                 'software': {},
                                                 'hardware': {'packets': hw_counter.get("pkts", "-")}

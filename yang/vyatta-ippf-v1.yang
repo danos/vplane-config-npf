@@ -71,8 +71,9 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-08-07 {
-		description "Added counter type option 'auto-per-action'";
+	revision 2020-08-26 {
+		description "Added counter type option 'auto-per-action'.
+		             Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters";
 	}
 
 	revision 2020-05-08 {
@@ -646,11 +647,12 @@ module vyatta-ippf-v1 {
 					type string;
 				}
 				leaf rule {
-					description "The rule number or action";
-					type union {
-						type uint32;
-						type string;
-					}
+					description "The rule number";
+					type uint32;
+				}
+				leaf name {
+					description "The counter name";
+					type string;
 				}
 				leaf action {
 					description "The group action";
