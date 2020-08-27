@@ -1,3 +1,9 @@
+vplane-config-npf (4.1.11) unstable; urgency=medium
+
+  * Allow 0 as a possible value in a port range for matching pkts
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 27 Aug 2020 11:05:23 +0100
+
 vplane-config-npf (4.1.10) unstable; urgency=medium
 
   [ Derek Fawcus ]
