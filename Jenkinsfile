@@ -186,9 +186,11 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
         always {
             dir("${env.SRC_DIR}") {
                     recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+                        enabledForFailure: true,
                         qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
 
                     recordIssues tool: flake8(pattern: 'flake8.out'),
+                        enabledForFailure: true,
                         referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
                         qualityGates: [[type: 'TOTAL', threshold: 18, unstable: true],
                                        [type: 'NEW', threshold: 1, unstable: true]]
