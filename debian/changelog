@@ -1,3 +1,41 @@
+vplane-config-npf (4.3.0) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * Add stateful firewall override
+
+  [ Alexey Khan ]
+  * add originate firewall for switch vif
+
+  [ Brian Russell ]
+  * Uprev dataplane qos dependency
+
+  [ Ian Wilson ]
+  * Add new "show/clear dataplane sessions ..." command
+
+  [ Paul Aitken ]
+  * app groups: add group name to rule
+
+  [ Vinicius Soares ]
+  * l3acl: Added counter type option "auto-per-action"
+  * l3acl: Added support for "auto-per-action" to the SW counters
+
+  [ Duncan Eastoe ]
+  * Remove vyatta-protocols dependencies
+
+  [ Paul Aitken ]
+  * Fix two flake8 issues
+
+  [ Gavin Shearer ]
+  * Allow 0 as a possible value in a port range for matching pkts
+
+  [ Paul Aitken ]
+  * Enable qualitygates even for failed builds
+
+  [ Vinicius Soares ]
+  * l3acl: Added 'name' leaf in statistics output (action-per-action counters)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 07 Sep 2020 14:11:29 +0100
+
 vplane-config-npf (4.2.4) unstable; urgency=medium
 
   [ Ian Wilson ]
