@@ -630,8 +630,12 @@ def sess_is_firewall(feat):
 #
 # Firewall detailed output
 #
-def feat_firewall_detail(col1):
-    print("  %-*s" % (col1, "Firewall"))
+def feat_firewall_detail(fw, col1, col2):
+    if 'rule' in fw:
+        rule = "%s/%u" % (fw['rule']['name'], fw['rule']['number'])
+        print("  %-*s %*s" % (col1, "Firewall rule", col2, rule))
+    else:
+        print("  %-*s" % (col1, "Firewall"))
 
 
 #
@@ -659,10 +663,11 @@ def feat_nat_detail(nat, col1, col2):
         trans_type += " (masquerade)"
 
     print("  %-*s" % (col1, trans_type))
-    col1 -= 2
+    print("    %-*s %*s" % (col1 - 2, "address", col2, nat['trans_addr']))
+    print("    %-*s %*d" % (col1 - 2, "port", col2, nat['trans_port']))
 
-    print("    %-*s %*s" % (col1, "address", col2, nat['trans_addr']))
-    print("    %-*s %*d" % (col1, "port", col2, nat['trans_port']))
+    if 'rule' in nat:
+        print("  %-*s %*s" % (col1, "NAT rule", col2, nat['rule']['number']))
 
 
 #
@@ -915,6 +920,18 @@ def feat_dpi_detail(dpi, col1, col2):
 
 
 #
+# Firewall feature string for use in the table output format
+#
+def feat_fw_str(fw):
+    str = "fw"
+
+    if 'rule' in fw:
+        str += ":%s/%u" % (fw['rule']['name'], fw['rule']['number'])
+
+    return str
+
+
+#
 # Return a short features string for the table output format
 #
 def sess_feat_str(sess):
@@ -933,11 +950,13 @@ def sess_feat_str(sess):
     if 'dpi' in feat:
         fstr = feat_dpi_str(feat['dpi'])
 
-    # The SE_PASS flag is set for stateful firewall sessions
-    if sess_is_firewall(feat):
-        if fstr:
-            fstr += "; "
-        fstr = "firewall"
+    if 'firewall' in feat:
+        tmp = feat_fw_str(feat['firewall'])
+
+        if not fstr:
+            fstr = tmp
+        else:
+            fstr += "; " + tmp
 
     if 'nat64' in feat:
         tmp = feat_nat64_str(feat['nat64'])
@@ -945,7 +964,7 @@ def sess_feat_str(sess):
         if not fstr:
             fstr = tmp
         else:
-            fstr += "; %s" % (tmp)
+            fstr += "; " + tmp
 
     if 'nat' in feat:
         tmp = feat_nat_str(feat['nat'])
@@ -953,7 +972,7 @@ def sess_feat_str(sess):
         if not fstr:
             fstr = tmp
         else:
-            fstr += "; %s" % (tmp)
+            fstr += "; " + tmp
 
     if 'alg' in feat:
         tmp = feat_alg_str(feat['alg'], sess['id'])
@@ -961,7 +980,7 @@ def sess_feat_str(sess):
         if not fstr:
             fstr = tmp
         else:
-            fstr += "; %s" % (tmp)
+            fstr += "; " + tmp
 
     # Catch-all for session types we do not handle yet
     if not fstr:
@@ -979,8 +998,8 @@ def sess_feat_detail(sess, col1, col2):
     if not feat:
         return
 
-    if sess_is_firewall(feat):
-        feat_firewall_detail(col1)
+    if 'firewall' in feat:
+        feat_firewall_detail(feat['firewall'], col1, col2)
 
     if 'dpi' in feat:
         feat_dpi_detail(feat['dpi'], col1, col2)
