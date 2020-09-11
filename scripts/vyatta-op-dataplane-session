@@ -151,6 +151,7 @@ def create_ctx(show):
         ctx['order'] = None
         ctx['orderby'] = None
 
+    ctx['start-with-type'] = None
     ctx['start-with'] = None
     ctx['count'] = 0
     ctx['start'] = None
@@ -254,7 +255,6 @@ def sess_op_parse_options(options, ctx):
 
     # Store some options locally for processing at end of function
     start_with_opt = None
-    order_opt = None
     orderby_opt = None
 
     while options:
@@ -320,7 +320,6 @@ def sess_op_parse_options(options, ctx):
         # order ascending/descending
         elif opt == "ascending" or opt == "descending":
             ctx['order'] = opt
-            order_opt = opt
 
             orderby_opt = options.popleft()
 
@@ -340,6 +339,7 @@ def sess_op_parse_options(options, ctx):
         # starting-with
         elif opt == "starting-with":
             start_with_opt = options.popleft()
+            ctx['start-with-type'] = start_with_opt
 
             if start_with_opt == 'address':
                 ctx['start-with'] = IPAddress(options.popleft())
@@ -369,6 +369,20 @@ def sess_op_parse_options(options, ctx):
         elif opt == "summary":
             ctx['summary'] = True
 
+    # Check and finalize options
+    error_str = sess_op_finalize_options(ctx)
+
+    return error_str
+
+
+#
+# Check and finalize the options
+#
+# Return None or an error string
+#
+def sess_op_finalize_options(ctx):
+    """Check and finalize options"""
+
     # Default to both ip and ip6 if neither was specified
     if not ctx['ip'] and not ctx['ip6']:
         ctx['ip'] = True
@@ -386,32 +400,32 @@ def sess_op_parse_options(options, ctx):
     # a start-with option of 'id' or 'timeout' is entered then we want to
     # default to those options.
     #
-    if start_with_opt == 'address':
+    if ctx['start-with-type'] == 'address':
         if ctx['orderby'] != 'src_addr' and ctx['orderby'] != 'dst_addr':
             return ("Mismatch between starting-with 'address' "
                     "and order-by '%s'" % (ctx['orderby']))
 
-    elif start_with_opt == 'id':
+    elif ctx['start-with-type'] == 'id':
         if ctx['orderby'] != 'id':
             # Was an 'orderby' specifically requested?
-            if order_opt:
+            if ctx['order']:
                 # Yes.  Return error.
                 return ("Mismatch between starting-with 'id' "
                         "and order-by '%s'" % (ctx['orderby']))
 
-            # order_opt not specified. Default to orderby id
+            # 'order' not specified. Default to orderby id
             ctx['orderby'] = 'id'
             ctx['order'] = 'ascending'
 
-    elif start_with_opt == 'timeout':
+    elif ctx['start-with-type'] == 'timeout':
         if ctx['orderby'] != 'time_to_expire':
             # Was an 'orderby' specifically requested?
-            if order_opt:
+            if ctx['order']:
                 # Yes.  Return error.
                 return ("Mismatch between starting-with 'timeout' "
                         "and order-by '%s'" % (ctx['orderby']))
 
-            # order_opt not specified. Default to orderby timeout
+            # 'order' not specified. Default to orderby timeout
             ctx['orderby'] = 'time_to_expire'
             ctx['order'] = 'ascending'
 
