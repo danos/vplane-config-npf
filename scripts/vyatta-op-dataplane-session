@@ -133,6 +133,8 @@ def create_ctx(show):
     ctx['sport'] = None
     ctx['dport'] = None
     ctx['proto'] = None
+    ctx['taddr'] = None
+    ctx['tport'] = None
 
     #
     # Session display order.
@@ -222,6 +224,12 @@ def cmd_option_string(ctx):
     if ctx['proto']:
         cmd += " proto %s" % (proto2num(ctx['proto']))
 
+    if ctx['taddr']:
+        cmd += " trans-addr %s" % (ctx['taddr'])
+
+    if ctx['tport']:
+        cmd += " trans-port %s" % (ctx['tport'])
+
     #
     # Session order.  'order' is not specified to the dataplane.  The dp
     # determines the order (ascending or descending) from the start and end
@@ -239,6 +247,13 @@ def cmd_option_string(ctx):
         cmd += " brief"
 
     return cmd
+
+
+#
+# Are we ordering by an address?
+#
+def orderby_is_addr(orderby):
+    return orderby == 'src_addr' or orderby == 'dst_addr' or orderby == 'trans_addr'
 
 
 #
@@ -312,6 +327,15 @@ def sess_op_parse_options(options, ctx):
         elif opt == 'protocol':
             ctx['proto'] = options.popleft()
 
+        # translation address/port
+        elif opt == 'translation':
+            opt = options.popleft()
+
+            if opt == 'address' and options:
+                ctx['taddr'] = options.popleft()
+            elif opt == 'port' and options:
+                ctx['tport'] = int(options.popleft())
+
         # unordered
         elif opt == "unordered":
             ctx['order'] = None
@@ -331,6 +355,8 @@ def sess_op_parse_options(options, ctx):
                 ctx['orderby'] = 'src_addr'
             elif orderby_opt == 'destination-address':
                 ctx['orderby'] = 'dst_addr'
+            elif orderby_opt == 'translation-address':
+                ctx['orderby'] = 'trans_addr'
             elif orderby_opt == 'id':
                 ctx['orderby'] = 'id'
             elif orderby_opt == 'timeout':
@@ -389,19 +415,12 @@ def sess_op_finalize_options(ctx):
         ctx['ip6'] = True
 
     #
-    # 'brief' prevents the features being returned in the json, so set 'brief'
-    # to False if a feature was specified.
-    #
-    if ctx['brief'] and ctx['feat']:
-        ctx['brief'] = False
-
-    #
     # 'order' and 'orderby' default to 'ascending' and 'src_addr'.  However if
     # a start-with option of 'id' or 'timeout' is entered then we want to
     # default to those options.
     #
     if ctx['start-with-type'] == 'address':
-        if ctx['orderby'] != 'src_addr' and ctx['orderby'] != 'dst_addr':
+        if not orderby_is_addr(ctx['orderby']):
             return ("Mismatch between starting-with 'address' "
                     "and order-by '%s'" % (ctx['orderby']))
 
@@ -429,6 +448,32 @@ def sess_op_finalize_options(ctx):
             ctx['orderby'] = 'time_to_expire'
             ctx['order'] = 'ascending'
 
+    #
+    # If filtering or ordering by translation address then feat should be
+    # 'snat' or 'dnat'. If no feature is specified then we default to 'snat'
+    # since that is the most common type of NAT.
+    #
+    if ctx['taddr']:
+        if not ctx['feat']:
+            ctx['feat'] = 'snat'
+        elif ctx['feat'] != 'snat' and ctx['feat'] != 'dnat':
+            return ("Mismatch between feature '%s' and translation address filter" %
+                    (ctx['feat']))
+
+    if ctx['orderby'] == 'trans_addr':
+        if not ctx['feat']:
+            ctx['feat'] = 'snat'
+        elif ctx['feat'] != 'snat' and ctx['feat'] != 'dnat':
+            return ("Mismatch between feature '%s' and order-by '%s'" %
+                    (ctx['feat'], ctx['orderby']))
+
+    #
+    # 'brief' prevents the features being returned in the json, so set 'brief'
+    # to False if a feature was specified.  'feat' is prioritised over 'brief'.
+    #
+    if ctx['brief'] and ctx['feat']:
+        ctx['brief'] = False
+
     return None
 
 
@@ -450,7 +495,7 @@ def sort_item_list(item_list, ctx, af):
     # Ascending or descending?
     rev = (ctx['order'] == 'descending')
 
-    if ctx['orderby'] == 'src_addr' or ctx['orderby'] == 'dst_addr':
+    if orderby_is_addr(ctx['orderby']):
         if af == 'ip':
             # Sort v4_list while it is in uint format (faster)
             item_list = sorted(item_list, reverse=rev)
@@ -617,6 +662,31 @@ def get_start_end_vals(start_index, item_list, batch_size):
 
     # Should never reach here
     return list_len, start, end
+
+
+#
+# NAT addr and port are buried in the session feature array.  In order to keep
+# the sorting algorithms simple, we promote them to the session itself.
+#
+# Defensive coding here means that in theory the new list may be smaller than
+# the input list.  In practise that should never happen since sorting by NAT
+# address means only NAT sessions should be in sess_list.
+#
+def orderby_trans_addr_fixup(sess_list):
+    new_list = []
+
+    for sess in sess_list:
+        feat = sess_feature_npf(sess)
+        if not feat:
+            continue
+        if 'nat' not in feat:
+            continue
+        nat = feat['nat']
+        sess['trans_addr'] = nat['trans_addr']
+        sess['trans_port'] = nat['trans_port']
+        new_list.append(sess)
+
+    return new_list
 
 
 #
@@ -1366,7 +1436,7 @@ def sort_sessions(sess_list, order, orderby):
     # to be compared.
     #
     def item_fmt(item, orderby):
-        if orderby == 'src_addr' or orderby == 'dst_addr':
+        if orderby_is_addr(orderby):
             return IPAddress(item)
         return item
 
@@ -1382,6 +1452,7 @@ def sort_sessions(sess_list, order, orderby):
     # --------------    --------------
     # source address    source port
     # dest address      dest port
+    # trans address     trans port
     # timeout           session ID
     # session ID        n/a
     #
@@ -1389,6 +1460,8 @@ def sort_sessions(sess_list, order, orderby):
         orderby2 = 'src_port'
     elif orderby == 'dst_addr':
         orderby2 = 'dst_port'
+    elif orderby == 'trans_addr':
+        orderby2 = 'trans_port'
     elif orderby == 'timeout':
         orderby2 = 'id'
     elif orderby == 'id':
@@ -1458,6 +1531,10 @@ def sess_op_show_ordered(ctx, item_list, af, batch_size):
 
         # Get batch of sessions
         sess_list = get_sessions(cmd)
+
+        # Fixup required if ordering by NAT translation address
+        if ctx['orderby'] == 'trans_addr':
+            sess_list = orderby_trans_addr_fixup(sess_list)
 
         # Sort sessions
         sess_list = sort_sessions(sess_list, ctx['order'], ctx['orderby'])
@@ -1550,7 +1627,7 @@ def sess_op_show(ctx):
         sess_op_show_summary()
         return
 
-    if ctx['orderby'] == 'src_addr' or ctx['orderby'] == 'dst_addr':
+    if orderby_is_addr(ctx['orderby']):
         #
         # If ordering by address then v4 and v6 are handled separately
         #

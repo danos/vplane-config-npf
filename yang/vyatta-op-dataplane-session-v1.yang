@@ -71,7 +71,7 @@ module vyatta-op-dataplane-session-v1 {
 
 		 YANG module for firewall-related stats operation mode commands.";
 
-	revision 2020-08-17 {
+	revision 2020-09-16 {
 		description "Initial revision.";
 	}
 
@@ -136,6 +136,11 @@ module vyatta-op-dataplane-session-v1 {
 				opd:help "Match sessions created by outbound flows";
 			}
 		}
+		opd:command translation {
+			opd:help "Filter by NAT translation address or port";
+			opd:on-enter "";
+			uses sess-fltr-addr-opts;
+		}
 	}
 
 	grouping sess-orderby-opts {
@@ -144,6 +149,9 @@ module vyatta-op-dataplane-session-v1 {
 		}
 		opd:command destination-address {
 			opd:help "Order by destination address";
+		}
+		opd:command translation-address {
+			opd:help "Order by NAT translation address";
 		}
 		opd:command id {
 			opd:help "Order by session ID";
