@@ -1,0 +1,172 @@
+module vyatta-resources-packet-classifier-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-resources-packet-classifier:1";
+	prefix pkt-class-v1;
+
+	import vyatta-resources-v1 {
+		prefix resources;
+	}
+	import vyatta-ippf-v1 {
+		prefix ippf;
+	}
+	import configd-v1 {
+		prefix configd;
+	}
+	import vyatta-fw-types-v1 {
+		prefix fw-types;
+	}
+	import vyatta-types-v1 {
+		prefix vy-types;
+	}
+
+	organization "AT&T Inc.";
+	contact
+		"AT&T
+		 Postal: 208 S. Akard Street
+		         Dallas, TX 75202, USA
+		 Web: www.att.com";
+
+	description
+		"Copyright (c) 2020, AT&T Intellectual Property.
+		 All rights reserved.
+
+		 Redistribution and use in source and binary forms,
+		 with or without modification, are permitted provided
+		 that the following conditions are met:
+
+		 1. Redistributions of source code must retain the
+		    above copyright notice, this list of conditions and
+		    the following disclaimer.
+		 2. Redistributions in binary form must reproduce
+		    the above copyright notice, this list of conditions
+		    and the following disclaimer in the documentation
+		    and/or other materials provided with the distribution.
+		 3. Neither the name of the copyright holder nor the
+		    names of its contributors may be used to endorse or
+		    promote products derived from this software without
+		    specific prior written permission.
+
+		 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+		 AND CONTRIBUTORS 'AS IS' AND ANY EXPRESS OR IMPLIED
+		 WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+		 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+		 PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+		 THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+		 ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+		 OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+		 TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+		 OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+		 HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+		 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+		 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+		 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+		 OF SUCH DAMAGE.
+
+		 SPDX-License-Identifier: BSD-3-Clause
+
+		 YANG module for Vyatta Generic Packet Classifier";
+
+	revision 2020-12-02 {
+		description "Initial revision.";
+	}
+
+	feature generic-packet-classifier {
+		description "Generic packet classifier support";
+	}
+
+	grouping gpc-results {
+		description "Definition of generic packet classifier results";
+		list results {
+			description  "Results";
+			configd:help "Results";
+			key "result";
+			min-elements 1;
+			leaf result {
+				description  "Result";
+				configd:help "Result";
+				type vy-types:alpha-numeric {
+					configd:help "Result";
+				}
+			}
+		}
+	}
+
+	augment /resources:resources {
+		if-feature generic-packet-classifier;
+		description "Top-level generic packet classifier command";
+		container packet-classifier {
+			description  "Generic packet classifier";
+			configd:help "Generic packet classifier";
+			presence "Generic packet classifier; mandatory child nodes when configured";
+			list group {
+				description  "generic packet classifier group";
+				configd:help "generic packet classifier group";
+				key "group-name";
+				min-elements 1;
+				leaf group-name {
+					description  "Group name";
+					configd:help "Group name";
+					type vy-types:alpha-numeric {
+						configd:help "Group name";
+					}
+				}
+				leaf description {
+					description  "Group description";
+					configd:help "Group description";
+					type string;
+				}
+				leaf ip-version {
+					description  "Traffic this group applies to";
+					configd:help "Traffic this group applies to";
+					mandatory true;
+					type enumeration {
+						enum "ipv4" {
+							description  "Group only applies to IPv4 traffic";
+							configd:help "Group only applies to IPv4 traffic";
+						}
+						enum "ipv6" {
+							description  "Group only applies to IPv6 traffic";
+							configd:help "Group only applies to IPv6 traffic";
+						}
+					}
+				}
+				uses gpc-results;
+				list rule {
+					description  "Rule number";
+					configd:help "Rule number";
+					min-elements 1;
+					must "result or disable" {
+						error-message "Either configure a 'result', or 'disable' this rule";
+					}
+					key "number";
+					leaf number {
+						description  "rule number";
+						configd:help "rule number";
+						type fw-types:rule-number;
+					}
+					leaf disable {
+						description  "Disable rule";
+						configd:help "Disable rule";
+						type empty;
+					}
+					leaf description {
+						description  "Rule description";
+						configd:help "Rule description";
+						type string;
+					}
+					container match {
+						description  "Configure match criteria";
+						configd:help "Configure match criteria";
+						uses ippf:ippf-match;
+					}
+					leaf result {
+						description  "Result for this rule";
+						configd:help "Result for this rule";
+						type leafref {
+							path "../../results/result";
+						}
+					}
+				}
+			}
+		}
+	}
+}

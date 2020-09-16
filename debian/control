@@ -308,3 +308,9 @@ Depends: ${misc:Depends}, ${yang:Depends},
          vyatta-op-dataplane-stats-npf-v1-yang
 Description: RPC YANG for vyatta-dataplane-stats-npf
  The Vyatta RPC YANG for NPF dataplane statistics state
+
+Package: vyatta-resources-packet-classifier-v1-yang
+Architecture: all
+Depends: vplane-config-npf (= ${binary:Version}), ${yang:Depends}
+Description: Generic packet classifier yang
+  YANG module for the Vyatta Generic Packet Classifier
