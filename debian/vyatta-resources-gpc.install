@@ -1,0 +1,4 @@
+vyatta_resources_gpc_vci/vyatta_resources_gpc.py opt/vyatta/sbin
+vyatta_resources_gpc_vci/gpc_config.py usr/lib/python3/dist-packages/vyatta_resources_gpc_vci
+vyatta_resources_gpc_vci/group.py usr/lib/python3/dist-packages/vyatta_resources_gpc_vci
+vyatta_resources_gpc_vci/rule.py usr/lib/python3/dist-packages/vyatta_resources_gpc_vci

@@ -309,6 +309,14 @@ Depends: ${misc:Depends}, ${yang:Depends},
 Description: RPC YANG for vyatta-dataplane-stats-npf
  The Vyatta RPC YANG for NPF dataplane statistics state
 
+Package: vyatta-resources-gpc
+Architecture: any
+Depends: python3 (>= 3.6), python3-vci, python3-systemd, ${misc:Depends},
+         vyatta-resources-packet-classifier-v1-yang,
+         vyatta-dataplane-cfg-pb-vyatta:gpc-config-0
+Description: Generic packet classifier VCI component
+ VCI component for the Generic Packet Classifier
+
 Package: vyatta-resources-packet-classifier-v1-yang
 Architecture: all
 Depends: vplane-config-npf (= ${binary:Version}), ${yang:Depends}

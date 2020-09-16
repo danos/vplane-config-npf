@@ -1,0 +1,10 @@
+[Vyatta Component]
+Name=net.vyatta.vci.resources.gpc
+Description=Generic Packet Classifier VCI Component
+ExecName=/opt/vyatta/sbin/vyatta_resources_gpc.py
+ConfigFile=/etc/vyatta/resources-gpc.json
+
+[Model net.vyatta.vci.resources.gpc.v1]
+Modules=vyatta-resources-packet-classifier-v1
+
+ModelSets=vyatta-v1
