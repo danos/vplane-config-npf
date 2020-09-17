@@ -56,6 +56,12 @@ module vyatta-dataplane-stats-npf-v1 {
 
 		 YANG module for firewall-related stats rpc commands.";
 
+	revision 2020-09-17 {
+		description "Removed augment in favour of duplicated grouping in
+                     order for currently used Cisco NCS version to be able
+                     to compile this file.  No functional change.";
+	}
+
 	revision 2020-07-21 {
 		description "Initial revision.";
 	}
@@ -90,6 +96,50 @@ module vyatta-dataplane-stats-npf-v1 {
 	grouping dp-stats-npf {
 		container in {
 			uses dp-stats-npf-dir;
+		}
+		container out {
+			uses dp-stats-npf-dir;
+		}
+	}
+
+	grouping dp-stats-npf-dir-pass-detail {
+		container unmatched {
+			description "Unmatched";
+			leaf count {
+				type uint64;
+			}
+		}
+		container pass {
+			description "Pass";
+			leaf count {
+				type uint64;
+			}
+			container detail {
+				leaf ipv6-to-ipv4 {
+					type uint64;
+				}
+				leaf ipv4-to-ipv6 {
+					type uint64;
+				}
+			}
+		}
+		container block {
+			description "Block";
+			leaf count {
+				type uint64;
+			}
+		}
+		container drop {
+			description "Drop";
+			leaf count {
+				type uint64;
+			}
+		}
+	}
+
+	grouping dp-stats-npf-in-pass-detail {
+		container in {
+			uses dp-stats-npf-dir-pass-detail;
 		}
 		container out {
 			uses dp-stats-npf-dir;
@@ -238,21 +288,10 @@ module vyatta-dataplane-stats-npf-v1 {
 								description "Interface name";
 								type vy-types:interface-ifname;
 							}
-							uses dp-stats-npf;
+							uses dp-stats-npf-in-pass-detail;
 						}
 					}
 				}
-			}
-		}
-	}
-
-	augment /get-dataplane-stats-fw/output/dataplane/statistics/nat64/interfaces/in/pass {
-		container detail {
-			leaf ipv6-to-ipv4 {
-				type uint64;
-			}
-			leaf ipv4-to-ipv6 {
-				type uint64;
 			}
 		}
 	}
