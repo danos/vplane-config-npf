@@ -1,3 +1,23 @@
+vplane-config-npf (4.3.1) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * Display rule details in firewall and NAT sessions
+
+  [ Gavin Shearer ]
+  * Add handling of additional error types
+
+  [ Ian Wilson ]
+  * Split sess_op_parse_options into two function
+  * Filter and sort sessions by NAT translation address or port
+
+  [ Paul Aitken ]
+  * Jenkinsfile: raise flake8 threshold to 22
+
+  [ William Ivory ]
+  * Tweak YANG to keep Cisco NCS happy
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 21 Sep 2020 10:55:30 +0100
+
 vplane-config-npf (4.3.0) unstable; urgency=medium
 
   [ Ian Wilson ]
