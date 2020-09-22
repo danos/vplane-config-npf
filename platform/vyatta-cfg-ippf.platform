@@ -1,2 +1,5 @@
 [Platform ufi.s9500-30xs]
 Yang=vyatta-ippf-deviations-siad-v1.yang
+
+[Platform ufi.s9700-53dx]
+Yang=vyatta-ippf-deviations-j2-v1.yang
