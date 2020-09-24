@@ -1,3 +1,10 @@
+vplane-config-npf (4.2.8) unstable; urgency=medium
+
+  [ William Ivory ]
+  * Tweak YANG to keep Cisco NCS happy
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 24 Sep 2020 17:06:45 +0100
+
 vplane-config-npf (4.2.7) unstable; urgency=medium
 
   * Allow 0 as a possible value in a port range for matching pkts
