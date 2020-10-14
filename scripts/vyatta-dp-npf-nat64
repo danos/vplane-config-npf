@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019, AT&T Intellectual Property.
+# Copyright (c) 2019-2020, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -356,7 +356,7 @@ def nat64_trans_map_str(map, sd):
                 cmd = "%stype=one2one,%saddr=%s/128" % (sd, sd, host)
 
         # Convert port number or service name to number string
-        if 'port' in map['host-to-host']:
+        if cmd and 'port' in map['host-to-host']:
             port = nat64_port_str(map['host-to-host']['port'])
             if port:
                 cmd += ",%sport=%s" % (sd, port)
