@@ -71,10 +71,11 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-10-21 {
+	revision 2020-10-23 {
 		description "Added counter type option 'auto-per-action'.
 			     Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters.
-			     Permanently enabled ip-packet-filter.";
+			     Permanently enabled ip-packet-filter.
+			     Don't allow matching L4 fields if matching fragments.";
 	}
 
 	revision 2020-05-08 {
@@ -176,6 +177,9 @@ module vyatta-ippf-v1 {
 		container port {
 			description  "Match port";
 			configd:help "Match port";
+			must "not (../port) or not ((../../fragment = 'any') or (../../protocol/base/name = 'ipv6-frag') or (../../protocol/base/number = 44))" {
+				error-message "Fragmentation matching cannot be performed at the same time as Layer 4 packet matching";
+			}
 			/* If a port is specified, then we need to specify a protocol supporting ports */
 			must "not (../port) or ((../../protocol/final) and not (../../protocol/base)) or
 			       ((../../protocol/base/name = 'tcp') or (../../protocol/base/number = 6) or
@@ -355,6 +359,9 @@ module vyatta-ippf-v1 {
 			      (../protocol/final/name = 'icmp') or (../protocol/final/number = 1)" {
 				error-message "'match icmp' can only be used if 'protocol final' is ICMP or not set";
 			}
+			must "not (../icmp) or not ((../fragment = 'any') or (../protocol/base/name = 'ipv6-frag') or (../protocol/base/number = 44) or (../protocol/final/name = 'ipv6-frag') or (../protocol/final/number = 44))" {
+				error-message "Fragmentation matching cannot be performed at the same time as Layer 4 packet matching";
+			}
 			must "not (../icmp) or count( name | type ) = 1" {
 				error-message "Configure either 'name' or 'type', not both";
 			}
@@ -381,6 +388,9 @@ module vyatta-ippf-v1 {
 			must "not (../icmpv6) or not (../protocol/final) or
 			      (../protocol/final/name = 'ipv6-icmp') or (../protocol/final/number = 58)" {
 				error-message "'match icmpv6' can only be used if 'protocol final' is ICMPv6 or not set";
+			}
+			must "not (../icmpv6) or not ((../fragment = 'any') or (../protocol/base/name = 'ipv6-frag') or (../protocol/base/number = 44) or (../protocol/final/name = 'ipv6-frag') or (../protocol/final/number = 44))" {
+				error-message "Fragmentation matching cannot be performed at the same time as Layer 4 packet matching";
 			}
 			must "not (../icmpv6) or count( name | type | class ) = 1" {
 				error-message "Configure exactly one of 'name', 'type', or 'class'";
