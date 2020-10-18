@@ -28,7 +28,7 @@ module vyatta-ippf-v1 {
 	contact
 		"AT&T
 		 Postal: 208 S. Akard Street
-		         Dallas, TX 75202, USA
+			 Dallas, TX 75202, USA
 		 Web: www.att.com";
 
 	description
@@ -73,13 +73,13 @@ module vyatta-ippf-v1 {
 
 	revision 2020-10-21 {
 		description "Added counter type option 'auto-per-action'.
-		             Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters.
-		             Permanently enabled ip-packet-filter.";
+			     Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters.
+			     Permanently enabled ip-packet-filter.";
 	}
 
 	revision 2020-05-08 {
 		description "Added Egress IP Packet Filter support.
-		             Updated 'interface:in' form to use leafref for validation";
+			     Updated 'interface:in' form to use leafref for validation";
 	}
 
 	revision 2020-04-15 {
@@ -179,18 +179,18 @@ module vyatta-ippf-v1 {
 			/* If a port is specified, then we need to specify a protocol supporting ports */
 			must "not (../port) or ((../../protocol/final) and not (../../protocol/base)) or
 			       ((../../protocol/base/name = 'tcp') or (../../protocol/base/number = 6) or
-			        (../../protocol/base/name = 'udp') or (../../protocol/base/number = 17) or
-			        (../../protocol/base/name = 'udplite') or (../../protocol/base/number = 136) or
-			        (../../protocol/base/name = 'sctp') or (../../protocol/base/number = 132) or
-			        (../../protocol/base/name = 'dccp') or (../../protocol/base/number = 33))" {
+				(../../protocol/base/name = 'udp') or (../../protocol/base/number = 17) or
+				(../../protocol/base/name = 'udplite') or (../../protocol/base/number = 136) or
+				(../../protocol/base/name = 'sctp') or (../../protocol/base/number = 132) or
+				(../../protocol/base/name = 'dccp') or (../../protocol/base/number = 33))" {
 				error-message "Configure a 'match protocol base [name|number]' which supports ports (tcp(6), udp(17), udplite(136), sctp(132), dccp(33))";
 			}
 			must "not (../port) or ((../../protocol/base) and not (../../protocol/final)) or
 			       ((../../protocol/final/name = 'tcp') or (../../protocol/final/number = 6) or
-			        (../../protocol/final/name = 'udp') or (../../protocol/final/number = 17) or
-			        (../../protocol/final/name = 'udplite') or (../../protocol/final/number = 136) or
-			        (../../protocol/final/name = 'sctp') or (../../protocol/final/number = 132) or
-			        (../../protocol/final/name = 'dccp') or (../../protocol/final/number = 33))" {
+				(../../protocol/final/name = 'udp') or (../../protocol/final/number = 17) or
+				(../../protocol/final/name = 'udplite') or (../../protocol/final/number = 136) or
+				(../../protocol/final/name = 'sctp') or (../../protocol/final/number = 132) or
+				(../../protocol/final/name = 'dccp') or (../../protocol/final/number = 33))" {
 				error-message "Configure a 'match protocol final [name|number]' which supports ports (tcp(6), udp(17), udplite(136), sctp(132), dccp(33))";
 			}
 			leaf-list number {
