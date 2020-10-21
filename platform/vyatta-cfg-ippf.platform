@@ -1,3 +1,2 @@
 [Platform ufi.s9500-30xs]
-Features=vyatta-ippf-v1:ip-packet-filter
 Yang=vyatta-ippf-deviations-siad-v1.yang

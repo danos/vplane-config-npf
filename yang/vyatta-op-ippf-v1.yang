@@ -71,6 +71,10 @@ module vyatta-op-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter operation mode commands.";
 
+	revision 2020-10-21 {
+		description "Permanently enabled ip-packet-filter.";
+	}
+
 	revision 2020-05-08 {
                 description "Add Egress IP Packet Filter support.";
         }
@@ -80,7 +84,6 @@ module vyatta-op-ippf-v1 {
 	}
 
 	opd:augment /op-show:show/op-show-security:security {
-		if-feature ippf:ip-packet-filter;
 		opd:command ip-packet-filter {
 			opd:help "Show IP packet filter";
 
@@ -152,7 +155,6 @@ module vyatta-op-ippf-v1 {
 	} /* show */
 
 	opd:augment /op-clear:clear/op-clear-security:security {
-		if-feature ippf:ip-packet-filter;
 		opd:command ip-packet-filter {
 			opd:help "Clear IP packet filter";
 

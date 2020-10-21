@@ -71,9 +71,10 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-08-26 {
+	revision 2020-10-21 {
 		description "Added counter type option 'auto-per-action'.
-		             Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters";
+		             Added 'name' leaf in the statistics output for carrying 'auto-per-action' counters.
+		             Permanently enabled ip-packet-filter.";
 	}
 
 	revision 2020-05-08 {
@@ -422,7 +423,6 @@ module vyatta-ippf-v1 {
 	}
 
 	augment /security:security {
-		if-feature ip-packet-filter;
 		description "Top-level IP packet filter command";
 		container ip-packet-filter {
 			description  "IP packet filter";
@@ -601,7 +601,6 @@ module vyatta-ippf-v1 {
 	}
 
 	rpc get-statistics {
-		if-feature ip-packet-filter;
 		description "Get IP Packet Filter statistics. The inputs specify optional filters to limit the returned statistics";
 		configd:call-rpc "vyatta-ippf-rpc --show";
 
@@ -683,7 +682,6 @@ module vyatta-ippf-v1 {
 	}
 
 	rpc clear-statistics {
-		if-feature ip-packet-filter;
 		description "Clear IP Packet Filter statistics. The inputs specify optional filters to limit the cleared statistics";
 		configd:call-rpc "vyatta-ippf-rpc --clear";
 		input {
