@@ -1,3 +1,10 @@
+vplane-config-npf (4.3.4) unstable; urgency=medium
+
+  * ippf: use minimal number of spaces when aligning
+  * ippf: ensure cannot match on L4 fields if matching fragments
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 26 Oct 2020 10:33:07 +0000
+
 vplane-config-npf (4.3.3) unstable; urgency=medium
 
   [ Ian Wilson ]
