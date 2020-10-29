@@ -234,8 +234,11 @@ sub build_rule {
     } else {
         $val = $config->returnValue("protocol");
         if ( defined($val) ) {
-            $proto_num = get_proto_num($val);
-            $proto_num = $val if !defined($proto_num);
+            # An explicit protocol match of RH can never work
+            if ( !defined($ipv6_rt) ) {
+                $proto_num = get_proto_num($val);
+                $proto_num = $val if !defined($proto_num);
+            }
         } else {
 
             # Try to infer protocol number if not defined and we have sufficient
@@ -244,8 +247,6 @@ sub build_rule {
                 $proto_num = 1;
             } elsif ( $config->exists("icmpv6") ) {
                 $proto_num = 58;
-            } elsif ( defined($ipv6_rt) ) {
-                $proto_num = 43;
             } elsif ( defined($tcp_flags) ) {
                 $proto_num = 6;
             }
