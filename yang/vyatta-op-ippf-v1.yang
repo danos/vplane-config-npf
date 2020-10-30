@@ -2,9 +2,6 @@ module vyatta-op-ippf-v1 {
 	namespace "urn:vyatta.com:mgmt:vyatta-op-ippf:1";
 	prefix vyatta-op-ippf-v1;
 
-	import vyatta-ippf-v1 {
-		prefix ippf;
-	}
 	import vyatta-opd-extensions-v1 {
 		prefix opd;
 	}
@@ -71,13 +68,14 @@ module vyatta-op-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter operation mode commands.";
 
-	revision 2020-10-21 {
-		description "Permanently enabled ip-packet-filter.";
+	revision 2020-11-02 {
+		description "Permanently enabled ip-packet-filter. " +
+			"Removed import of vyatta-ippf-v1.yang";
 	}
 
 	revision 2020-05-08 {
-                description "Add Egress IP Packet Filter support.";
-        }
+		description "Add Egress IP Packet Filter support.";
+	}
 
 	revision 2019-06-20 {
 		description "Initial revision.";
