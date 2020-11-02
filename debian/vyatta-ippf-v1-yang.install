@@ -4,5 +4,5 @@ opt/vyatta/sbin/vyatta-ippf-rpc
 opt/vyatta/sbin/validate-ippf
 
 platform/vyatta-cfg-ippf.platform lib/vyatta-platform/platforms
-platform/vyatta-ippf-deviations-siad-v1.yang lib/vyatta-platform/yang
+platform/vyatta-ippf-deviations-qax-v1.yang lib/vyatta-platform/yang
 platform/vyatta-ippf-deviations-j2-v1.yang lib/vyatta-platform/yang

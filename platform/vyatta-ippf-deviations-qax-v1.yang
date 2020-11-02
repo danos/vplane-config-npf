@@ -1,6 +1,6 @@
-module vyatta-ippf-deviations-siad-v1 {
-	namespace "urn:vyatta.com:mgmt:vyatta-ippf-deviations-siad:1";
-	prefix vyatta-ippf-deviations-siad-v1;
+module vyatta-ippf-deviations-qax-v1 {
+	namespace "urn:vyatta.com:mgmt:vyatta-ippf-deviations-qax:1";
+	prefix vyatta-ippf-deviations-qax-v1;
 
 	import vyatta-security-v1 {
 		prefix security;
@@ -57,8 +57,9 @@ module vyatta-ippf-deviations-siad-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2020-10-14 {
-		description "Adding egress ACL support for IP_DSCP & IPv6 HopLimit.";
+	revision 2020-11-02 {
+		description "Adding egress ACL support for IP_DSCP & IPv6 HopLimit.
+			     Rename this module and file.";
 	}
 
 	revision 2020-06-25 {
