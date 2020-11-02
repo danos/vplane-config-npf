@@ -1,3 +1,10 @@
+vplane-config-npf (4.3.5) unstable; urgency=medium
+
+  [ Derek Fawcus ]
+  * NPF: Allow for more flexible IPv6 RT RH matches
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 02 Nov 2020 15:47:11 +0000
+
 vplane-config-npf (4.3.4) unstable; urgency=medium
 
   * ippf: use minimal number of spaces when aligning
