@@ -1,3 +1,10 @@
+vplane-config-npf (4.3.6) unstable; urgency=medium
+
+  [ Ian Wilson ]
+  * Unused import in vyatta-op-ippf-v1.yang
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 03 Nov 2020 15:07:02 +0000
+
 vplane-config-npf (4.3.5) unstable; urgency=medium
 
   [ Derek Fawcus ]
