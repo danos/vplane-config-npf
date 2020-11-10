@@ -73,6 +73,14 @@ module vyatta-resources-packet-classifier-v1 {
 		description "Generic packet classifier support";
 	}
 
+	notification rules-update {
+		description "Classifier rules have been updated";
+		leaf-list groups {
+			type string;
+			description "Names of the classifier groups";
+		}
+	}
+
 	grouping gpc-results {
 		description "Definition of generic packet classifier results";
 		list results {

@@ -92,6 +92,12 @@ class Config(vci.Config):
 
         self.json_config = new_json_config
 
+        if gpc_config.modified_groups:
+            client = vci.Client()
+            client.emit(GPC_NAMESPACE, "rules-update",
+                        {f"{GPC_NAMESPACE}:groups":
+                         gpc_config.modified_groups})
+
     def get(self):
         """ Get current config """
         LOG.debug("Config:get")

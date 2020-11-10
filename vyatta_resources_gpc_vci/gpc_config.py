@@ -74,6 +74,11 @@ class GpcConfig:
 
         return groups
 
+    @property
+    def modified_groups(self):
+        """Retrieve a list of modified groups """
+        return self._modified_groups
+
     def get_group(self, group_name):
         """ Retrieve a group by name """
         return self._groups.get(group_name)
