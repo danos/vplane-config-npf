@@ -1,3 +1,10 @@
+vplane-config-npf (4.2.9) unstable; urgency=medium
+
+  [ Alan Dewar ]
+  * Uprev dataplane qos dependency
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 23 Nov 2020 11:14:36 +0000
+
 vplane-config-npf (4.2.8) unstable; urgency=medium
 
   [ William Ivory ]
