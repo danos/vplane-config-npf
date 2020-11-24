@@ -1,3 +1,10 @@
+vplane-config-npf (4.0.20) unstable; urgency=medium
+
+  [ Alan Dewar ]
+  * Uprev dataplane qos dependency
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 24 Nov 2020 11:14:02 +0000
+
 vplane-config-npf (4.0.19) unstable; urgency=medium
 
   * Allow 0 as a possible value in a port range for matching pkts
