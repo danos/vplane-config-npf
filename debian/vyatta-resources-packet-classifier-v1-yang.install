@@ -1,1 +1,2 @@
 usr/share/configd/yang/vyatta-resources-packet-classifier-v1.yang
+platform/vyatta-resources-packet-classifier-deviations-j2-v1.yang lib/vyatta-platform/yang

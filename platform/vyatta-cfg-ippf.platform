@@ -2,4 +2,6 @@
 Yang=vyatta-ippf-deviations-qax-v1.yang
 
 [Platform ufi.s9700-53dx]
-Yang=vyatta-ippf-deviations-j2-v1.yang
+Yang=vyatta-ippf-deviations-j2-v1.yang, \
+vyatta-resources-packet-classifier-deviations-j2-v1.yang
+Features=vyatta-resources-packet-classifier-v1:generic-packet-classifier
