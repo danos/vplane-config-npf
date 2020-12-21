@@ -131,6 +131,15 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
                     sh script: "perlcritic --quiet --severity 5 . 2>&1 | tee perlcritic.txt", returnStatus: true
                 }
             }
+            post {
+                always {
+                    dir("${env.SRC_DIR}") {
+                        recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+                            enabledForFailure: true,
+                            qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+                    }
+                }
+            }
         }
 
         stage('Flake8') {
@@ -140,6 +149,17 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
 pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
 python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
 '''
+                }
+            }
+            post {
+                always {
+                    dir("${env.SRC_DIR}") {
+                        recordIssues tool: flake8(pattern: 'flake8.out'),
+                            enabledForFailure: true,
+                            referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
+                            qualityGates: [[type: 'TOTAL', threshold: 22, unstable: true],
+                                           [type: 'NEW', threshold: 1, unstable: true]]
+                    }
                 }
             }
         }
@@ -184,18 +204,6 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
 
     post {
         always {
-            dir("${env.SRC_DIR}") {
-                    recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
-                        enabledForFailure: true,
-                        qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
-
-                    recordIssues tool: flake8(pattern: 'flake8.out'),
-                        enabledForFailure: true,
-                        referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
-                        qualityGates: [[type: 'TOTAL', threshold: 22, unstable: true],
-                                       [type: 'NEW', threshold: 1, unstable: true]]
-            }
-
             sh 'rm -f *.deb' // top-level dir
             sh "osc chroot --wipe --force --root ${env.OSC_BUILD_ROOT}"
             deleteDir()
