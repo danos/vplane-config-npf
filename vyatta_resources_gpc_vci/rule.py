@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2020, AT&T Intellectual Property.
+# Copyright (c) 2020-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
@@ -82,9 +82,9 @@ class Rule:
             # currently a list in yang with max 1 item
             for p in ports_list:
                 if is_dest:
-                    match_message.src_port = p
+                    match_message.dest_port = p
                 else:
-                    match_message.dst_port = p
+                    match_message.src_port = p
 
     def _match_addr_port(self, is_dest, match_val, rule_message):
         """ Build protobuf matches for src or dst IP address or port number """
