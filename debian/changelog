@@ -1,3 +1,41 @@
+vplane-config-npf (4.4.0) unstable; urgency=medium
+
+  [ bs775m ]
+  * vyatta-cfg :ACL Support for IP_DSCP, IPv6 HopLimit.
+
+  [ Derek Fawcus ]
+  * NPF: Allow for more flexible IPv6 RT RH matches
+
+  [ Ian Wilson ]
+  * Unused import in vyatta-op-ippf-v1.yang
+
+  [ Gavin Shearer ]
+  * ippf: enable IPPF Yang for platform ufi.s9700-53dx (Jericho 2)
+  * ippf: rename YANG platform file for SIAD/QAX to use name "qax"
+
+  [ Brian Russell ]
+  * Uprev dataplane qos dependency (Fixes: VRVDR-53324)
+
+  [ Duncan Eastoe ]
+  * debian: Swap libvyatta-cfg1 dependency
+
+  [ Brian Russell ]
+  * Add generic packet classifier yang
+  * Add generic packet classifier VCI component
+  * Send a notification on GPC config change
+  * Add J2 platform support and deviations for GPC
+
+  [ Nicholas Brown ]
+  * Move post step to specific stage
+
+  [ Paul Aitken ]
+  * Fix revision statement whitespace
+
+  [ Alan Dewar ]
+  * GPC: use correct protobuf field names (Fixes: VRVDR-54132)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 19 Jan 2021 22:18:57 +0000
+
 vplane-config-npf (4.3.4) unstable; urgency=medium
 
   * ippf: use minimal number of spaces when aligning
