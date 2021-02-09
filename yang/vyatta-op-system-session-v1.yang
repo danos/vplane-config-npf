@@ -27,7 +27,7 @@ module vyatta-op-system-session-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2020, AT&T Intellectual Property.
+		"Copyright (c) 2017-2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -65,6 +65,11 @@ module vyatta-op-system-session-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for session-related operation mode commands.";
+
+	revision 2021-02-08 {
+		description "Escalate privileges of show/clear/delete" +
+			" session commands.";
+	}
 
 	revision 2020-03-04 {
 		description "ip:[port] filter format in delete session table command
@@ -161,6 +166,9 @@ module vyatta-op-system-session-v1 {
 
 		opd:command session {
 			opd:help "Show system session information";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command limit {
 				opd:help "Show session limit information";
@@ -324,6 +332,9 @@ module vyatta-op-system-session-v1 {
 
 		opd:command session {
 			opd:help "Delete system session information";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command table {
 				opd:repeatable true;
@@ -356,6 +367,9 @@ module vyatta-op-system-session-v1 {
 
 		opd:command session {
 			opd:help "Clear system session information";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command limit {
 				opd:help "Clear session limiter";

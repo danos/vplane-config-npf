@@ -32,7 +32,7 @@ module vyatta-op-service-nat-cgnat-v1 {
          Web: www.att.com";
 
     description
-        "Copyright (c) 2019-2020, AT&T Intellectual Property.  All rights reserved.
+        "Copyright (c) 2019-2021, AT&T Intellectual Property.  All rights reserved.
 
         Redistribution and use in source and binary forms,
         with or without modification, are permitted provided
@@ -69,6 +69,10 @@ module vyatta-op-service-nat-cgnat-v1 {
         SPDX-License-Identifier: BSD-3-Clause
 
         YANG module for CGNAT operation mode commands";
+
+    revision 2021-02-10 {
+        description "Some commands need run with escalated privileges";
+    }
 
     revision 2020-05-27 {
         description "Add show log.";
@@ -188,6 +192,9 @@ module vyatta-op-service-nat-cgnat-v1 {
 
         opd:command cgnat {
             opd:help "Show CGNAT information";
+            opd:inherit "" {
+                opd:privileged true;
+            }
 
             opd:command summary {
                 opd:help "Show summary of CGNAT information";
@@ -316,6 +323,9 @@ module vyatta-op-service-nat-cgnat-v1 {
     opd:augment /clear:clear {
         opd:command cgnat {
             opd:help "Clear CGNAT information";
+            opd:inherit "" {
+                opd:privileged true;
+            }
 
             opd:command session {
                 opd:help "Delete or clear statistics for matching CGNAT sessions";
@@ -390,6 +400,9 @@ module vyatta-op-service-nat-cgnat-v1 {
             }
             opd:command subscriber {
                 opd:help "Update CGNAT subscriber information";
+                opd:inherit "" {
+                    opd:privileged true;
+                }
 
                 opd:argument subscriber-prefix {
                     opd:help "Update CGNAT subscriber information for " +
