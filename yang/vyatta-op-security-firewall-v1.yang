@@ -32,7 +32,7 @@ module vyatta-op-security-firewall-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2019, AT&T Intellectual Property.
+		"Copyright (c) 2017-2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -71,6 +71,10 @@ module vyatta-op-security-firewall-v1 {
 
 		 YANG module for firewall-related operation mode commands.";
 
+	revision 2020-02-08 {
+		description "Escalate privilege of show/clear firewall";
+	}
+
 	revision 2019-11-14 {
 		description "Correct spellings of 'specified'";
 	}
@@ -102,6 +106,9 @@ module vyatta-op-security-firewall-v1 {
 		opd:command firewall {
 			opd:help "Show dataplane firewall information";
 			opd:on-enter "vyatta-dp-npf-show-rules all: fw-in fw-out local bridge zone";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command detail {
 				opd:help "Show dataplane firewall detail information";
@@ -161,6 +168,9 @@ module vyatta-op-security-firewall-v1 {
 		opd:command firewall {
 			opd:help "Clear firewall statistics";
 			opd:on-enter "vyatta-dp-npf-clear fw";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command bridge {
 				opd:help "Clear bridge statistics";
@@ -212,6 +222,9 @@ module vyatta-op-security-firewall-v1 {
 			if-feature fw:zone-based-firewall;
 			opd:help "Clear zone statistics";
 			opd:on-enter "vyatta-dp-npf-clear zone";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:option from {
 				opd:help "Clear statistics for the specified 'from' zone";
