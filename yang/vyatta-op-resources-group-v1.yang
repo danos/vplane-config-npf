@@ -17,7 +17,7 @@ module vyatta-op-resources-group-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2017-2020, AT&T Intellectual Property.
+		"Copyright (c) 2017-2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -56,6 +56,10 @@ module vyatta-op-resources-group-v1 {
 
 		 YANG module for resources-group-related operation mode commands.";
 
+	revision 2021-02-10 {
+		description "Escalate privileges of operational commands";
+	}
+
 	revision 2020-06-11 {
 		description "npf-address-group-show.pl replaced with python file. " +
 					"Missing show options added. " +
@@ -76,6 +80,9 @@ module vyatta-op-resources-group-v1 {
 		opd:command address-group {
 			opd:help "Show address-group information";
 			opd:on-enter 'npf-address-group-show';
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			opd:command list {
 				opd:help "Show list of all address-groups";
