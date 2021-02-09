@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2020, AT&T Intellectual Property.
+# Copyright (c) 2020-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -90,7 +90,7 @@ def ippf_show_rpc(filters, client):
     match_interfaces = filters.get("interfaces", "")
     match_directions = filters.get("directions", "")
     match_groupnames = filters.get("groups", "")
-    match_rulenums = str(filters.get("rules", ""))
+    match_rulenums = list(map(str, filters.get("rules", "")))
     match_actions = filters.get("actions", "")
 
     rownum = 0
