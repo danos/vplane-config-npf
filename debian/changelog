@@ -1,3 +1,17 @@
+vplane-config-npf (4.4.1) unstable; urgency=medium
+
+  [ Gavin Shearer ]
+  * Update the end date of copyrights to be 2021
+
+  [ Nicholas Brown ]
+  * referenceJobName is deprecated
+  * Update copyright date
+
+  [ Gavin Shearer ]
+  * ippf: fix issue of show cmd matching incorrect rule numbers
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Wed, 10 Feb 2021 18:29:38 +0000
+
 vplane-config-npf (4.4.0) unstable; urgency=medium
 
   [ bs775m ]
