@@ -134,6 +134,7 @@ dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-pol
             post {
                 always {
                     dir("${env.SRC_DIR}") {
+                        discoverGitReferenceBuild()
                         recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
                             enabledForFailure: true,
                             qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
@@ -154,9 +155,9 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
             post {
                 always {
                     dir("${env.SRC_DIR}") {
+                        discoverGitReferenceBuild()
                         recordIssues tool: flake8(pattern: 'flake8.out'),
                             enabledForFailure: true,
-                            referenceJobName: "DANOS/${SRC_DIR}/${env.REF_BRANCH}",
                             qualityGates: [[type: 'TOTAL', threshold: 22, unstable: true],
                                            [type: 'NEW', threshold: 1, unstable: true]]
                     }
