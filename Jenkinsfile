@@ -158,8 +158,8 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                         discoverGitReferenceBuild()
                         recordIssues tool: flake8(pattern: 'flake8.out'),
                             enabledForFailure: true,
-                            qualityGates: [[type: 'TOTAL', threshold: 22, unstable: true],
-                                           [type: 'NEW', threshold: 1, unstable: true]]
+                            qualityGates: [[type: 'TOTAL', threshold: 20, unstable: true],
+                                           [type: 'NEW', threshold: 9, unstable: true]]
                     }
                 }
             }
