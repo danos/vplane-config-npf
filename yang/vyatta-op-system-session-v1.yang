@@ -66,7 +66,7 @@ module vyatta-op-system-session-v1 {
 
 		 YANG module for session-related operation mode commands.";
 
-	revision 2021-02-08 {
+	revision 2021-02-17 {
 		description "Escalate privileges of show/clear/delete" +
 			" session commands.";
 	}
@@ -275,6 +275,9 @@ module vyatta-op-system-session-v1 {
 			status obsolete; // replaced by "session table"
 			opd:help "Show session table information";
 			opd:on-enter "vyatta-dp-npf-show-sessions";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			uses show-session-table-cmds;
 		}
