@@ -252,6 +252,9 @@ module vyatta-op-system-session-v1 {
 			status obsolete; // replaced by "session table"
 			opd:help "Show session table information";
 			opd:on-enter "vyatta-dp-npf-show-sessions";
+			opd:inherit "" {
+				opd:privileged true;
+			}
 
 			uses show-session-table-cmds;
 		}

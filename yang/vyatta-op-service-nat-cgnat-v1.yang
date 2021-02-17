@@ -378,6 +378,7 @@ module vyatta-op-service-nat-cgnat-v1 {
                 opd:repeatable true;
                 opd:inherit "session filters for clearing" {
                     opd:on-enter "vyatta-dp-cgnat-sess-op-yang update ${@: 4}";
+                    opd:privileged true;
                 }
                 uses session-filter;
                 opd:command statistics {
