@@ -1,3 +1,11 @@
+vplane-config-npf (4.3.8) unstable; urgency=medium
+
+  [ Paul Carson ]
+  * Enable show/clear commands for operator users (Closes: VRVDR-54360)
+  * Escalate privileges for some show/update commands (Closes: VRVDR-54360)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 22 Feb 2021 14:03:09 +0000
+
 vplane-config-npf (4.3.7) unstable; urgency=medium
 
   [ Brian Russell ]
