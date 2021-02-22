@@ -1,3 +1,16 @@
+vplane-config-npf (4.4.2) unstable; urgency=medium
+
+  [ Paul Carson ]
+  * Enable show/clear commands for operator users (Closes: VRVDR-54360)
+
+  [ Paul Aitken ]
+  * set flake8 qualitygate appropriately
+
+  [ Paul Carson ]
+  * Escalate privileges for some show/update commands (Closes: VRVDR-54360)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Mon, 22 Feb 2021 14:09:30 +0000
+
 vplane-config-npf (4.4.1) unstable; urgency=medium
 
   [ Gavin Shearer ]
