@@ -321,4 +321,4 @@ Package: vyatta-resources-packet-classifier-v1-yang
 Architecture: all
 Depends: vplane-config-npf (= ${binary:Version}), ${yang:Depends}
 Description: Generic packet classifier yang
-  YANG module for the Vyatta Generic Packet Classifier
+ YANG module for the Vyatta Generic Packet Classifier
