@@ -26,7 +26,7 @@ module vyatta-resources-packet-classifier-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2020, AT&T Intellectual Property.
+		"Copyright (c) 2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -65,7 +65,7 @@ module vyatta-resources-packet-classifier-v1 {
 
 		 YANG module for Vyatta Generic Packet Classifier";
 
-	revision 2020-12-02 {
+	revision 2021-03-22 {
 		description "Initial revision.";
 	}
 
@@ -93,6 +93,7 @@ module vyatta-resources-packet-classifier-v1 {
 				configd:help "Result";
 				type vy-types:alpha-numeric {
 					configd:help "Result";
+					length 1..16;
 				}
 			}
 		}
@@ -115,6 +116,7 @@ module vyatta-resources-packet-classifier-v1 {
 					configd:help "Group name";
 					type vy-types:alpha-numeric {
 						configd:help "Group name";
+						length 1..16;
 					}
 				}
 				leaf description {
