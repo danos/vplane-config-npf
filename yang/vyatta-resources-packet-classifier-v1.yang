@@ -75,9 +75,9 @@ module vyatta-resources-packet-classifier-v1 {
 
 	notification rules-update {
 		description "Classifier rules have been updated";
-		leaf-list groups {
+		leaf-list classifiers {
 			type string;
-			description "Names of the classifier groups";
+			description "Names of the classifiers";
 		}
 	}
 
@@ -142,39 +142,39 @@ module vyatta-resources-packet-classifier-v1 {
 	grouping gpc-common {
 		description "Common elements in a packet classifier";
 		leaf description {
-			description  "Group description";
-			configd:help "Group description";
+			description  "Classifier description";
+			configd:help "Classifier description";
 			type string;
 		}
 		leaf ip-version {
-			description  "Traffic this group applies to";
-			configd:help "Traffic this group applies to";
+			description  "Type of traffic this classifier applies to";
+			configd:help "Type of traffic this classifier applies to";
 			mandatory true;
 			type enumeration {
 				enum "ipv4" {
-					description  "Group only applies to IPv4 traffic";
-					configd:help "Group only applies to IPv4 traffic";
+					description  "Classifier only applies to IPv4 traffic";
+					configd:help "Classifier only applies to IPv4 traffic";
 				}
 				enum "ipv6" {
-					description  "Group only applies to IPv6 traffic";
-					configd:help "Group only applies to IPv6 traffic";
+					description  "Classifier only applies to IPv6 traffic";
+					configd:help "Classifier only applies to IPv6 traffic";
 				}
 			}
 		}
 	}
 
 	grouping gpc-local-classifiers {
-		description "Local definitions of generic packet classifiers";
-		list group {
-			description  "generic packet classifier group";
-			configd:help "generic packet classifier group";
-			key "group-name";
+		description "Local definitions of packet classifiers";
+		list classifier {
+			description  "packet classifier";
+			configd:help "packet classifier";
+			key "classifier-name";
 			min-elements 1;
-			leaf group-name {
-				description  "Group name";
-				configd:help "Group name";
+			leaf classifier-name {
+				description  "Classifier name";
+				configd:help "Classifier name";
 				type vy-types:alpha-numeric {
-					configd:help "Group name";
+					configd:help "Classifier name";
 					length 1..16;
 				}
 			}

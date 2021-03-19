@@ -17,7 +17,7 @@ module vyatta-resources-packet-classifier-deviations-j2-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2020, AT&T Intellectual Property.
+		"Copyright (c) 2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -56,11 +56,11 @@ module vyatta-resources-packet-classifier-deviations-j2-v1 {
 
 		 YANG module for Vyatta Generic Packet Classifier";
 
-	revision 2020-11-23 {
+	revision 2021-04-16 {
 		description "Initial version.";
 	}
 
-	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:group/pkt-class:rule/pkt-class:match/pkt-class:fragment {
+	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:classifier/pkt-class:rule/pkt-class:match/pkt-class:fragment {
 		deviate add {
 			must "../../../pkt-class:ip-version = 'ipv4' or
 				../pkt-class:protocol/pkt-class:base/pkt-class:number = 44 or
@@ -70,11 +70,11 @@ module vyatta-resources-packet-classifier-deviations-j2-v1 {
 		}
 	}
 
-	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:group/pkt-class:rule/pkt-class:match/pkt-class:protocol/pkt-class:final {
+	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:classifier/pkt-class:rule/pkt-class:match/pkt-class:protocol/pkt-class:final {
 		deviate not-supported;
 	}
 
-	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:group {
+	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:classifier {
 		deviate add {
 			/*
 			 * Ensure that the total set of rules for IPv6 does not
