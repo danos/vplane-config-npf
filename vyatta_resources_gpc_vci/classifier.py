@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2020, AT&T Intellectual Property.
+# Copyright (c) 2020-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
 #
 """
-General Packet Classifier Group - a group of classification rules
+General Packet Classifier - a collection of classification rules
 """
 import logging
 
@@ -18,23 +18,23 @@ from vyatta_resources_gpc_vci.rule import Rule
 LOG = logging.getLogger('GPC VCI')
 
 
-class Group:
+class Classifier:
     """
-    A group of classification rules.
+    A collection of classification rules.
     """
-    def __init__(self, group_config):
-        """ Initialise group object """
+    def __init__(self, classifier_config):
+        """ Initialise classifier object """
 
-        self._name = group_config['group-name']
-        self._results = group_config['results']
+        self._name = classifier_config['classifier-name']
+        self._results = classifier_config['results']
         self._rules = []
         self._pb_message = GPCConfig_pb2.Rules()
-        if group_config.get('ip-version') == "ipv4":
+        if classifier_config.get('type') == "ipv4":
             self._pb_message.traffic_type = GPCConfig_pb2.IPV4
         else:
             self._pb_message.traffic_type = GPCConfig_pb2.IPV6
 
-        rules_list = group_config.get('rule')
+        rules_list = classifier_config.get('rule')
         if rules_list is not None:
             for rule_dict in rules_list:
                 # Skip disabled rules

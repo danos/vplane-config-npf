@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: LGPL-2.1-only
 #
 """
-General Packet Classifier Rule - a classification rule within a group
+General Packet Classifier Rule - a classification rule within a classifier
 """
 import logging
 import ipaddress
@@ -17,7 +17,7 @@ LOG = logging.getLogger('GPC VCI')
 
 class Rule:
     """
-    A classification rule within a generic packet classifier group.
+    A classification rule within a generic packet classifier.
     It consists of a set of match criteria and a result.
     """
     def __init__(self, rule_config, pb_message):

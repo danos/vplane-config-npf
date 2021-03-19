@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2020, AT&T Intellectual Property.
+# Copyright (c) 2020-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
@@ -92,11 +92,11 @@ class Config(vci.Config):
 
         self.json_config = new_json_config
 
-        if gpc_config.modified_groups:
+        if gpc_config.modified_classifiers:
             client = vci.Client()
             client.emit(GPC_NAMESPACE, "rules-update",
-                        {f"{GPC_NAMESPACE}:groups":
-                         gpc_config.modified_groups})
+                        {f"{GPC_NAMESPACE}:classifiers":
+                         gpc_config.modified_classifiers})
 
     def get(self):
         """ Get current config """
@@ -144,17 +144,17 @@ if __name__ == "__main__":
         rep.bind("ipc://tmp/gpc_update.socket")
 
         while True:
-            group_name = rep.recv_string()
-            LOG.debug(f"grp req {group_name}")
+            classifier_name = rep.recv_string()
+            LOG.debug(f"grp req {classifier_name}")
 
             reply = b"None"
             if gpc_config is not None:
-                group = gpc_config.get_group(group_name)
-                if group is not None:
-                    reply = group.pb_message()
+                classifier = gpc_config.get_classifier(classifier_name)
+                if classifier is not None:
+                    reply = classifier.pb_message()
 
             rep.send(reply)
-            LOG.debug(f"sent grp {group_name}")
+            LOG.debug(f"sent grp {classifier_name}")
 
     except Exception:
         LOG.error(f"Unexpected error: {sys.exc_info()[0]}")

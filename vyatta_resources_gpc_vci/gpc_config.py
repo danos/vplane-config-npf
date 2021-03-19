@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2020, AT&T Intellectual Property.
+# Copyright (c) 2020-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: LGPL-2.1-only
@@ -11,7 +11,7 @@ Config for General Packet Classifier
 
 import logging
 
-from vyatta_resources_gpc_vci.group import Group
+from vyatta_resources_gpc_vci.classifier import Classifier
 
 LOG = logging.getLogger('GPC VCI')
 
@@ -25,60 +25,60 @@ class GpcConfig:
     """
     def __init__(self, new_config, old_config):
         """ Initialise config object """
-        self._groups = {}
-        self._modified_groups = []
+        self._classifiers = {}
+        self._modified_classifiers = []
 
-        old_group_names = self._get_group_names_from_config(old_config)
-        groups = self._build_groups_from_config(new_config)
+        old_class_names = self._get_classifier_names_from_config(old_config)
+        classifiers = self._build_classifiers_from_config(new_config)
 
-        for name in groups:
-            if name in old_group_names:
-                self._modified_groups.append(name)
+        for name in classifiers:
+            if name in old_class_names:
+                self._modified_classifiers.append(name)
 
-        self._groups = groups
+        self._classifiers = classifiers
 
-    def _get_group_config(self, cfg_dict):
-        """ Get the group config """
-        group_list = None
+    def _get_classifier_config(self, cfg_dict):
+        """ Get the classifier config """
+        classifier_list = None
 
         if cfg_dict is not None:
             res_dict = cfg_dict.get(f"{RES_NAMESPACE}:resources")
             if res_dict is not None:
                 gpc_dict = res_dict.get(f"{GPC_NAMESPACE}:packet-classifier")
                 if gpc_dict is not None:
-                    group_list = gpc_dict.get('group')
+                    classifier_list = gpc_dict.get('classifier')
 
-        return group_list
+        return classifier_list
 
-    def _get_group_names_from_config(self, cfg_dict):
-        """ Get a list of group names from config"""
+    def _get_classifier_names_from_config(self, cfg_dict):
+        """ Get a list of classifier names from config"""
         names = []
-        group_list = self._get_group_config(cfg_dict)
+        classifier_list = self._get_classifier_config(cfg_dict)
 
-        if group_list is not None:
-            for group_dict in group_list:
-                names.append(group_dict['group-name'])
+        if classifier_list is not None:
+            for classifier_dict in classifier_list:
+                names.append(classifier_dict['classifier-name'])
 
         return names
 
-    def _build_groups_from_config(self, cfg_dict):
-        """ Build a dictionary of groups """
-        groups = {}
+    def _build_classifiers_from_config(self, cfg_dict):
+        """ Build a dictionary of classifiers """
+        classifiers = {}
 
-        group_list = self._get_group_config(cfg_dict)
+        classifier_list = self._get_classifier_config(cfg_dict)
 
-        if group_list is not None:
-            for group_dict in group_list:
-                group = Group(group_dict)
-                groups[group.name] = group
+        if classifier_list is not None:
+            for classifier_dict in classifier_list:
+                classifier = Classifier(classifier_dict)
+                classifiers[classifier.name] = classifier
 
-        return groups
+        return classifiers
 
     @property
-    def modified_groups(self):
-        """Retrieve a list of modified groups """
-        return self._modified_groups
+    def modified_classifiers(self):
+        """Retrieve a list of modified classifiers """
+        return self._modified_classifiers
 
-    def get_group(self, group_name):
-        """ Retrieve a group by name """
-        return self._groups.get(group_name)
+    def get_classifier(self, classifier_name):
+        """ Retrieve a classifier by name """
+        return self._classifiers.get(classifier_name)
