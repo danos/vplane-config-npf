@@ -1,3 +1,13 @@
+vplane-config-npf (4.4.3) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * Fix lintian warning
+
+  [ Alan Dewar ]
+  * GPC: limit group and result names to 16 characters (Fixes: VRVDR-54757)
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 25 Mar 2021 12:20:27 +0000
+
 vplane-config-npf (4.4.2) unstable; urgency=medium
 
   [ Paul Carson ]
