@@ -2,6 +2,10 @@ module vyatta-ippf-deviations-j2-v1 {
 	namespace "urn:vyatta.com:mgmt:vyatta-ippf-deviations-j2:1";
 	prefix vyatta-ippf-deviations-j2-v1;
 
+	import configd-v1 {
+		prefix configd;
+	}
+
 	import vyatta-security-v1 {
 		prefix security;
 	}
@@ -18,7 +22,7 @@ module vyatta-ippf-deviations-j2-v1 {
 		 Web: www.att.com";
 
 	description
-		"Copyright (c) 2020, AT&T Intellectual Property.
+		"Copyright (c) 2020-2021, AT&T Intellectual Property.
 		 All rights reserved.
 
 		 Redistribution and use in source and binary forms,
@@ -56,6 +60,11 @@ module vyatta-ippf-deviations-j2-v1 {
 		 SPDX-License-Identifier: BSD-3-Clause
 
 		 YANG module for Vyatta IP Packet Filter";
+
+	revision 2021-04-06 {
+		description "Update validation to check not running out of
+			     statistics resources.";
+	}
 
 	revision 2020-10-23 {
 		description "Initial version.";
@@ -102,6 +111,15 @@ module vyatta-ippf-deviations-j2-v1 {
 			     "8 * (count(ippf:group[ippf:ip-version = 'ipv6' and ippf:group-name = ../ippf:interface/ippf:out]/ippf:rule[not(ippf:disable)]/ippf:match[ippf:dscp]) > 0) + 22 <= 320" {
 				error-message "IPv6 output matches across all groups would exceed TCAM key space";
 			}
+		}
+		deviate delete {
+			configd:validate "validate-ippf";
+		}
+		deviate add {
+			// Note: in and out statistics maximums are different
+			// intentionally, as due to a chip issue the index 0
+			// statistic cannot be used for the out direction.
+			configd:validate "validate-ippf --max-in-stats 4096 --max-out-stats 4095";
 		}
 	}
 }

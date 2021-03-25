@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2021 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -8,6 +8,8 @@
 # Validate IP Packet Filter configuration.
 #
 
+import sys
+import getopt
 from vyatta import configd
 
 
@@ -16,8 +18,104 @@ BASE_ADDRESS_PATH = "security ip-packet-filter"
 STATUS_SUCCESS = 0
 STATUS_FAILED = 1
 
+STAT_MAX = {
+    "in": 0,
+    "out": 0,
+}
 
-def validate_ippf_interface_cfg(client):
+
+def err(msg):
+    """ prints an error to stderr """
+    print(msg, file=sys.stderr)
+
+
+def process_options():
+    """ process command-line options """
+    try:
+        opts, _ = getopt.getopt(sys.argv[1:], "", ['max-in-stats=',
+                                                   'max-out-stats='])
+    except getopt.GetoptError as opt_error:
+        err(opt_error)
+        err(f"usage: {sys.argv[0]} [--max-in-stats <num>] "
+            f"[--max-out-stats <num>]")
+        sys.exit(2)
+
+    try:
+        for opt, arg in opts:
+            if opt in '--max-in-stats':
+                STAT_MAX['in'] = int(arg)
+            elif opt in '--max-out-stats':
+                STAT_MAX['out'] = int(arg)
+    except ValueError:
+        err("Ensure values of parameters are numbers")
+        sys.exit(2)
+
+
+def group_stats_count(grp):
+    """ Count how many statistics entries are needed for the rules. """
+
+    ctrs = grp.get('counters')
+    if not ctrs:
+        return 0
+
+    ctrtype = ctrs.get('type')
+    if 'auto-per-action' in ctrtype:
+        if ctrtype['auto-per-action']:
+            return 1
+        return 2           # all action types
+
+    if 'auto-per-rule' not in ctrtype:
+        return 0
+
+    rules = grp.get('rule')
+    if not rules:
+        return 0
+
+    count = 0
+
+    for rule in rules:
+        if 'disable' not in rule:
+            count += 1
+
+    return count
+
+
+def validate_maximum_stats_rules(ifcfg, grpcfg):
+    """ Check that the number of statistics that need allocated are not
+    greater than the total number that can be configured, for both 'in'
+    and 'out' directions. """
+
+    status = STATUS_SUCCESS
+
+    stat_count = {
+        "in": 0,
+        "out": 0
+    }
+
+    for direction in ["in", "out"]:
+
+        if STAT_MAX[direction] == 0:    # no limit
+            continue
+
+        for interface in ifcfg:
+
+            if not interface.get(direction):
+                continue
+
+            for grpname in interface[direction]:
+                for grp in grpcfg:
+                    if grp['group-name'] == grpname:
+                        stat_count[direction] += group_stats_count(grp)
+
+        if stat_count[direction] > STAT_MAX[direction]:
+            status = STATUS_FAILED
+            print(f"For direction '{direction}' the {stat_count[direction]} "
+                  f"statistics required is more than maximum supported "
+                  f"({STAT_MAX[direction]})\n")
+    return status
+
+
+def validate_ippf_cfg(client):
 
     try:
         cfg = client.tree_get_dict(BASE_ADDRESS_PATH)
@@ -31,6 +129,10 @@ def validate_ippf_interface_cfg(client):
         return STATUS_SUCCESS
 
     status = STATUS_SUCCESS
+
+    grpcfg = cfg["ip-packet-filter"].get("group")
+    if grpcfg:
+        status = validate_maximum_stats_rules(ifcfg, grpcfg)
 
     for interface in ifcfg:
         ifname = interface["interface-name"]
@@ -75,9 +177,10 @@ def validate_ippf_main():
         print("Cannot establish client session: '{}'".format(str(exc).strip()))
         return 1
 
-    return validate_ippf_interface_cfg(client)
+    return validate_ippf_cfg(client)
 
 
 if __name__ == "__main__":
+    process_options()
     ret = validate_ippf_main()
     exit(ret)
