@@ -8,6 +8,10 @@
 # Validate IP Packet Filter configuration.
 #
 
+""" Perform validation of the IP packet filter (ippf) configuration. Note that
+    most of the validation is performed using YANG 'must' statements, but
+    some cannot be done using them, so instead it is done by this script. """
+
 import sys
 import getopt
 from vyatta import configd
@@ -116,6 +120,7 @@ def validate_maximum_stats_rules(ifcfg, grpcfg):
 
 
 def validate_ippf_cfg(client):
+    """ Validate the IP packet filter configuration. """
 
     try:
         cfg = client.tree_get_dict(BASE_ADDRESS_PATH)
@@ -143,37 +148,39 @@ def validate_ippf_cfg(client):
                 # So we only need to compare the address families
                 # if there are exactly two groups.
 
-                if len(interface[direction]) == 2:
+                if len(interface[direction]) != 2:
+                    continue
 
-                    # Get group names
-                    groupName1 = interface[direction][0]
-                    groupName2 = interface[direction][1]
+                # Get group names
+                group_name_1 = interface[direction][0]
+                group_name_2 = interface[direction][1]
 
-                    af1 = af2 = None
+                af1 = af2 = None
 
-                    # Walk group list to extract AFs
-                    for group in cfg["ip-packet-filter"]["group"]:
-                        if group["group-name"] == groupName1:
-                            af1 = group["ip-version"]
+                # Walk group list to extract AFs
+                for group in cfg["ip-packet-filter"]["group"]:
+                    if group["group-name"] == group_name_1:
+                        af1 = group["ip-version"]
 
-                        elif group["group-name"] == groupName2:
-                            af2 = group["ip-version"]
+                    elif group["group-name"] == group_name_2:
+                        af2 = group["ip-version"]
 
-                    # Finally we can compare the AFs
-                    if af1 == af2:
-                        status = STATUS_FAILED
-                        print("\n[{} interface {} {}]\n\n"
-                              "Configure only one group per address-family"
-                              .format(BASE_ADDRESS_PATH, ifname, direction))
+                # Finally we can compare the AFs
+                if af1 == af2:
+                    status = STATUS_FAILED
+                    print("\n[{} interface {} {}]\n\n"
+                          "Configure only one group per address-family"
+                          .format(BASE_ADDRESS_PATH, ifname, direction))
 
     return status
 
 
 def validate_ippf_main():
+    """ Connect to client then validate the IP packet filter configuration. """
 
     try:
         client = configd.Client()
-    except Exception as exc:
+    except configd.FatalException as exc:
         print("Cannot establish client session: '{}'".format(str(exc).strip()))
         return 1
 
@@ -182,5 +189,5 @@ def validate_ippf_main():
 
 if __name__ == "__main__":
     process_options()
-    ret = validate_ippf_main()
-    exit(ret)
+    RET = validate_ippf_main()
+    exit(RET)
