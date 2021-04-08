@@ -1,3 +1,10 @@
+vplane-config-npf (4.4.4) unstable; urgency=medium
+
+  * J2: Update validation to check not running out of statistics resources
+  * Fix some pylint3 warnings in existing code
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 08 Apr 2021 10:56:13 +0100
+
 vplane-config-npf (4.4.3) unstable; urgency=medium
 
   [ Paul Aitken ]
