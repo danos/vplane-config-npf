@@ -147,6 +147,16 @@ module vyatta-resources-packet-classifier-v1 {
 			type string;
 		}
 		leaf ip-version {
+			description
+				"Reserved for compatibility with IPPF.
+				 The IPPF match container is shared by IPPF and GPC.
+				 This has been created such that the address family specific
+				 must statements within IPPF may refer to either ip-version
+				 (as used by IPPF) or type (as used by GPC).";
+			type string;
+			status obsolete;
+		}
+		leaf type {
 			description  "Type of traffic this classifier applies to";
 			configd:help "Type of traffic this classifier applies to";
 			mandatory true;

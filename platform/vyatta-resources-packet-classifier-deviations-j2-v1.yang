@@ -62,7 +62,7 @@ module vyatta-resources-packet-classifier-deviations-j2-v1 {
 
 	deviation /resources:resources/pkt-class:packet-classifier/pkt-class:classifier/pkt-class:rule/pkt-class:match/pkt-class:fragment {
 		deviate add {
-			must "../../../pkt-class:ip-version = 'ipv4' or
+			must "../../../pkt-class:type = 'ipv4' or
 				../pkt-class:protocol/pkt-class:base/pkt-class:number = 44 or
 				../pkt-class:protocol/pkt-class:base/pkt-class:name = 'ipv6-frag'" {
 				error-message "IPv6 group rules that match on fragments must also match on 'ipv6-frag' protocol base";
@@ -89,7 +89,7 @@ module vyatta-resources-packet-classifier-deviations-j2-v1 {
 			 * implemented as a check across all bound groups
 			 * in the feature code.
 			 */
-			must "pkt-class:ip-version = 'ipv4' or " +
+			must "pkt-class:type = 'ipv4' or " +
 			     "128 * (count(pkt-class:rule[not(pkt-class:disable)]/pkt-class:match[pkt-class:destination/pkt-class:ipv6]) > 0) + " +
 			     "128 * (count(pkt-class:rule[not(pkt-class:disable)]/pkt-class:match[pkt-class:source/pkt-class:ipv6]) > 0) + " +
 			     "16 * (count(pkt-class:rule[not(pkt-class:disable)]/pkt-class:match[pkt-class:destination/pkt-class:port]) > 0) + " +

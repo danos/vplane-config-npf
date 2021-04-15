@@ -71,9 +71,10 @@ module vyatta-ippf-v1 {
 
 		 YANG module for Vyatta IP Packet Filter";
 
-	revision 2021-04-15 {
+	revision 2021-04-16 {
 		description "Updated error messages related to 'protocol final',
-			     as it is not supported on some platforms.";
+			     as it is not supported on some platforms.
+			     Update for GPC use.";
 	}
 
 	revision 2020-10-23 {
@@ -123,7 +124,10 @@ module vyatta-ippf-v1 {
 				error-message "Configure either 'prefix' or 'host'";
 			}
 			must "not (../../../../ip-version = 'ipv6')" {
-				error-message "'match ipv4' isn't available in IPv6 groups";
+				error-message "'match ipv4' is not available in IPv6 groups";
+			}
+			must "not (../../../../type = 'ipv6')" {
+				error-message "'match ipv4' is not available in IPv6 classifiers";
 			}
 			leaf prefix {
 				description  "Match an IPv4 prefix";
@@ -154,7 +158,10 @@ module vyatta-ippf-v1 {
 				error-message "Configure either 'prefix' or 'host'";
 			}
 			must "not (../../../../ip-version = 'ipv4')" {
-				error-message "'match ipv6' isn't available in IPv4 groups";
+				error-message "'match ipv6' is not available in IPv4 groups";
+			}
+			must "not (../../../../type = 'ipv4')" {
+				error-message "'match ipv6' is not available in IPv4 classifiers";
 			}
 			must "not (../ipv4)" {
 				error-message "Configure either 'ipv4' or 'ipv6'";
@@ -353,6 +360,9 @@ module vyatta-ippf-v1 {
 			must "not (../icmp) or not (../../../ip-version = 'ipv6')" {
 				error-message "'match icmp' is not available in IPv6 groups";
 			}
+			must "not (../icmp) or not (../../../type = 'ipv6')" {
+				error-message "'match icmp' is not available in IPv6 classifiers";
+			}
 			must "not (../icmp) or (../protocol/base) or (../protocol/final)" {
 				error-message "'match icmp' requires 'protocol base' or (if supported) 'protocol final'";
 			}
@@ -382,6 +392,9 @@ module vyatta-ippf-v1 {
 			configd:help "ICMP for IPv6";
 			must "not (../icmpv6) or not (../../../ip-version = 'ipv4')" {
 				error-message "'match icmpv6' is not available in IPv4 groups";
+			}
+			must "not (../icmpv6) or not (../../../type = 'ipv4')" {
+				error-message "'match icmpv6' is not available in IPv4 classifiers";
 			}
 			must "not (../icmpv6) or (../protocol/base) or (../protocol/final)" {
 				error-message "'match icmpv6' requires 'protocol base' or (if supported) 'protocol final'";
@@ -478,6 +491,16 @@ module vyatta-ippf-v1 {
 							configd:help "Group only applies to IPv6 traffic";
 						}
 					}
+				}
+				leaf type {
+					description
+						"Reserved for compatibility with GPC.
+						 The IPPF match container is shared by IPPF and GPC.
+						 This has been created such that the address family specific
+						 must statements within IPPF may refer to either ip-version
+						 (as used by IPPF) or type (as used by GPC).";
+					type string;
+					status obsolete;
 				}
 				container counters {
 					description  "Configure counters";
