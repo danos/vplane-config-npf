@@ -1,3 +1,9 @@
+vplane-config-npf (4.4.5) unstable; urgency=medium
+
+  * gpc/acl: update error msgs saying 'protocol final' may not be supported
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Fri, 16 Apr 2021 18:31:04 +0100
+
 vplane-config-npf (4.4.4) unstable; urgency=medium
 
   * J2: Update validation to check not running out of statistics resources
