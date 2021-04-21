@@ -65,7 +65,7 @@ module vyatta-resources-packet-classifier-v1 {
 
 		 YANG module for Vyatta Generic Packet Classifier";
 
-	revision 2021-03-22 {
+	revision 2021-04-16 {
 		description "Initial revision.";
 	}
 
@@ -99,6 +99,91 @@ module vyatta-resources-packet-classifier-v1 {
 		}
 	}
 
+	grouping gpc-rules {
+		description "Definition of GPC rules";
+		list rule {
+			description  "Rule number";
+			configd:help "Rule number";
+			min-elements 1;
+			must "result or disable" {
+				error-message "Either configure a 'result', or 'disable' this rule";
+			}
+			key "number";
+			leaf number {
+				description  "rule number";
+				configd:help "rule number";
+				type fw-types:rule-number;
+			}
+			leaf disable {
+				description  "Disable rule";
+				configd:help "Disable rule";
+				type empty;
+			}
+			leaf description {
+				description  "Rule description";
+				configd:help "Rule description";
+				type string;
+			}
+			container match {
+				description  "Configure match criteria";
+				configd:help "Configure match criteria";
+				uses ippf:ippf-match;
+			}
+			leaf result {
+				description  "Result for this rule";
+				configd:help "Result for this rule";
+				type leafref {
+					path "../../results/result";
+				}
+			}
+		}
+	}
+
+	grouping gpc-common {
+		description "Common elements in a packet classifier";
+		leaf description {
+			description  "Group description";
+			configd:help "Group description";
+			type string;
+		}
+		leaf ip-version {
+			description  "Traffic this group applies to";
+			configd:help "Traffic this group applies to";
+			mandatory true;
+			type enumeration {
+				enum "ipv4" {
+					description  "Group only applies to IPv4 traffic";
+					configd:help "Group only applies to IPv4 traffic";
+				}
+				enum "ipv6" {
+					description  "Group only applies to IPv6 traffic";
+					configd:help "Group only applies to IPv6 traffic";
+				}
+			}
+		}
+	}
+
+	grouping gpc-local-classifiers {
+		description "Local definitions of generic packet classifiers";
+		list group {
+			description  "generic packet classifier group";
+			configd:help "generic packet classifier group";
+			key "group-name";
+			min-elements 1;
+			leaf group-name {
+				description  "Group name";
+				configd:help "Group name";
+				type vy-types:alpha-numeric {
+					configd:help "Group name";
+					length 1..16;
+				}
+			}
+			uses gpc-common;
+			uses gpc-results;
+			uses gpc-rules;
+		}
+	}
+
 	augment /resources:resources {
 		if-feature generic-packet-classifier;
 		description "Top-level generic packet classifier command";
@@ -106,77 +191,7 @@ module vyatta-resources-packet-classifier-v1 {
 			description  "Generic packet classifier";
 			configd:help "Generic packet classifier";
 			presence "Generic packet classifier; mandatory child nodes when configured";
-			list group {
-				description  "generic packet classifier group";
-				configd:help "generic packet classifier group";
-				key "group-name";
-				min-elements 1;
-				leaf group-name {
-					description  "Group name";
-					configd:help "Group name";
-					type vy-types:alpha-numeric {
-						configd:help "Group name";
-						length 1..16;
-					}
-				}
-				leaf description {
-					description  "Group description";
-					configd:help "Group description";
-					type string;
-				}
-				leaf ip-version {
-					description  "Traffic this group applies to";
-					configd:help "Traffic this group applies to";
-					mandatory true;
-					type enumeration {
-						enum "ipv4" {
-							description  "Group only applies to IPv4 traffic";
-							configd:help "Group only applies to IPv4 traffic";
-						}
-						enum "ipv6" {
-							description  "Group only applies to IPv6 traffic";
-							configd:help "Group only applies to IPv6 traffic";
-						}
-					}
-				}
-				uses gpc-results;
-				list rule {
-					description  "Rule number";
-					configd:help "Rule number";
-					min-elements 1;
-					must "result or disable" {
-						error-message "Either configure a 'result', or 'disable' this rule";
-					}
-					key "number";
-					leaf number {
-						description  "rule number";
-						configd:help "rule number";
-						type fw-types:rule-number;
-					}
-					leaf disable {
-						description  "Disable rule";
-						configd:help "Disable rule";
-						type empty;
-					}
-					leaf description {
-						description  "Rule description";
-						configd:help "Rule description";
-						type string;
-					}
-					container match {
-						description  "Configure match criteria";
-						configd:help "Configure match criteria";
-						uses ippf:ippf-match;
-					}
-					leaf result {
-						description  "Result for this rule";
-						configd:help "Result for this rule";
-						type leafref {
-							path "../../results/result";
-						}
-					}
-				}
-			}
+			uses gpc-local-classifiers;
 		}
 	}
 }
