@@ -173,6 +173,24 @@ module vyatta-resources-packet-classifier-v1 {
 		}
 	}
 
+	grouping gpc-import {
+		leaf import {
+			description  "Imported classifier";
+			configd:help "Imported classifier";
+			mandatory true;
+			must "/resources:resources/pkt-class-v1:packet-classifier/" +
+				"pkt-class-v1:classifier[pkt-class-v1:classifier-name = current()]/" +
+				"pkt-class-v1:type = ../type" {
+				error-message "Imported classifiers must have matching type";
+			}
+
+			type leafref {
+				path "/resources:resources/pkt-class-v1:packet-classifier/" +
+					"pkt-class-v1:classifier/pkt-class-v1:classifier-name";
+			}
+		}
+	}
+
 	grouping gpc-local-classifiers {
 		description "Local definitions of packet classifiers";
 		list classifier {
@@ -193,6 +211,28 @@ module vyatta-resources-packet-classifier-v1 {
 			uses gpc-rules;
 		}
 	}
+
+	grouping gpc-import-classifiers {
+		description "Reference resource definitions of packet classifiers";
+		list classifier {
+			description  "packet classifier";
+			configd:help "packet classifier";
+			key "classifier-name";
+			min-elements 1;
+			leaf classifier-name {
+				description  "Classifier name";
+				configd:help "Classifier name";
+				type vy-types:alpha-numeric {
+					configd:help "Classifier name";
+					length 1..16;
+				}
+			}
+			uses gpc-common;
+			uses gpc-import;
+		}
+	}
+
+	/* grouping gpc-local-or-import-classifiers to be defined */
 
 	augment /resources:resources {
 		if-feature generic-packet-classifier;
