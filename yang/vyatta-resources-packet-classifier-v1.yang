@@ -234,6 +234,19 @@ module vyatta-resources-packet-classifier-v1 {
 
 	/* grouping gpc-local-or-import-classifiers to be defined */
 
+	grouping gpc-classify {
+		description "Classify according to one or more classifiers";
+		leaf-list classify {
+			description  "Classifier to apply";
+			configd:help "Classifier to apply";
+			min-elements 1;
+			ordered-by "user";
+			type leafref {
+				path "../classifier/classifier-name";
+			}
+		}
+	}
+
 	augment /resources:resources {
 		if-feature generic-packet-classifier;
 		description "Top-level generic packet classifier command";
