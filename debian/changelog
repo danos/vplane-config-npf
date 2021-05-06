@@ -1,3 +1,15 @@
+vplane-config-npf (4.4.6) unstable; urgency=medium
+
+  [ Derek Fawcus ]
+  * GPC: Split classifier in to a grouping
+  * GPC: Rename container used to hold rules
+  * GPC: Each classifier has a type, not ip-version
+  * GPC: VCI changes to handle renames
+  * GPC: Allow an imported classifier
+  * GPC: Add classify clause for users
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Thu, 06 May 2021 11:26:48 +0100
+
 vplane-config-npf (4.4.5) unstable; urgency=medium
 
   * gpc/acl: update error msgs saying 'protocol final' may not be supported
