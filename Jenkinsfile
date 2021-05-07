@@ -66,149 +66,149 @@ pipeline {
             cancelPreviousBuilds()
         }}}
 
-     stage('Run tests') {
-      parallel {
-       stage('OSC') {
-        stages {
-        stage('OSC config') {
-            steps {
-                sh 'printenv'
-                // Build scripts with tasks to perform in the chroot
-                sh """
+        stage('Run tests') {
+            parallel {
+                stage('OSC') {
+                    stages {
+                        stage('OSC config') {
+                            steps {
+                                sh 'printenv'
+                                // Build scripts with tasks to perform in the chroot
+                                sh """
 cat <<EOF > osc-buildpackage_buildscript_default
 export BUILD_ID=\"${BUILD_ID}\"
 export JENKINS_NODE_COOKIE=\"${JENKINS_NODE_COOKIE}\"
 dpkg-buildpackage -jauto -us -uc -b
 EOF
 """
-            }
-        }
+                            }
+                        }
 
-        // Workspace specific chroot location used instead of /var/tmp
-        // Allows parallel builds between jobs, but not between stages in a single job
-        // TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
-        // TODO: probably by allowing it to accept a .conf file from a location other than pkg_srcdir
+                        // Workspace specific chroot location used instead of /var/tmp
+                        // Allows parallel builds between jobs, but not between stages in a single job
+                        // TODO: Enhance osc-buildpkg to support parallel builds from the same pkg_srcdir
+                        // TODO: probably by allowing it to accept a .conf file from a location other than pkg_srcdir
 
-        stage('OSC Build') {
-            steps {
-                dir("${SRC_DIR}") {
-                    sh """
+                        stage('OSC Build') {
+                            steps {
+                                dir("${SRC_DIR}") {
+                                    sh """
 cat <<EOF > .osc-buildpackage.conf
 OSC_BUILDPACKAGE_TMP=\"${WORKSPACE}\"
 OSC_BUILDPACKAGE_BUILDSCRIPT=\"${WORKSPACE}/osc-buildpackage_buildscript_default\"
 EOF
 """
-                    sh "osc-buildpkg -v -g -T -P ${env.OBS_TARGET_PROJECT} ${env.OBS_TARGET_REPO} -- --trust-all-projects --build-uid='caller'"
-                }
-            }
-        }
-        } // stages
-        } // stage OSC
+                                    sh "osc-buildpkg -v -g -T -P ${env.OBS_TARGET_PROJECT} ${env.OBS_TARGET_REPO} -- --trust-all-projects --build-uid='caller'"
+                                }
+                            }
+                        }
+                    } // stages
+                } // stage OSC
 
-        stage('Code Stats') {
-            when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
-            steps {
-                sh 'sloccount --duplicates --wide --details ${SRC_DIR} > sloccount.sc'
-                sloccountPublish pattern: '**/sloccount.sc'
-            }
-        }
-
-/* We can't do a simple
- *    sh "dram --username jenkins -d yang"
- * because the base yang dir contains a VNF module
- * and there are platform modules in another dir.
- */
-        stage('DRAM') {
-            steps {
-                dir("${SRC_DIR}") {
-                    sh '''
-yang=`echo yang/*.yang | sed 's@yang/vyatta-policy-pbr-bridge-v1.yang @@' | sed 's/ /,/g'`
-platform=`echo platform/*.platform | sed 's/ /,/g'`
-platyang=`echo platform/*.yang | sed 's/ /,/g'`
-dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-policy-pbr-bridge-v1.yang -s
-'''
-                }
-            }
-        }
-
-        stage('Perlcritic') {
-            steps {
-                dir("${SRC_DIR}") {
-                    sh script: "perlcritic --quiet --severity 5 . 2>&1 | tee perlcritic.txt", returnStatus: true
-                }
-            }
-            post {
-                always {
-                    dir("${env.SRC_DIR}") {
-                        discoverGitReferenceBuild()
-                        recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
-                            enabledForFailure: true,
-                            qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+                stage('Code Stats') {
+                    when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
+                    steps {
+                        sh 'sloccount --duplicates --wide --details ${SRC_DIR} > sloccount.sc'
+                        sloccountPublish pattern: '**/sloccount.sc'
                     }
                 }
-            }
-        }
 
-        stage('Flake8') {
-            steps {
-                dir("${SRC_DIR}") {
-                    sh '''
-pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
-python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
-'''
-                }
-            }
-            post {
-                always {
-                    dir("${env.SRC_DIR}") {
-                        discoverGitReferenceBuild()
-                        recordIssues tool: flake8(pattern: 'flake8.out'),
-                            enabledForFailure: true,
-                            qualityGates: [[type: 'TOTAL', threshold: 20, unstable: true],
-                                           [type: 'NEW', threshold: 9, unstable: true]]
+                /* We can't do a simple
+                 *    sh "dram --username jenkins -d yang"
+                 * because the base yang dir contains a VNF module
+                 * and there are platform modules in another dir.
+                 */
+                stage('DRAM') {
+                    steps {
+                        dir("${SRC_DIR}") {
+                            sh '''
+                               yang=`echo yang/*.yang | sed 's@yang/vyatta-policy-pbr-bridge-v1.yang @@' | sed 's/ /,/g'`
+                               platform=`echo platform/*.platform | sed 's/ /,/g'`
+                               platyang=`echo platform/*.yang | sed 's/ /,/g'`
+                               dram --username jenkins -f \$yang -P \$platform -Y \$platyang -v yang/vyatta-policy-pbr-bridge-v1.yang -s
+                               '''
+                        }
                     }
                 }
-            }
-        }
 
-        stage('Codechecks') {
-            when {
-                allOf {
-                    // Only if this is a Pull Request
-                    expression { env.CHANGE_ID != null }
-                    expression { env.CHANGE_TARGET != null }
+                stage('Perlcritic') {
+                    steps {
+                        dir("${SRC_DIR}") {
+                            sh script: "perlcritic --quiet --severity 5 . 2>&1 | tee perlcritic.txt", returnStatus: true
+                        }
+                    }
+                    post {
+                        always {
+                            dir("${env.SRC_DIR}") {
+                                discoverGitReferenceBuild()
+                                recordIssues tool: perlCritic(pattern: 'perlcritic.txt'),
+                                    enabledForFailure: true,
+                                    qualityGates: [[type: 'TOTAL', threshold: 1, unstable: true]]
+                            }
+                        }
+                    }
                 }
-            }
-            steps {
-                dir("${SRC_DIR}") {
-                    sh "./codechecks upstream/${env.CHANGE_TARGET} origin/${env.BRANCH_NAME}"
-                }
-            }
-        }
 
-        stage('Gitlint') {
-            agent {
-                docker {
-                    image 'jorisroovers/gitlint'
-                    args '--entrypoint=""'
-                    reuseNode true
+                stage('Flake8') {
+                    steps {
+                        dir("${SRC_DIR}") {
+                            sh '''
+                               pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
+                               python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
+                               '''
+                        }
+                    }
+                    post {
+                        always {
+                            dir("${env.SRC_DIR}") {
+                                discoverGitReferenceBuild()
+                                recordIssues tool: flake8(pattern: 'flake8.out'),
+                                    enabledForFailure: true,
+                                    qualityGates: [[type: 'TOTAL', threshold: 20, unstable: true],
+                                                   [type: 'NEW', threshold: 9, unstable: true]]
+                            }
+                        }
+                    }
                 }
-            }
-            when {
-                allOf {
-                    // Only if this is a Pull Request
-                    expression { env.CHANGE_ID != null }
-                    expression { env.CHANGE_TARGET != null }
+
+                stage('Codechecks') {
+                    when {
+                        allOf {
+                            // Only if this is a Pull Request
+                            expression { env.CHANGE_ID != null }
+                            expression { env.CHANGE_TARGET != null }
+                        }
+                    }
+                    steps {
+                        dir("${SRC_DIR}") {
+                            sh "./codechecks upstream/${env.CHANGE_TARGET} origin/${env.BRANCH_NAME}"
+                        }
+                    }
                 }
-            }
-            steps {
-                dir("${SRC_DIR}") {
-                    sh "gitlint --commits upstream/${env.CHANGE_TARGET}..origin/${env.BRANCH_NAME}"
+
+                stage('Gitlint') {
+                    agent {
+                        docker {
+                            image 'jorisroovers/gitlint'
+                            args '--entrypoint=""'
+                            reuseNode true
+                        }
+                    }
+                    when {
+                        allOf {
+                            // Only if this is a Pull Request
+                            expression { env.CHANGE_ID != null }
+                            expression { env.CHANGE_TARGET != null }
+                        }
+                    }
+                    steps {
+                        dir("${SRC_DIR}") {
+                            sh "gitlint --commits upstream/${env.CHANGE_TARGET}..origin/${env.BRANCH_NAME}"
+                        }
+                    }
                 }
-            }
-        }
-	} // parallel
-	} // Run tests
+            } // parallel
+        } // Run tests
     } // stages
 
     post {
