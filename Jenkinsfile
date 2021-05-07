@@ -66,6 +66,10 @@ pipeline {
             cancelPreviousBuilds()
         }}}
 
+     stage('Run tests') {
+      parallel {
+       stage('OSC') {
+        stages {
         stage('OSC config') {
             steps {
                 sh 'printenv'
@@ -98,6 +102,8 @@ EOF
                 }
             }
         }
+        } // stages
+        } // stage OSC
 
         stage('Code Stats') {
             when {expression { env.CHANGE_ID == null }} // Not when this is a Pull Request
@@ -201,6 +207,8 @@ python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,
                 }
             }
         }
+	} // parallel
+	} // Run tests
     } // stages
 
     post {
