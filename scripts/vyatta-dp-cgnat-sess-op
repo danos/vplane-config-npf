@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019-2020, AT&T Intellectual Property.
+# Copyright (c) 2019-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -217,7 +217,7 @@ def cgn_sess_state_str(outer, inner, long_or_short):
 #
 # cgn_get_subscriber_list
 #
-def cgn_get_subscriber_list(prefix):
+def cgn_get_subscriber_list(show):
     """Get a sorted list of active cgnat subscribers.
 
     Fetches a list of uints from the dataplane, sorts them, then converts to
@@ -225,6 +225,9 @@ def cgn_get_subscriber_list(prefix):
     specified, in which case the dataplane will only return subscribers
     matching that value.
     """
+
+    # Optional address or prefix specified by user
+    prefix = show.get('subs-addr')
 
     subs_list = []
 
@@ -256,7 +259,7 @@ def cgn_get_subscriber_list(prefix):
 #
 # cgn_get_sessions_subs
 #
-def cgn_get_sessions_subs(addr, fltrs):
+def cgn_get_sessions_subs(fltrs, show):
     """Get sessions for a given subscriber address.
 
     For simplicity, we just fetch all sessions for the given subscriber
@@ -265,7 +268,7 @@ def cgn_get_sessions_subs(addr, fltrs):
 
     sess_list = []
 
-    cmd = "cgn-op show session subs-addr %s" % (addr)
+    cmd = "cgn-op show session subs-addr %s" % (show.get('subs-addr'))
     if fltrs:
         cmd = "%s %s" % (cmd, fltrs)
 
@@ -419,7 +422,7 @@ def cgn_sess_show_one(outer, inner, show_hdr):
 #
 # cgn_sess_show_outer_brief
 #
-def cgn_sess_show_outer_brief(outer, show_hdr):
+def cgn_sess_show_outer_brief(show, outer, show_hdr):
     """Show 3-tuple outer session"""
 
     dst_list = []
@@ -444,7 +447,7 @@ def cgn_sess_show_outer_brief(outer, show_hdr):
 #
 # cgn_sess_show_one_detail
 #
-def cgn_sess_show_one_detail(outer, inner):
+def cgn_sess_show_one_detail(show, outer, inner):
     """Show one session in detail"""
 
     state = cgn_sess_state_str(outer, inner, True)
@@ -536,7 +539,7 @@ def cgn_sess_show_one_detail(outer, inner):
     print()
 
 
-def cgn_sess_show_outer_detail(outer, sort_key):
+def cgn_sess_show_outer_detail(show, outer, sort_key):
     """Show 3-tuple outer session"""
 
     dst_list = []
@@ -555,21 +558,25 @@ def cgn_sess_show_outer_detail(outer, sort_key):
 
     if dst_list:
         for dst in dst_list:
-            cgn_sess_show_one_detail(outer, dst)
+            cgn_sess_show_one_detail(show, outer, dst)
     else:
-        cgn_sess_show_one_detail(outer, None)
+        cgn_sess_show_one_detail(show, outer, None)
 
 
 #
 # cgn_op_show_sess
 #
-def cgn_op_show_sess(fltrs, count_opt, d_opt, sa_opt):
+def cgn_op_show_sess(fltrs, show):
     """Fetch and display sessions from the dataplane
 
     Fetches in batches of 1000 or more.  Will not split fetching nested
     sessions over multiple commands, so may return many more sessions than
     1000 per command.
     """
+
+    count_opt = show.get('count')
+    d_opt = show.get('detail')
+    sa_opt = show.get('subs-addr')
 
     # Return at least this many sessions
     if count_opt:
@@ -613,9 +620,9 @@ def cgn_op_show_sess(fltrs, count_opt, d_opt, sa_opt):
                         if "__error" in sess:
                             print(sess["__error"])
                         elif d_opt:
-                            cgn_sess_show_outer_detail(sess, None)
+                            cgn_sess_show_outer_detail(show, sess, None)
                         else:
-                            cgn_sess_show_outer_brief(sess, show_hdr)
+                            cgn_sess_show_outer_brief(show, sess, show_hdr)
                             show_hdr = False
 
                     # If a count was specified then assume user only wants
@@ -635,28 +642,30 @@ def cgn_op_show_sess(fltrs, count_opt, d_opt, sa_opt):
 #
 # cgn_op_show_sess_ordered
 #
-def cgn_op_show_sess_ordered(fltrs, count_opt, d_opt, sa_opt):
+def cgn_op_show_sess_ordered(fltrs, show):
     """Fetch and display sessions from the dataplane.
 
     """
 
+    count_opt = show.get('count')
     count = 0
     show_hdr = True
 
     # Get sorted list of subscriber address strings
-    subs_list = cgn_get_subscriber_list(sa_opt)
+    subs_list = cgn_get_subscriber_list(show)
 
     # For each subscriber address ...
     for subs_addr in subs_list:
 
         # Get session list, sorted by subscriber port
-        sess_list = cgn_get_sessions_subs(subs_addr, fltrs)
+        show['subs-addr'] = subs_addr
+        sess_list = cgn_get_sessions_subs(fltrs, show)
 
         for sess in sess_list:
-            if d_opt:
-                cgn_sess_show_outer_detail(sess, None)
+            if show.get('detail'):
+                cgn_sess_show_outer_detail(show, sess, None)
             else:
-                cgn_sess_show_outer_brief(sess, show_hdr)
+                cgn_sess_show_outer_brief(show, sess, show_hdr)
                 show_hdr = False
 
             # If a count option was specified then assume the user only wants
@@ -761,7 +770,8 @@ def cgn_op_main():
     sp_opt = None
     da_opt = None
     dp_opt = None
-    id_opt = None
+    id1_opt = None
+    id2_opt = None
     proto_opt = None
     count = None
     unordered = False
@@ -815,12 +825,12 @@ def cgn_op_main():
             fltrs = "%s pool %s" % (fltrs, pool_opt)
 
         if opt in '--id1':
-            id_opt = arg
-            fltrs = "%s id1 %s" % (fltrs, id_opt)
+            id1_opt = arg
+            fltrs = "%s id1 %s" % (fltrs, id1_opt)
 
         if opt in '--id2':
-            id_opt = arg
-            fltrs = "%s id2 %s" % (fltrs, id_opt)
+            id2_opt = arg
+            fltrs = "%s id2 %s" % (fltrs, id2_opt)
 
         if opt in '--pub-addr':
             pa_opt = arg
@@ -889,14 +899,25 @@ def cgn_op_main():
     #
     # show sessions.
     #
+    # The 'fltrs' string determines what is returned from the dataplane.
+    # The 'show' dictionary determines how the returned sessions are displayed.
+    #
+    # 'subs-addr' starts as either None or a user-input prefix or address.  It
+    # may be changed as we iterate over a list of subscribers
+    #
+    show = {
+        'subs-addr': sa_opt,
+        'detail': d_opt,
+        'count': count,
+    }
 
     #
     # Show sessions unordered.  All filtering is done in dataplane.
     #
     if unordered:
-        cgn_op_show_sess(fltrs, count, d_opt, sa_opt)
+        cgn_op_show_sess(fltrs, show)
     else:
-        cgn_op_show_sess_ordered(fltrs, count, d_opt, sa_opt)
+        cgn_op_show_sess_ordered(fltrs, show)
 
 
 #
