@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019 AT&T Intellectual Property.
+# Copyright (c) 2019-2021 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -41,6 +41,7 @@ filters = {
     'protocol': '--proto',
     'unordered': '--unordered',
     'statistics': '--stats',
+    'alg': '--alg',
 }
 
 

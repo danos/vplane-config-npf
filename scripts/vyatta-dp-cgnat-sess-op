@@ -445,6 +445,91 @@ def cgn_sess_show_outer_brief(show, outer, show_hdr):
 
 
 #
+# cgn_sess_show_alg_pinhole
+#
+def cgn_sess_show_alg_pinholes(ph_list):
+    print("    Pinholes:")
+
+    ph_list = sorted(ph_list, key=lambda d: (d['id']))
+
+    for ph in ph_list:
+        sport = ph.get('sport')
+        if sport == 0:
+            sport = 'any'
+
+            print("      %s: %s %s, "
+                  "%s/%s -> %s/%s" % (ph.get('id'), ph.get('dir'),
+                                      npf_num2proto(ph.get('ipproto')),
+                                      ph.get('saddr'), sport,
+                                      ph.get('daddr'), ph.get('dport')))
+
+
+#
+#
+#
+def cgn_sess_show_alg_children(chldn_list):
+    print("    Data session details:")
+
+    for child in sorted(chldn_list):
+        print("      %s" % (child))
+    print()
+
+
+#
+# cgn_sess_show_alg
+#
+def cgn_sess_show_alg(show, alg):
+    """Show session ALG detail"""
+    print("  ALG")
+
+    if alg.get('parent'):
+        alg_type = 'data'
+    else:
+        alg_type = 'control'
+
+    print("    %s %s, To: %s:%s" % (alg.get('name'), alg_type.capitalize(),
+                                    alg.get('dst_addr'),
+                                    alg.get('dst_port')))
+
+    if alg.get('parent'):
+        # Child/data session
+        print("    Ctrl session: %s" % (alg.get('parent')))
+        return
+
+    # Parent/control session
+    chldn_list = alg.get('children')
+    if chldn_list:
+        print("    Data session(s): ", end="")
+
+        for child in sorted(chldn_list):
+            if child != chldn_list[0]:
+                print(", ", end="")
+            print("%s" % (child), end="")
+        print()
+
+    print("    Inspect:         %s" % (alg.get('inspect')))
+    print("    Min payload:     %s" % (alg.get('min_payload')))
+
+    ph_list = alg.get('pinholes')
+    if ph_list:
+        cgn_sess_show_alg_pinholes(ph_list)
+
+    #
+    # Special case for ALG to display the data sessions when a single ALG
+    # session has been requested
+    #
+    if chldn_list and show.get('id'):
+        cgn_sess_show_alg_children(chldn_list)
+
+    if alg.get('pptp'):
+        pptp = alg.get('pptp')
+        print("    PPTP")
+        print("      Subs Call ID:  %s | %s" % (pptp.get('orig_call_id'),
+                                                pptp.get('trans_call_id')))
+        print("      Peer Call ID:  %s" % (pptp.get('peer_call_id')))
+
+
+#
 # cgn_sess_show_one_detail
 #
 def cgn_sess_show_one_detail(show, outer, inner):
@@ -535,6 +620,9 @@ def cgn_sess_show_one_detail(show, outer, inner):
     # Unknown source count only applies to 3-tuple session
     if not inner:
         print("    unknown source: %u" % (unk_pkts_in))
+
+    if outer.get('alg'):
+        cgn_sess_show_alg(show, outer.get('alg'))
 
     print()
 
@@ -773,6 +861,7 @@ def cgn_op_main():
     id1_opt = None
     id2_opt = None
     proto_opt = None
+    alg_opt = None
     count = None
     unordered = False
 
@@ -790,7 +879,7 @@ def cgn_op_main():
                                     'subs-addr=', 'subs-port=',
                                     'dst-addr=', 'dst-port=',
                                     'proto=', 'count=', 'unordered',
-                                    'stats'])
+                                    'stats', 'alg='])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -870,6 +959,10 @@ def cgn_op_main():
         if opt in '--stats':
             stats_opt = True
 
+        if opt in '--alg':
+            alg_opt = arg
+            fltrs = "%s alg %s" % (fltrs, alg_opt)
+
     #
     # sa_opt is passed to the show scripts outwith the fltr string, so only
     # add it to the fltr string for the update and clear commands
@@ -905,10 +998,17 @@ def cgn_op_main():
     # 'subs-addr' starts as either None or a user-input prefix or address.  It
     # may be changed as we iterate over a list of subscribers
     #
+    # If 'alg' and 'id' are specified then we will fetch and display ALG child
+    # sessions if the requested 'id1_opt' is an ALG parent session.  (Note, we
+    # *only* fetch the children for a parent when a single session is
+    # requested in order to avoid loops within loops.)
+    #
     show = {
         'subs-addr': sa_opt,
         'detail': d_opt,
         'count': count,
+        'alg': alg_opt,
+        'id': id1_opt,
     }
 
     #

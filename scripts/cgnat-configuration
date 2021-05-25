@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 #
-# Copyright (c) 2019-2020 AT&T Intellectual Property.
+# Copyright (c) 2019-2021 AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -369,6 +369,11 @@ def build_cgnat_config(commands, cfg, tree):
         key = "{} snat-alg-bypass".format(BASE_CGNAT_PATH)
         commands['snat-alg-bypass'][tree] = key
 
+    if 'alg' in cfg:
+        for atype in cfg['alg']:
+            key = "{} alg {}".format(BASE_CGNAT_PATH, atype)
+            commands['alg'][atype][tree] = key
+
     if 'max-sessions' in cfg:
         key = "{} max-sessions".format(BASE_CGNAT_PATH)
         commands['max-sessions'][tree] = (key, cfg['max-sessions'])
@@ -506,6 +511,25 @@ def send_cgnat_snat_alg_bypass_config(commands):
         if cc is None:
             # configuration is being deleted
             delete_cgnat_config(rc, "snat-alg-bypass on")
+
+
+def send_cgnat_alg_config(commands):
+
+    """ Send config for 'cgnat alg' """
+
+    for name in commands:
+
+        rc = commands[name].get('running')
+        cc = commands[name].get('cand')
+
+        if rc is None:
+            if cc is not None:
+                # this is new configuration
+                set_cgnat_config(cc, "alg {} on".format(name))
+        else:
+            if cc is None:
+                # configuration is being deleted
+                delete_cgnat_config(rc, "alg {} off".format(name))
 
 
 def send_cgnat_max_sessions_config(commands):
@@ -947,6 +971,9 @@ def send_cgnat_config(commands):
 
     if 'snat-alg-bypass' in commands:
         send_cgnat_snat_alg_bypass_config(commands['snat-alg-bypass'])
+
+    if 'alg' in commands:
+        send_cgnat_alg_config(commands['alg'])
 
     if 'max-sessions' in commands:
         send_cgnat_max_sessions_config(commands['max-sessions'])

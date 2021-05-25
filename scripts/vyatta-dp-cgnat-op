@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2019-2020, AT&T Intellectual Property.
+# Copyright (c) 2019-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # SPDX-License-Identifier: GPL-2.0-only
@@ -30,6 +30,11 @@ def num2str(count, approx):
 # Yes or No string
 def yes_or_no(val):
     return "Yes" if val else "No"
+
+
+# Enabled or Disabled string
+def enabled_or_disabled(val):
+    return "Enabled" if val else "Disabled"
 
 
 #
@@ -148,6 +153,31 @@ def cgn_op_show_summary():
                 if 'icmp_echoreq' in summary:
                     print("  %-32s %18u" % ("ICMP Echo Req for CGNAT addr",
                                             summary.get('icmp_echoreq')))
+                print()
+
+
+#
+# cgn_op_show_alg
+#
+def cgn_op_show_alg():
+    """Show CGN ALG"""
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                cgn_dict = dp.json_command("cgn-op show alg status")
+                alg = cgn_dict.get('alg')
+                if not alg:
+                    continue
+
+                print("CGNAT ALG Status")
+
+                state = alg.get('status')
+                for i in range(0, len(state)):
+                    name = state[i].get('name')
+                    enabled = enabled_or_disabled(state[i].get('enabled'))
+                    print("%-5s %s" % (name, enabled))
+
                 print()
 
 
@@ -447,6 +477,9 @@ def cgn_op_main():
 
         if s_opt == 'summary':
             cgn_op_show_summary()
+
+        if s_opt == 'alg':
+            cgn_op_show_alg()
 
     # clear ...
     if c_opt:

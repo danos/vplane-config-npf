@@ -70,6 +70,10 @@ module vyatta-op-service-nat-cgnat-v1 {
 
         YANG module for CGNAT operation mode commands";
 
+    revision 2021-05-24 {
+        description "Add show alg";
+    }
+
     revision 2021-02-17 {
         description "Some commands need run with escalated privileges";
     }
@@ -185,6 +189,21 @@ module vyatta-op-service-nat-cgnat-v1 {
                 opd:pattern-help "<pool-name>";
             }
             opd:allowed "allowed-nodes service nat pool";
+        }
+
+        opd:option alg {
+            opd:help "Match ALG";
+            type enumeration {
+                opd:help "ALG name or any";
+                enum "pptp" {
+                    description "Match PPTP ALG";
+                    opd:help    "Match PPTP ALG";
+                }
+                enum "any" {
+                    description "Match all ALGs";
+                    opd:help    "Match all ALGs";
+                }
+            }
         }
     }
 
@@ -309,6 +328,10 @@ module vyatta-op-service-nat-cgnat-v1 {
                              "previous batch ended meaning the session table " +
                              "is only iterated over once.";
                 }
+            }
+            opd:command alg {
+                opd:help "Show CGNAT ALG information";
+                opd:on-enter "vyatta-dp-cgnat-op --show alg";
             }
         }
     }
