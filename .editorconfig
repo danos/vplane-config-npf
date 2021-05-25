@@ -1,0 +1,80 @@
+# Located at the project root
+root = true
+
+# Base settings for most files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+indent_style = tab
+indent_size = 8
+
+max_line_length = 100
+
+[Jenkinsfile]
+indent_style = space
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+indent_size = 8
+
+[configure.ac]
+indent_style = tab
+indent_size = 8
+
+[debian/*]
+indent_style = space
+indent_size = 4
+
+[debian/rules]
+indent_style = tab
+indent_size = 8
+
+# recursive
+[etc/**]
+indent_style = space
+indent_size = 4
+
+# recursive
+[lib/**]
+indent_style = space
+indent_size = 4
+
+[platform/*.yang]
+indent_style = tab
+indent_size = 8
+
+[scripts/*]
+indent_style = space
+indent_size = 4
+
+[tests/*]
+indent_style = space
+indent_size = 4
+
+[vyatta_resources_gpc_vci/*]
+indent_style = space
+indent_size = 4
+
+[yang/*]
+indent_style = tab
+indent_size = 8
+
+[yang/vyatta-op-service-nat-pool-v1.yang]
+indent_style = space
+indent_size = 4
+
+[yang/vyatta-service-nat-pool-v1.yang]
+indent_style = space
+indent_size = 4
+
+[yang/vyatta-op-service-nat-cgnat-v1.yang]
+indent_style = space
+indent_size = 4
+
+[yang/vyatta-service-nat-cgnat-v1.yang]
+indent_style = space
+indent_size = 4
