@@ -49,6 +49,11 @@ def num2str(count, approx):
     return str
 
 
+# Yes or No string
+def yes_or_no(val):
+    return "Yes" if val else "No"
+
+
 #
 # int2ip
 #
@@ -459,15 +464,19 @@ def cgn_sess_show_alg_pinholes(ph_list):
     ph_list = sorted(ph_list, key=lambda d: (d['id']))
 
     for ph in ph_list:
-        sport = ph.get('sport')
-        if sport == 0:
-            sport = 'any'
+        # PPTP ALG data pkts (GRE) only contain a dest Call ID
+        if ph.get('alg') != 'pptp':
+            sport = ph.get('sport')
+            if sport == 0:
+                sport = 'any'
+        else:
+            sport = '-'
 
-            print("      %s: %s %s, "
-                  "%s/%s -> %s/%s" % (ph.get('id'), ph.get('dir'),
-                                      npf_num2proto(ph.get('ipproto')),
-                                      ph.get('saddr'), sport,
-                                      ph.get('daddr'), ph.get('dport')))
+        print("      %s: %s %s, "
+              "%s/%s -> %s/%s" % (ph.get('id'), ph.get('dir'),
+                                  npf_num2proto(ph.get('ipproto')),
+                                  ph.get('saddr'), sport,
+                                  ph.get('daddr'), ph.get('dport')))
 
 
 #
@@ -488,33 +497,39 @@ def cgn_sess_show_alg(show, alg):
     """Show session ALG detail"""
     print("  ALG")
 
-    if alg.get('parent'):
-        alg_type = 'data'
+    is_child = alg.get('is_child')
+
+    if not is_child:
+        name_type = alg.get('name') + '-control'
     else:
-        alg_type = 'control'
+        name_type = alg.get('name') + '-data'
 
-    print("    %s %s, To: %s:%s" % (alg.get('name'), alg_type.capitalize(),
-                                    alg.get('dst_addr'),
-                                    alg.get('dst_port')))
+    print("    %-12s" % (name_type))
 
-    if alg.get('parent'):
+    if is_child:
         # Child/data session
-        print("    Ctrl session: %s" % (alg.get('parent')))
+        parent = alg.get('parent')
+        if parent == 0:
+            parent = "-"
+        print(f"    Control session:   {parent}")
         return
 
     # Parent/control session
     chldn_list = alg.get('children')
-    if chldn_list:
-        print("    Data session(s): ", end="")
 
+    print("    Data session(s):   ", end="")
+
+    if chldn_list:
         for child in sorted(chldn_list):
             if child != chldn_list[0]:
                 print(", ", end="")
-            print("%s" % (child), end="")
-        print()
+            print(f"{child}", end="")
+    else:
+        print("-", end="")
 
-    print("    Inspect:         %s" % (alg.get('inspect')))
-    print("    Min payload:     %s" % (alg.get('min_payload')))
+    print()
+
+    print("    Min payload:       %s" % (alg.get('min_payload')))
 
     ph_list = alg.get('pinholes')
     if ph_list:
@@ -530,9 +545,13 @@ def cgn_sess_show_alg(show, alg):
     if alg.get('pptp'):
         pptp = alg.get('pptp')
         print("    PPTP")
-        print("      Subs Call ID:  %s | %s" % (pptp.get('orig_call_id'),
-                                                pptp.get('trans_call_id')))
-        print("      Peer Call ID:  %s" % (pptp.get('peer_call_id')))
+        print("      Subs Call ID:    %s | %s" % (pptp.get('orig_call_id'),
+                                                  pptp.get('trans_call_id')))
+        print("      Peer Call ID:    %s" % (pptp.get('peer_call_id')))
+        print("      Out Call Req:    %s (%s)" % (yes_or_no(pptp.get('out_call_req')),
+                                                  pptp.get('call_dir')))
+        print("      Out Call Reply:  %s" % (yes_or_no(pptp.get('out_call_reply'))))
+        print("      Call closed:     %s" % (yes_or_no(pptp.get('call_closed'))))
 
 
 #
