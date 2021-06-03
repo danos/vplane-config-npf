@@ -185,9 +185,11 @@ def cgn_sess_state_str(outer, inner, long_or_short):
     session.
     """
 
-    state2short = ["NO", "CL", "OP", "ES", "TR", "CG", "CG", "CG"]
-    state2long = ["None", "Closed", "Opening", "Established", "Transitory",
-                  "Client-FIN-Rcv", "Server-FIN-Rcv", "CS-FIN-Rcv"]
+    state2short = ["NO", "CL", "OP", "ES", "CG", "TR", "CG", "CG", "CG"]
+    state2long = ["None", "Closed", "Opening", "Established", "Closing",
+                  "Transitory", "Client-FIN-Rcv", "Server-FIN-Rcv",
+                  "CS-FIN-Rcv"]
+    assert len(state2short) == len(state2long)
 
     proto = outer.get('proto')
 
@@ -196,7 +198,7 @@ def cgn_sess_state_str(outer, inner, long_or_short):
     else:
         state = outer.get('state')
 
-    if state is None:
+    if state is None or state >= len(state2short):
         return "?"
 
     if long_or_short:
