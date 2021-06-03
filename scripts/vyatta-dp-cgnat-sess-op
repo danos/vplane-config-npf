@@ -105,6 +105,9 @@ def npf_num2proto(pnum):
     elif pnum == 58:
         # Use the short form of icmp-ipv6 when appropriate
         return "icmpv6"
+    elif pnum == 47:
+        # PPTP ALG child sessions
+        return "gre"
 
     # Get cached proto table, else create new one
     global proto_table
@@ -136,6 +139,7 @@ def npf_proto2num(name):
         'icmp': 1,
         'tcp': 6,
         'udp': 17,
+        'gre': 47,
         'ipv6-icmp': 58
     }
 
