@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 #
-# Copyright (c) 2018-2020, AT&T Intellectual Property.
+# Copyright (c) 2018-2021, AT&T Intellectual Property.
 # All rights reserved.
 #
 # Copyright (c) 2013-2016, Brocade Communications Systems, Inc.
@@ -307,9 +307,9 @@ sub format_npf_operation {
     # Tidy app rproc output.
     if ( $operation =~ /(.*) app\((.*),(.*),(.*)\)(.*)/ ) {
         my $name  = ( $2 eq '' ) ? "'none'" : $2;
+        my $type =  ( $3 eq '' ) ? "'none'" : $3;
         my $proto = ( $4 eq '' ) ? "'none'" : $4;
-        my $hex = sprintf( "0x%X", $3 );
-        $operation = "$1 app=($name,$hex,$proto)$5";
+        $operation = "$1 app=($name,$type,$proto)$5";
     }
 
     return $operation;
