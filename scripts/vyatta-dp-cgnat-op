@@ -9,10 +9,15 @@
 """Scripts for CGNAT error, summary, and policy op-mode commands"""
 
 import sys
+import json
 import getopt
 import vplaned
 from time import localtime, strftime
 from vyatta.npf.npf_addr_group import npf_show_address_group
+from vyatta.npf.IPProto import num2proto
+
+# List of CGNAT ALGs
+alg_list = ['pptp', 'sip', 'ftp']
 
 
 #
@@ -104,12 +109,19 @@ def cgn_op_show_summary():
                 print("    %-30s %18u" % ("Did not match CGNAT policy",
                                           summary.get('nopolicy')))
                 if summary.get('bypass'):
-                    print("    %-30s %18u" % ("ALG packets",
+                    print("    %-30s %18u" % ("ALG bypass packets",
                                               summary.get('bypass')))
                 print("    %-30s %18u" % ("Untranslatable packets",
                                           summary.get('etrans')))
                 print("    %-30s %18u" % ("Hairpinned packets",
                                           summary.get('pkts_hairpinned')))
+
+                print("    %-30s" % ("ALGs:"))
+                for alg in alg_list:
+                    key = 'alg_' + alg + '_out'
+                    if key in summary:
+                        print("      %-28s %18u" % (alg.upper(),
+                                                    summary.get(key)))
 
                 # In
                 print("  %-32s" % ("In:"))
@@ -132,6 +144,13 @@ def cgn_op_show_summary():
                                               summary.get('sess_ht_created')))
                     print("    %-30s %18u" % ("Destroyed",
                                               summary.get('sess_ht_destroyed')))
+
+                print("    %-30s" % ("ALGs:"))
+                for alg in alg_list:
+                    key = 'alg_' + alg + '_in'
+                    if key in summary:
+                        print("      %-28s %18u" % (alg.upper(),
+                                                    summary.get(key)))
 
                 # PCP
                 if 'pcp_ok' in summary:
@@ -157,10 +176,19 @@ def cgn_op_show_summary():
 
 
 #
-# cgn_op_show_alg
+# Print one line in error/global count output
 #
-def cgn_op_show_alg():
-    """Show CGN ALG"""
+def cgn_op_show_error_one(key, fmt, in_d, out_d):
+    if key in in_d and key in out_d:
+        print(fmt % (in_d[key]['desc'], in_d[key]['count'],
+                     out_d[key]['count']))
+
+
+#
+# cgn_op_show_alg_status
+#
+def cgn_op_show_alg_status():
+    """Show CGN ALG Status"""
 
     with vplaned.Controller() as controller:
         for dp in controller.get_dataplanes():
@@ -179,6 +207,388 @@ def cgn_op_show_alg():
                     print("%-5s %s" % (name, enabled))
 
                 print()
+
+
+#
+# Sum one or more counts from the 'in' and 'out' count dictionaries
+#
+def cgn_op_sum_counts(in_d, out_d, rc_list):
+    in_sum = 0
+    out_sum = 0
+
+    for i in range(0, len(rc_list)):
+        key = rc_list[i]
+        if key in in_d:
+            in_sum += in_d[key]['count']
+        if key in out_d:
+            out_sum += out_d[key]['count']
+
+    return in_sum, out_sum
+
+
+#
+# Show ALG packet inspection return code stats for control pkts
+#
+def alg_show_stats_inspect(insp, d_opt):
+    """Show CGN ALG Packet Inspect Statistics"""
+
+    # Simple way to enable all stats for demo'ing the output
+    show_all = False
+
+    #
+    # Only display SIP or FTP stats if dataplane returns 'OK_SIP' or
+    # 'OK_FTP' stats
+    #
+    show_sip = False
+    show_ftp = False
+
+    in_tmp = insp.get('in')
+    out_tmp = insp.get('out')
+
+    in_d = {}
+    out_d = {}
+
+    #
+    # Counter names sub-divided into lists
+    #
+    err_pload = ['ERR_PLOAD_FETCH', 'ERR_PLOAD_UPDATE', 'ERR_PLOAD_NOSPC']
+    err_phole = ['ERR_PHOLE_NOMEM', 'ERR_PHOLE_EXIST']
+    err_pptp = ['ERR_PPTP_MAP', 'ERR_PPTP_OUT_REQ', 'ERR_PPTP_OUT_REPLY',
+                'ERR_PPTP_MC']
+    err_sip = ['ERR_SIP_MAP', 'ERR_SIP_UNSP', 'ERR_SIP_NOSPC', 'ERR_SIP_DREQ',
+               'ERR_SIP_NOENT', 'ERR_SIP_NOMEM', 'ERR_SIP_MEDIA',
+               'ERR_SIP_PHOLE', 'ERR_SIP_MAXCID', 'ERR_SIP_PARSE_REQ',
+               'ERR_SIP_PARSE_RSP', 'ERR_SIP_PARSE_CID', 'ERR_SIP_PARSE_VIA',
+               'ERR_SIP_PARSE_CTYPE', 'ERR_SIP_PARSE_CLEN', 'ERR_SIP_PARSE_SDP',
+               'ERR_SIP_PARSE_C', 'ERR_SIP_PARSE_A']
+    err_ftp = ['ERR_FTP_PARSE_PORT', 'ERR_FTP_PARSE_EPRT', 'ERR_FTP_PARSE_227',
+               'ERR_FTP_PARSE_229']
+    err_other = ['ERR_INT']
+
+    # Convert counter list to a dictionary keyed by counter name
+    for i in range(0, len(in_tmp)):
+        key = in_tmp[i].get('name')
+        count = in_tmp[i].get('count')
+        desc = in_tmp[i].get('desc')
+
+        if key in in_d:
+            in_d[key][count] += count
+        else:
+            in_d[key] = {'count': count, 'desc': desc}
+
+    for i in range(0, len(out_tmp)):
+        key = out_tmp[i].get('name')
+        count = out_tmp[i].get('count')
+        desc = out_tmp[i].get('desc')
+
+        if key in out_d:
+            out_d[key][count] += count
+        else:
+            out_d[key] = {'count': count, 'desc': desc}
+
+    fmt0s = "    %-36s %12s %12s"
+    fmt1 = "      %-34s %12u %12u"
+    fmt2 = "        %-32s %12u %12u"
+
+    print("  CGNAT ALG Control Packets")
+
+    print(fmt0s % ("Ok:", "In", "Out"))
+    cgn_op_show_error_one('OK_PPTP', fmt1, in_d, out_d)
+
+    # 'OK_SIP' may not me present in initial release
+    if 'OK_SIP' in in_d:
+        show_sip = True
+        cgn_op_show_error_one('OK_SIP', fmt1, in_d, out_d)
+
+    # 'OK_FTP' may not me present in initial release
+    if 'OK_FTP' in in_d:
+        show_ftp = True
+        cgn_op_show_error_one('OK_FTP', fmt1, in_d, out_d)
+
+    print("    Errors:")
+
+    #
+    # Payload errors
+    #
+    in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_pload)
+
+    print(fmt1 % ("Payload errors:", in_sum, out_sum))
+
+    # Only show individual payload errors if 'detail' was specified
+    if d_opt:
+        for rc in err_pload:
+            cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+    #
+    # Pinhole errors
+    #
+    in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_phole)
+
+    print(fmt1 % ("Pinhole errors:", in_sum, out_sum))
+
+    # Only show individual pinhole errors if 'detail' was specified
+    if d_opt:
+        for rc in err_phole:
+            cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+    #
+    # PPTP errors
+    #
+    in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_pptp)
+
+    print(fmt1 % ("PPTP errors:", in_sum, out_sum))
+
+    # Only show individual PPTP errors if 'detail' was specified
+    if d_opt:
+        for rc in err_pptp:
+            cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+    #
+    # SIP errors
+    #
+    if show_sip or show_all:
+        in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_sip)
+
+        print(fmt1 % ("SIP errors:", in_sum, out_sum))
+
+        # Only show individual SIP errors if 'detail' was specified
+        if d_opt:
+            for rc in err_sip:
+                cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+    #
+    # FTP errors
+    #
+    if show_ftp or show_all:
+        in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_ftp)
+
+        print(fmt1 % ("FTP errors:", in_sum, out_sum))
+
+        # Only show individual FTP errors if 'detail' was specified
+        if d_opt:
+            for rc in err_ftp:
+                cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+    #
+    # Other errors
+    #
+    in_sum, out_sum = cgn_op_sum_counts(in_d, out_d, err_other)
+
+    print(fmt1 % ("Other errors:", in_sum, out_sum))
+
+    # Only show individual 'other' errors if 'detail' was specified
+    if d_opt:
+        for rc in err_other:
+            cgn_op_show_error_one(rc, fmt2, in_d, out_d)
+
+
+#
+# Show CGN ALG sessions stats for one ALG
+#
+def alg_show_stats_sessions_one(sess, name):
+    """Show CGN ALG Sessions Statistics for one ALG"""
+
+    if name not in sess:
+        return
+
+    sess = sess.get(name)
+
+    ctrl_cur = 0
+    if sess['ctrl_sessions_crtd'] > sess['ctrl_sessions_dstd']:
+        ctrl_cur = sess['ctrl_sessions_crtd'] - sess['ctrl_sessions_dstd']
+
+    data_cur = 0
+    if sess['data_sessions_crtd'] > sess['data_sessions_dstd']:
+        data_cur = sess['data_sessions_crtd'] - sess['data_sessions_dstd']
+
+    fmt = "      %-34s %12s"
+
+    print("  %s Sessions" % (name.upper()))
+    print("    Control")
+    print(fmt % ("Current", ctrl_cur))
+    print(fmt % ("Created", sess['ctrl_sessions_crtd']))
+    print(fmt % ("Destroyed", sess['ctrl_sessions_dstd']))
+    print("    Data")
+    print(fmt % ("Current", data_cur))
+    print(fmt % ("Created", sess['data_sessions_crtd']))
+    print(fmt % ("Destroyed", sess['data_sessions_dstd']))
+
+
+#
+# Show CGN ALG sessions stats for all ALGs
+#
+def alg_show_stats_sessions(sess):
+    """Show CGN ALG Session Statistics"""
+    for alg in alg_list:
+        alg_show_stats_sessions_one(sess, alg)
+
+
+#
+# Show CGN ALG session stats and packet inspections return code stats
+#
+def alg_show_stats(stats, d_opt):
+    """Show CGN ALG Statistics"""
+
+    if 'sessions' in stats:
+        alg_show_stats_sessions(stats.get('sessions'))
+
+    if 'inspect' in stats:
+        alg_show_stats_inspect(stats.get('inspect'), d_opt)
+
+
+#
+# alg_get_summary
+#
+# Fetch the ALG global counters from the dataplane
+#
+def alg_get_summary(dp):
+    """Get CGN ALG Summary"""
+
+    if not dp:
+        return None
+
+    cgn_dict = dp.json_command("cgn-op show alg summary")
+
+    if 'alg' not in cgn_dict:
+        return None
+    alg = cgn_dict.get('alg')
+
+    if 'summary' not in alg:
+        return None
+
+    return alg.get('summary')
+
+
+#
+# alg_show_summary
+#
+# Display CGNAT ALG global counts
+#
+def alg_show_summary(summary, d_opt):
+    """Show CGN ALG Summary"""
+
+    print("CGNAT ALG Summary")
+
+    if 'stats' in summary:
+        alg_show_stats(summary.get('stats'), d_opt)
+
+    return
+
+
+#
+# cgn_op_show_alg_summary
+#
+# Display CGNAT ALG global counts
+#
+def cgn_op_show_alg_summary(d_opt):
+    """Show CGN ALG Summary"""
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                summary = alg_get_summary(dp)
+
+                if summary:
+                    alg_show_summary(summary, d_opt)
+
+
+#
+# alg_get_pinholes
+#
+# Fetch the ALG pinhole table from the dataplane
+#
+def alg_get_pinholes(dp, ph_opt):
+    """Get CGN ALG Pinhole Table"""
+
+    if not dp:
+        return None
+
+    cgn_dict = dp.json_command("cgn-op show alg pinholes %s" % (ph_opt))
+
+    if 'alg' not in cgn_dict:
+        return None
+    alg = cgn_dict.get('alg')
+
+    if 'pinholes' not in alg:
+        return None
+
+    return alg.get('pinholes')
+
+
+#
+# col1_width
+#
+# Column 1 and 2 are the pinhole ID columns and can vary in length quite a
+# bit.  As such, we make it dynamic.  It starts at 4 chars wide and grows as
+# the size of the pinhole IDs grow.
+#
+def col1_width(tmp):
+    """Column 1 and 2 width static variable."""
+
+    # 4 is minimum
+    if tmp < 4:
+        tmp = 4
+
+    if 'cnt' not in col1_width.__dict__:
+        col1_width.cnt = 0
+    # Column width only ever increases
+    if tmp > col1_width.cnt:
+        col1_width.cnt = tmp
+    return col1_width.cnt
+
+
+def alg_show_pinholes(ph_list):
+    col1 = col1_width(4)
+
+    if False:
+        print(json.dumps(ph_list, sort_keys=False, indent=4))
+
+    print("%-*s %-*s %-5s %-4s "
+          "%-5s %21s %21s %7s %7s" % (col1, "ID", col1, "Pair", "ALG", "Dir",
+                                      "Proto", "Source", "Destination",
+                                      "Timeout", "Session"))
+
+    # Sort by pinhole 'id'
+    tmp = sorted(ph_list, key=lambda d: (d['id']))
+    ph_list = tmp
+
+    for ph in ph_list:
+        id1 = "%s" % (ph.get('id'))
+        col1 = col1_width(len(id1))
+
+        id2 = "%s" % (ph.get('pair_id'))
+        col1 = col1_width(len(id2))
+
+        #
+        # PPTP pinholes do not have a source port
+        # SIP pinholes may have a 'wildcard' source port
+        #
+        sport = '-'
+        if ph.get('alg') != 'pptp':
+            sport = ph.get('sport')
+            if sport == 0:
+                sport = 'any'
+
+        src = "%s/%s" % (ph.get('saddr'), sport)
+        dst = "%s/%s" % (ph.get('daddr'), ph.get('dport'))
+
+        print("%-*s %-*s %-5s %-4s %-5s "
+              "%21s %21s %7s %7s" % (col1, id1, col1, id2,
+                                     ph.get('alg'), ph.get('dir'),
+                                     num2proto(ph.get('ipproto')), src, dst,
+                                     ph.get('timeout'), ph.get('session_id')))
+
+
+#
+# Show CGNAT ALG Pinhole table
+#
+def cgn_op_show_alg_pinholes(ph_opt):
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                phs = alg_get_pinholes(dp, ph_opt)
+                if phs:
+                    alg_show_pinholes(phs)
 
 
 #
@@ -230,13 +640,6 @@ def cgn_op_get_errors():
 
 
 #
-# Print one line in error/global count output
-#
-def cgn_op_show_error_one(key, fmt, in_d, out_d):
-    print(fmt % (in_d[key]['desc'], in_d[key]['count'], out_d[key]['count']))
-
-
-#
 # cgn_op_show_errors
 #
 def cgn_op_show_errors():
@@ -284,6 +687,11 @@ def cgn_op_show_errors():
     print("  PCP errors:")
     cgn_op_show_error_one('PCP_EINVAL', fmt, in_d, out_d)
     cgn_op_show_error_one('PCP_ENOSPC', fmt, in_d, out_d)
+
+    print("  ALG errors:")
+    cgn_op_show_error_one('ALG_ERR_INSP', fmt, in_d, out_d)
+    cgn_op_show_error_one('ALG_ERR_SESS', fmt, in_d, out_d)
+    cgn_op_show_error_one('ALG_ERR_PHOLE', fmt, in_d, out_d)
 
     print("  Other:")
     cgn_op_show_error_one('ERR_UNKWN', fmt, in_d, out_d)
@@ -430,6 +838,20 @@ def cgn_op_clear_errors():
 
 
 #
+# cgn_op_clear_alg_stats
+#
+def cgn_op_clear_alg_stats():
+    """Clear CGNAT ALG stats"""
+
+    cmd = "cgn-op clear alg stats"
+
+    with vplaned.Controller() as controller:
+        for dp in controller.get_dataplanes():
+            with dp:
+                dp.string_command(cmd)
+
+
+#
 # cgn_op_main
 #
 def cgn_op_main():
@@ -438,7 +860,11 @@ def cgn_op_main():
     s_opt = None
     n_opt = None
     c_opt = None
+    d_opt = False
     stats_opt = False
+    status_opt = False
+    summ_opt = False
+    ph_opt = None
 
     #
     # Parse options
@@ -447,7 +873,9 @@ def cgn_op_main():
         opts, args = getopt.getopt(sys.argv[1:],
                                    "",
                                    ['show=', 'name=',
-                                    'clear=', 'stats'])
+                                    'clear=', 'stats',
+                                    'status', 'summary',
+                                    'detail', 'ph='])
 
     except getopt.GetoptError as r:
         print(r, file=sys.stderr)
@@ -464,8 +892,20 @@ def cgn_op_main():
         if opt in '--clear':
             c_opt = arg
 
+        if opt in '--detail':
+            d_opt = True
+
         if opt in '--stats':
             stats_opt = True
+
+        if opt in '--status':
+            status_opt = True
+
+        if opt in '--summary':
+            summ_opt = True
+
+        if opt in '--ph':
+            ph_opt = arg
 
     # show ...
     if s_opt:
@@ -479,7 +919,12 @@ def cgn_op_main():
             cgn_op_show_summary()
 
         if s_opt == 'alg':
-            cgn_op_show_alg()
+            if ph_opt:
+                cgn_op_show_alg_pinholes(ph_opt)
+            elif summ_opt:
+                cgn_op_show_alg_summary(d_opt)
+            elif status_opt:
+                cgn_op_show_alg_status()
 
     # clear ...
     if c_opt:
@@ -488,6 +933,9 @@ def cgn_op_main():
 
         if c_opt == 'errors':
             cgn_op_clear_errors()
+
+        if c_opt == 'alg' and stats_opt:
+            cgn_op_clear_alg_stats()
 
 
 #

@@ -70,8 +70,10 @@ module vyatta-op-service-nat-cgnat-v1 {
 
         YANG module for CGNAT operation mode commands";
 
-    revision 2021-05-24 {
-        description "Add show alg";
+    revision 2021-06-10 {
+        description "Add show alg. " +
+                    "Add show alg options. " +
+                    "Add clear alg.";
     }
 
     revision 2021-02-17 {
@@ -331,7 +333,30 @@ module vyatta-op-service-nat-cgnat-v1 {
             }
             opd:command alg {
                 opd:help "Show CGNAT ALG information";
-                opd:on-enter "vyatta-dp-cgnat-op --show alg";
+                opd:on-enter "vyatta-dp-cgnat-op --show alg --summary";
+
+                opd:command status {
+                    opd:help "Show CGNAT ALG status information";
+                    opd:on-enter "vyatta-dp-cgnat-op --show alg --status";
+                }
+                opd:command summary {
+                    opd:help "Show CGNAT ALG summary and statistics";
+                    opd:on-enter "vyatta-dp-cgnat-op --show alg --summary";
+
+                    opd:command detail {
+                        opd:help "Show CGNAT ALG summary and detailed statistics";
+                        opd:on-enter "vyatta-dp-cgnat-op --show alg --summary --detail";
+                    }
+                }
+                opd:command pinholes {
+                    opd:help "Show CGNAT ALG pinhole table";
+                    opd:on-enter "vyatta-dp-cgnat-op --show alg --ph all";
+
+                    opd:command pptp {
+                        opd:help "Show PPTP pinhole table entries";
+                        opd:on-enter "vyatta-dp-cgnat-op --show alg --ph pptp";
+                    }
+                }
             }
         }
     }
@@ -350,6 +375,13 @@ module vyatta-op-service-nat-cgnat-v1 {
                 opd:privileged true;
             }
 
+            opd:command alg {
+                opd:help "Clear CGNAT ALG information";
+                opd:command statistics {
+                    opd:help "Clear CGNAT ALG statistics";
+                    opd:on-enter "vyatta-dp-cgnat-op --clear alg --stats";
+                }
+            }
             opd:command session {
                 opd:help "Delete or clear statistics for matching CGNAT sessions";
                 opd:repeatable true;
