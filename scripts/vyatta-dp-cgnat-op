@@ -472,8 +472,6 @@ def alg_show_summary(summary, d_opt):
     if 'stats' in summary:
         alg_show_stats(summary.get('stats'), d_opt)
 
-    return
-
 
 #
 # cgn_op_show_alg_summary
@@ -610,7 +608,7 @@ def cgn_op_get_errors():
                 cgn_dict = dp.json_command("cgn-op show errors")
                 errors = cgn_dict.get('errors')
                 if not errors:
-                    return [], [], [], []
+                    return {}, {}
 
                 in_errors = errors.get('in')
                 out_errors = errors.get('out')
