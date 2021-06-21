@@ -157,7 +157,7 @@ EOF
                     steps {
                         dir("${SRC_DIR}") {
                             sh '''
-                               pyfiles=`find . -type f -exec file --mime-type {} \\; | grep "text/x-python" | cut -d: -f1 | cut -c3- | xargs`
+                               pyfiles=`find */ -type f | xargs file --mime-type | awk -F: '$2 ~ /text\\/x-python/ {print $1}'`
                                python3 -m flake8 --output-file=flake8.out --count --exit-zero --exclude=.git/*,debian/* \$pyfiles
                                '''
                         }
