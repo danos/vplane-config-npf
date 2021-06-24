@@ -115,6 +115,9 @@ def cgn_op_show_summary():
                                           summary.get('etrans')))
                 print("    %-30s %18u" % ("Hairpinned packets",
                                           summary.get('pkts_hairpinned')))
+                if 'excluded_out' in summary:
+                    print("    %-30s %18u" % ("Excluded",
+                                              summary.get('excluded_out')))
 
                 print("    %-30s" % ("ALGs:"))
                 for alg in alg_list:
@@ -708,6 +711,12 @@ def cgn_op_show_policy_one(pol):
     if "match_group" in pol:
         npf_show_address_group(pol.get('match_group'), "ipv4", None,
                                "Match address-group",
+                               2, 22, 28,
+                               4, 14, 34)
+
+    if "exclude_ag" in pol:
+        npf_show_address_group(pol.get('exclude_ag'), "ipv4", None,
+                               "Exclude address-group",
                                2, 22, 28,
                                4, 14, 34)
 

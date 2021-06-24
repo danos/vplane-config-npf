@@ -172,12 +172,28 @@ def build_cgnat_policy_config(commands, cfg, tree):
         if 'priority' in p:
             cmd += "priority={} ".format(p['priority'])
 
-        # Policy match parameters
+        #
+        # Policy match parameters.  This is an address-group in which we
+        # lookup the source address of outbound pkts.  If they match the
+        # addr-group then a CGNAT translation is performed.
+        #
         if 'match' in p:
             if 'source' in p['match']:
                 if 'address-group' in p['match']['source']:
                     cmd += "match-ag={} ".format(
                         p['match']['source']['address-group'])
+
+        #
+        # Policy exclude parameters.  This is an address-group in which we
+        # lookup the destination address of outbound pkts (only if they have
+        # already matched the 'match' addr-grp).  If they match the exclude
+        # addr-group then no CGNAT translation is performed.
+        #
+        if 'exclude' in p:
+            if 'destination' in p['exclude']:
+                if 'address-group' in p['exclude']['destination']:
+                    cmd += "exclude-ag={} ".format(
+                        p['exclude']['destination']['address-group'])
 
         # Policy translation parameters
         if 'translation' in p:

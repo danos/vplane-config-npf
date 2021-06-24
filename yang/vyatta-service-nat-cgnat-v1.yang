@@ -83,8 +83,9 @@ module vyatta-service-nat-cgnat-v1 {
 
         YANG module for CGNAT configuration";
 
-    revision 2021-05-24 {
-        description "Add ALG commands.";
+    revision 2021-06-17 {
+        description "Add ALG commands. " +
+                    "Add policy exclude address-group.";
     }
 
     revision 2020-06-11 {
@@ -585,6 +586,23 @@ module vyatta-service-nat-cgnat-v1 {
                             description "Source addresses in the address-group" +
                                         "will match this policy.";
                             configd:help "Address-group of source addresses to match";
+                            type leafref {
+                                path "/resources:resources/res-group:group/" +
+                                     "res-group:address-group/res-group:tagnode";
+                            }
+                        }
+                    }
+                }
+                container exclude {
+                    description "For configuring the destination address and mask " +
+                                "to be excluded from CGNAT translation.";
+                    configd:help "Destination addresses to be excluded";
+                    container destination {
+                        description "CGNAT destination parameters";
+                        configd:help "CGNAT destination parameters";
+                        leaf address-group {
+                            description "Destination addresses to be excluded.";
+                            configd:help "Address-group of destination addresses to exclude";
                             type leafref {
                                 path "/resources:resources/res-group:group/" +
                                      "res-group:address-group/res-group:tagnode";
