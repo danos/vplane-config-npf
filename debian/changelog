@@ -1,3 +1,38 @@
+vplane-config-npf (4.5.0) unstable; urgency=medium
+
+  [ Paul Aitken ]
+  * parallelise Jenkinsfile
+  * re-indent Jenkinsfile
+  * Jenkinsfile improvements
+
+  [ Ian Wilson ]
+  * cgnat: Add display modifiers to a 'show' dictionary
+  * cgnat-alg: Initial CGNAT ALG config and op commands
+
+  [ Paul Aitken ]
+  * Add editorconfig
+  * Jenkinsfile: use Vyatta:Unstable
+
+  [ Ian Wilson ]
+  * cgnat-alg: Add closing state to list of state names
+  * cgnat-alg: Add gre/47 to proto/number conversion routines
+  * cgnat-alg: Tweaked appearance on ALG detail in session output
+
+  [ Gavin Shearer ]
+  * dpi: change application type to be a string
+
+  [ Ian Wilson ]
+  * cgnat-alg: Add show commands for summary stats and pinholes
+  * cgnat-alg: Show commands for summary stats follow-up
+
+  [ Derek Fawcus ]
+  * UT: Optimise python file find expression
+
+  [ Ian Wilson ]
+  * cgnat: Add config and op commands for cgnat policy exclude addr-group
+
+ -- Gavin Shearer <gavin.shearer@att.com>  Tue, 17 Aug 2021 18:11:55 +0100
+
 vplane-config-npf (4.4.6) unstable; urgency=medium
 
   [ Derek Fawcus ]
