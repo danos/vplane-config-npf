@@ -37,7 +37,7 @@ pipeline {
 
     environment {
         OBS_INSTANCE = 'build-release'
-        OBS_TARGET_PROJECT = 'Vyatta:Unstable'
+        OBS_TARGET_PROJECT = 'Vyatta:Shipping:2110'
         OBS_TARGET_REPO = 'standard'
         OBS_TARGET_ARCH = 'x86_64'
         // # Replace : with _ in project name, as osc-buildpkg does
